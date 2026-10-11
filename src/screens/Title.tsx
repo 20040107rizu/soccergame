@@ -6,6 +6,7 @@ import { deleteGame, importJson, loadGame, saveGame, SLOTS, slotInfo, type Slot 
 import { newGame } from '../game/season';
 import { overall } from '../game/stats';
 import type { GameState } from '../game/types';
+import { APP_VERSION } from '../version';
 
 type Mode = 'menu' | 'club' | 'original';
 
@@ -156,7 +157,7 @@ export function Title({ onStart }: { onStart: (s: GameState, slot: Slot, firstRu
           <circle cx="60" cy="40" r="4" fill="#ffd34d" />
         </svg>
         <h1 className="title-logo">マスターリーグ</h1>
-        <p className="title-sub">PREMIER LEAGUE 2026-27</p>
+        <p className="title-sub">PREMIER LEAGUE 2026-27 · v{APP_VERSION}</p>
       </div>
 
       <button className="btn primary big" onClick={() => setMode('club')}>

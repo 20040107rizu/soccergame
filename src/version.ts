@@ -3,9 +3,14 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.6.1';
+export const APP_VERSION = '0.6.2';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.6.2',
+    date: '2026-10-11',
+    items: ['ステータスバーとの重なりをもう一度修正（すべての画面で、上の時計の下から表示）', 'アップデートがすぐ届くように改善', 'ヘルプとタイトル画面にバージョンを表示'],
+  },
   {
     version: '0.6.1',
     date: '2026-10-11',

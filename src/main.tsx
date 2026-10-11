@@ -12,6 +12,21 @@ try {
 }
 requestPersistence();
 
+// ホーム画面アプリの iPhone で、ステータスバーの高さ（safe-area）が取れない場合の保険
+try {
+  const standalone = (navigator as unknown as { standalone?: boolean }).standalone === true || matchMedia('(display-mode: standalone)').matches;
+  if (standalone && /iPhone|iPod/.test(navigator.userAgent)) {
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;top:0;padding-top:env(safe-area-inset-top);visibility:hidden';
+    document.body.appendChild(probe);
+    const top = parseFloat(getComputedStyle(probe).paddingTop) || 0;
+    probe.remove();
+    if (top < 20) document.documentElement.style.setProperty('--safe-t', '50px');
+  }
+} catch {
+  // 何もしない
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

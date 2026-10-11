@@ -1,5 +1,5 @@
 // オフラインでも起動できるようにする簡易サービスワーカー
-const CACHE = 'masterleague-v7';
+const CACHE = 'masterleague-v8';
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest', './icon.svg', './apple-touch-icon.png', './icon-192.png', './icon-512.png'])));
   self.skipWaiting();
@@ -10,9 +10,12 @@ self.addEventListener('activate', (e) => {
 });
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  // ページ本体（index.html）はブラウザのキャッシュを使わず、常に最新を取りに行く（アップデートをすぐ届けるため）
+  const isPage = e.request.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('.html') || url.pathname.endsWith('.webmanifest');
   // ネット優先、失敗したらキャッシュ
   e.respondWith(
-    fetch(e.request)
+    fetch(isPage ? new Request(e.request, { cache: 'no-store' }) : e.request)
       .then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));

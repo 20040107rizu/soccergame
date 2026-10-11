@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CondArrow, PosTag, Seg, Sheet } from '../components/ui';
 import { SKILL_CAT_LABEL, SKILLS, STAT_DESC, STAT_GROUPS, STAT_LABEL, STYLES, TRAIT_DESC, type SkillCat } from '../game/stats';
 import { POSITIONS, type Condition } from '../game/types';
+import { APP_VERSION } from '../version';
 
 type Tab = 'stats' | 'styles' | 'skills' | 'other';
 
@@ -194,6 +195,7 @@ export function Help({ onClose }: { onClose: () => void }) {
           </section>
         </div>
       )}
+      <p className="app-version">マスターリーグ v{APP_VERSION}</p>
     </Sheet>
   );
 }
