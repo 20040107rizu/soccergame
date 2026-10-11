@@ -1,8 +1,8 @@
-export type Position = 'GK' | 'CB' | 'LB' | 'RB' | 'DMF' | 'CMF' | 'LMF' | 'RMF' | 'AMF' | 'LWF' | 'RWF' | 'SS' | 'CF';
+export type Position = 'GK' | 'LSB' | 'CB' | 'RSB' | 'DMF' | 'CMF' | 'OMF' | 'LMF' | 'RMF' | 'LWG' | 'RWG' | 'ST' | 'CF';
 
-export const POSITIONS: Position[] = ['GK', 'CB', 'LB', 'RB', 'DMF', 'CMF', 'LMF', 'RMF', 'AMF', 'LWF', 'RWF', 'SS', 'CF'];
+export const POSITIONS: Position[] = ['GK', 'LSB', 'CB', 'RSB', 'DMF', 'CMF', 'OMF', 'LMF', 'RMF', 'LWG', 'RWG', 'ST', 'CF'];
 
-/** eFootball の能力値 25 項目 */
+/** eFootball の能力値 26 項目 */
 export interface Stats {
   offense: number; // オフェンスセンス
   ballControl: number; // ボールコントロール
@@ -24,6 +24,7 @@ export interface Stats {
   defense: number; // ディフェンスセンス
   ballWinning: number; // ボール奪取
   aggression: number; // アグレッシブネス
+  defEngagement: number; // 守備意識
   gkAwareness: number; // GKセンス
   gkCatching: number; // キャッチング
   gkClearing: number; // クリアリング
@@ -47,6 +48,12 @@ export interface Appearance {
   skin: number;
   hairStyle: number;
   hairColor: number;
+  /** ひげ 0:なし 1:無精ひげ 2:口ひげ 3:あごひげ 4:フル */
+  beard?: number;
+  /** 顔の形 0:卵形 1:丸 2:面長 3:角ばり */
+  face?: number;
+  /** 眉 0:普通 1:太い 2:細い */
+  brow?: number;
 }
 
 /** ポジション適性：3=メイン 2=サブ（高い） 1=サブ（可） */
@@ -88,7 +95,11 @@ export interface Player {
   career: SeasonStats;
   /** オリジナルチーム用に作成された選手（エディット可能） */
   custom?: boolean;
-  appearance?: Appearance;
+  appearance: Appearance;
+  /** 今季の評価点の合計（ベストイレブン用） */
+  ratingSum?: number;
+  /** 適性外ポジションでの出場数（適性拡大用） */
+  roleApps?: Partial<Record<Position, number>>;
   /** 実在選手（初期データ由来） */
   real?: boolean;
 }
@@ -102,6 +113,8 @@ export interface SeasonStats {
 }
 
 export type Formation = '4-3-3' | '4-2-3-1' | '4-4-2' | '3-5-2' | '3-4-3' | '4-1-2-3';
+
+export type FormationLabel = Formation | 'カスタム';
 export type Tactic = 'attack' | 'balance' | 'defense';
 
 export interface Team {
@@ -114,10 +127,16 @@ export interface Team {
   rep: number;
   country: string;
   league: 'PL' | 'EU';
-  formation: Formation;
+  formation: FormationLabel;
   tactic: Tactic;
-  /** スタメン11人（フォーメーションの枠順） */
+  /** スタメン11人 */
   lineup: string[];
+  /** スタメン11人のピッチ上の位置（x:左→右, y:自陣→敵陣 0-100）。位置からポジションが決まる */
+  slots: { x: number; y: number }[];
+  /** チームスピリット 0-99 */
+  spirit: number;
+  /** 前の試合のスタメンと役割（スピリットの計算用） */
+  lastLineup?: string[];
   /** 控え（ベンチ入り）最大 9 人 */
   bench: string[];
   /** CPU クラブの移籍資金（百万ユーロ） */
@@ -183,6 +202,24 @@ export interface NegotiationRecord {
   agreedFee?: number;
 }
 
+export type MailFrom = 'club' | 'agent' | 'advisor' | 'medical' | 'league' | 'coach' | 'scout' | 'board';
+
+export interface Mail {
+  id: string;
+  season: number;
+  day: number;
+  from: MailFrom;
+  sender: string;
+  subject: string;
+  body: string;
+  read: boolean;
+  playerId?: string;
+  offerId?: string;
+  /** 補強アドバイスなどで紹介する選手 */
+  players?: string[];
+  important?: boolean;
+}
+
 export interface GameState {
   version: number;
   createdAt: number;
@@ -203,5 +240,8 @@ export interface GameState {
   offers: Offer[];
   negotiations: Record<string, NegotiationRecord>;
   news: NewsItem[];
+  mails: Mail[];
+  watchlist: string[];
+  flags?: Record<string, boolean>;
   history: { season: number; rank: number; champion: string; clWinner?: string; userCl?: string }[];
 }

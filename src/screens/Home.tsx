@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Crest, RepStars, Sheet } from '../components/ui';
+import { Crest, RepStars, Sheet, SpiritGauge } from '../components/ui';
+import { unreadCount } from '../game/mail';
+import { InboxList } from './Inbox';
 import { plTable, windowStatus } from '../game/competitions';
 import { fmtMoney } from '../game/economy';
 import { createMatch, sidePower } from '../game/engine';
@@ -19,6 +21,7 @@ export function Home({ onPreMatch }: { onPreMatch: () => void }) {
   const fx = over ? undefined : userFixture(state);
   const w = windowStatus(state);
   const { total, cap } = userPayroll(state);
+  const unread = unreadCount(state);
 
   const skipDay = () => {
     setBusy(true);
@@ -66,6 +69,9 @@ export function Home({ onPreMatch }: { onPreMatch: () => void }) {
           </b>
         </div>
       </div>
+      <div className="card tight">
+        <SpiritGauge v={team.spirit} />
+      </div>
 
       <div className={'window-banner' + (w.open ? ' open' : '')}>
         <b>{w.open ? `🔓 ${w.label} OPEN` : '🔒 移籍市場 CLOSED'}</b>
@@ -99,17 +105,10 @@ export function Home({ onPreMatch }: { onPreMatch: () => void }) {
         </div>
       )}
 
-      <h3 className="section-title">ニュース</h3>
-      <div className="card news">
-        {state.news.slice(0, 15).map((n) => (
-          <div key={n.id} className={'news-item kind-' + (n.kind ?? 'info')}>
-            <small>
-              S{n.season} · {state.calendar[Math.min(n.day, state.calendar.length - 1)]?.label ?? ''}
-            </small>
-            <span>{n.text}</span>
-          </div>
-        ))}
-      </div>
+      <h3 className="section-title">
+        受信箱{unread > 0 && <span className="unread-pill">{unread}件の未読</span>}
+      </h3>
+      <InboxList limit={30} />
 
       {summary && (
         <Sheet title={`シーズン${state.season - 1} 総括`} onClose={() => setSummary(null)}>
@@ -188,12 +187,12 @@ function NextMatch({ fixtureId, label, onPlay }: { fixtureId: string; label: str
       <div className="versus">
         <div className="vs-team">
           <Crest team={home} size={48} />
-          <span>{home.short}</span>
+          <span className="vs-name">{home.name}</span>
         </div>
         <b className="vs">VS</b>
         <div className="vs-team">
           <Crest team={away} size={48} />
-          <span>{away.short}</span>
+          <span className="vs-name">{away.name}</span>
         </div>
       </div>
       <div className="compare">

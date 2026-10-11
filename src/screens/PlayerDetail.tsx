@@ -4,7 +4,8 @@ import { COND_STYLE, CondArrow, Ovr, PlayerIcon, PosTag, Seg, Sheet, statColor }
 import { windowStatus } from '../game/competitions';
 import { fmtMoney, marketValue } from '../game/economy';
 import { teamById } from '../game/season';
-import { overall, SKILL_LABEL, STAT_GROUPS, STAT_LABEL, STYLES } from '../game/stats';
+import { overall, SKILLS, STAT_GROUPS, STAT_LABEL, STYLES } from '../game/stats';
+import { AppearanceEditor } from './AppearanceEditor';
 import { releaseCost, releasePlayer, renewContract, renewDemand, seekBuyer } from '../game/transfer';
 import { useGame } from '../store';
 
@@ -14,6 +15,8 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
   const { state, update, toast, openNegotiation, editPlayer } = useGame();
   const [tab, setTab] = useState<'stats' | 'info'>('stats');
   const [renew, setRenew] = useState<{ salary: number; years: number } | null>(null);
+  const [skillOpen, setSkillOpen] = useState<string | null>(null);
+  const [face, setFace] = useState(false);
   const p = state.players[id];
   if (!p) return null;
   const team = p.teamId ? teamById(state, p.teamId) : undefined;
@@ -35,6 +38,19 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
           </div>
           <div className="pd-sub">{team ? team.name : 'フリー'}</div>
         </div>
+        <button
+          className={'star-btn' + ((state.watchlist ?? []).includes(p.id) ? ' on' : '')}
+          aria-label="マイリスト"
+          onClick={() =>
+            update((d) => {
+              d.watchlist = d.watchlist ?? [];
+              if (d.watchlist.includes(p.id)) d.watchlist = d.watchlist.filter((x) => x !== p.id);
+              else d.watchlist.push(p.id);
+            })
+          }
+        >
+          {(state.watchlist ?? []).includes(p.id) ? '★' : '☆'}
+        </button>
         <div className="pd-ovr">
           <small>総合</small>
           <Ovr v={overall(p)} big />
@@ -67,6 +83,7 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
               <div>
                 <small>プレースタイル</small>
                 <b>{STYLES[p.style]?.label ?? '—'}</b>
+                <small className="muted">有効：{STYLES[p.style]?.pos.join('/')}</small>
               </div>
               <div>
                 <small>逆足頻度 / 精度</small>
@@ -101,8 +118,24 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
           ))}
           <h4>特殊スキル</h4>
           <div className="skills">
-            {p.skills.length ? p.skills.map((s) => <span key={s} className="skill">{SKILL_LABEL[s] ?? s}</span>) : <span className="muted">なし</span>}
+            {p.skills.length ? (
+              p.skills.map((s) => {
+                const sk = SKILLS.find((x) => x.id === s);
+                return (
+                  <button key={s} className={'skill' + (skillOpen === s ? ' on' : '')} onClick={() => setSkillOpen(skillOpen === s ? null : s)}>
+                    {sk?.label ?? s}
+                  </button>
+                );
+              })
+            ) : (
+              <span className="muted">なし</span>
+            )}
           </div>
+          {skillOpen && <p className="skill-desc">{SKILLS.find((x) => x.id === skillOpen)?.desc}</p>}
+          <button className="btn small ghost" onClick={() => setFace(true)}>
+            顔（見た目）を編集
+          </button>
+          {face && <AppearanceEditor id={p.id} onClose={() => setFace(false)} />}
         </>
       ) : (
         <>

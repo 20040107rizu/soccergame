@@ -6,8 +6,9 @@ import { PL2 } from '../data/pl2';
 import { fairSalary } from './economy';
 import { NEIGHBORS } from './positions';
 import { clamp, pick, rand, randInt, uid } from './rng';
-import { autoSkills, defaultStyle, generateStats, overallFor, seededRandom } from './stats';
-import type { Aptitudes, Condition, GrowthType, Player, Position, Team } from './types';
+import { autoSkills, defaultStyle, generateStats, overallFor, seededRandom, STYLES } from './stats';
+import { FORMATIONS } from './positions';
+import type { Appearance, Aptitudes, Condition, GrowthType, Player, Position, Team } from './types';
 import { POSITIONS } from './types';
 
 export const PL_SEEDS: ClubSeed[] = [...PL1, ...PL2];
@@ -47,7 +48,7 @@ export function playerFromSeed(line: string, teamId: string): Player {
   const r = seededRandom(nameEn + name);
   const aptitudes: Aptitudes = { [position]: 3 };
   for (const s of (subs || '').split(',').filter(Boolean)) aptitudes[s as Position] = 2;
-  const st = style || defaultStyle(position);
+  const st = style && STYLES[style]?.pos.includes(position) ? style : defaultStyle(position);
   const target = Number(ovr);
   const stats = generateStats(position, target, st, r);
   const a = Number(age);
@@ -83,6 +84,7 @@ export function playerFromSeed(line: string, teamId: string): Player {
     season: emptyStats(),
     career: emptyStats(),
     real: true,
+    appearance: randomAppearance(r, nat),
   };
   p.salary = fairSalary(p);
   return p;
@@ -102,6 +104,8 @@ export function teamFromSeed(seed: ClubSeed): Team {
     formation: '4-3-3',
     tactic: 'balance',
     lineup: [],
+    slots: FORMATIONS['4-3-3'].map((x) => ({ ...x })),
+    spirit: 75,
     bench: [],
     budget: seed.budget,
   };
@@ -152,7 +156,7 @@ export function generatePlayer(opts: { position: Position; level: number; age?: 
     season: emptyStats(),
     career: emptyStats(),
     custom: opts.custom,
-    appearance: { skin: randInt(0, 4), hairStyle: randInt(0, 5), hairColor: randInt(0, 5) },
+    appearance: randomAppearance(rand, ''),
   };
   p.salary = fairSalary(p);
   return p;
@@ -160,9 +164,26 @@ export function generatePlayer(opts: { position: Position; level: number; age?: 
 
 /** オリジナルチームの初期メンバー構成 */
 export const ORIGINAL_TEMPLATE: Position[] = [
-  'GK', 'GK', 'CB', 'CB', 'CB', 'CB', 'LB', 'RB', 'LB', 'DMF', 'DMF', 'CMF', 'CMF', 'CMF',
-  'AMF', 'LMF', 'RMF', 'LWF', 'RWF', 'SS', 'CF', 'CF',
+  'GK', 'GK', 'CB', 'CB', 'CB', 'CB', 'LSB', 'RSB', 'LSB', 'DMF', 'DMF', 'CMF', 'CMF', 'CMF',
+  'OMF', 'LMF', 'RMF', 'LWG', 'RWG', 'ST', 'CF', 'CF',
 ];
+
+const LIGHT_SKIN = ['日本', '韓国', 'ウズベキスタン'];
+
+/** 見た目（顔）を作る。実在選手は名前から毎回同じ顔になる */
+export function randomAppearance(r: () => number, nationality: string): Appearance {
+  const pickI = (n: number) => Math.floor(r() * n);
+  const skin = LIGHT_SKIN.includes(nationality) ? pickI(2) : pickI(5);
+  const dark = skin >= 3;
+  return {
+    skin,
+    hairStyle: dark && r() < 0.35 ? (r() < 0.5 ? 0 : 4) : pickI(8),
+    hairColor: dark ? (r() < 0.9 ? 0 : 1) : r() < 0.55 ? pickI(2) : pickI(5),
+    beard: r() < 0.55 ? 0 : 1 + pickI(4),
+    face: pickI(4),
+    brow: pickI(3),
+  };
+}
 
 export function generateOriginalSquad(teamId: string, level = 71): Player[] {
   return ORIGINAL_TEMPLATE.map((pos, i) => {

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fmtMoney } from './game/economy';
 import type { Slot } from './game/save';
+import { unreadCount } from './game/mail';
 import { playDay, prepareDay, teamById, today } from './game/season';
 import type { GameState } from './game/types';
 import { Club } from './screens/Club';
 import { Competitions } from './screens/Competitions';
+import { Help } from './screens/Help';
 import { Home } from './screens/Home';
 import { Match } from './screens/Match';
 import { Negotiation } from './screens/Negotiation';
@@ -79,6 +81,8 @@ function Shell({ firstTab }: { firstTab: Tab }) {
   const { state, update, toast } = useGame();
   const [tab, setTab] = useState<Tab>(firstTab);
   const [screen, setScreen] = useState<'tabs' | 'prematch' | 'match'>('tabs');
+  const [help, setHelp] = useState(false);
+  const unread = unreadCount(state);
   const team = teamById(state, state.userTeamId);
   const day = today(state);
 
@@ -99,7 +103,7 @@ function Shell({ firstTab }: { firstTab: Tab }) {
                 prepareDay(d);
                 return playDay(d);
               });
-              if (r.userResult) toast(`${r.userResult.label}（賞金 +€${r.userResult.prize}M）`);
+              if (r.userResult) toast(`${r.userResult.label}（賞金 +${fmtMoney(r.userResult.prize)}）`);
               setScreen('tabs');
               setTab('home');
             }}
@@ -112,9 +116,12 @@ function Shell({ firstTab }: { firstTab: Tab }) {
   return (
     <div className="app">
       <header className="topbar" style={{ borderColor: team.color }}>
-        <span className="topbar-title">{team.short}</span>
+        <span className="topbar-title">{team.name}</span>
         <span className="topbar-meta">{day ? day.label : 'シーズン終了'}</span>
         <span className="money-badge">{fmtMoney(state.money)}</span>
+        <button className="help-btn" aria-label="ヘルプ" onClick={() => setHelp(true)}>
+          ？
+        </button>
       </header>
       <main className="content">
         {tab === 'home' && <Home onPreMatch={() => setScreen('prematch')} />}
@@ -126,11 +133,15 @@ function Shell({ firstTab }: { firstTab: Tab }) {
       <nav className="tabbar">
         {TABS.map((t) => (
           <button key={t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>
-            <span className="tab-icon">{t.icon}</span>
+            <span className="tab-icon">
+              {t.icon}
+              {t.id === 'home' && unread > 0 && <i className="tab-badge">{unread > 99 ? '99+' : unread}</i>}
+            </span>
             <span>{t.id === 'club' && team.original ? 'エディット' : t.label}</span>
           </button>
         ))}
       </nav>
+      {help && <Help onClose={() => setHelp(false)} />}
     </div>
   );
 }

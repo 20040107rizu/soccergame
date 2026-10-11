@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { LineupBoard } from '../components/LineupBoard';
-import { Crest, PosTag, Seg, Sheet } from '../components/ui';
-import { createMatch, MAX_SUBS, setFormation, setTactic, stepMinute, substitute, swapSlots, type LiveMatch, type MatchEvent, type SideKey } from '../game/engine';
-import { FORMATION_LIST, FORMATIONS } from '../game/positions';
+import { Crest, PosTag, Seg, Sheet, SpiritGauge } from '../components/ui';
+import { createMatch, MAX_SUBS, moveSideSlot, setFormation, setTactic, sideRoles, startSecondHalf, stepMinute, substitute, swapSlots, type LiveMatch, type MatchEvent, type SideKey } from '../game/engine';
+import { fmtMoney } from '../game/economy';
+import { FORMATION_LIST } from '../game/positions';
 import { playDay, teamById, userFixture } from '../game/season';
 import type { Formation, Tactic } from '../game/types';
 import { useGame } from '../store';
@@ -27,12 +28,13 @@ export function Match({ onExit }: { onExit: () => void }) {
   const [ball, setBall] = useState({ x: 50, y: 50 });
   const [flash, setFlash] = useState<MatchEvent | null>(null);
   const [done, setDone] = useState(false);
+  const [started, setStarted] = useState(false);
   const userKey: SideKey = m.home.teamId === state.userTeamId ? 'home' : 'away';
   const home = teamById(state, m.home.teamId);
   const away = teamById(state, m.away.teamId);
 
   useEffect(() => {
-    if (m.finished || paused || manage || flash) return;
+    if (!started || m.finished || m.halfTime || paused || manage || flash) return;
     const t = setTimeout(() => {
       const evs = stepMinute(state, m);
       const key = evs.find((e) => e.type === 'goal') ?? evs.find((e) => e.side && e.shotY !== undefined);
@@ -46,7 +48,7 @@ export function Match({ onExit }: { onExit: () => void }) {
       } else {
         setBall((b) => ({ x: clampN(b.x + (Math.random() - 0.5) * 30, 15, 85), y: clampN(b.y + (Math.random() - 0.5) * 30, 10, 90) }));
       }
-      if (m.attention) setManage(true);
+      if (m.attention || m.halfTime) setManage(true);
       rerender();
     }, SPEEDS[speed].ms);
     return () => clearTimeout(t);
@@ -56,7 +58,7 @@ export function Match({ onExit }: { onExit: () => void }) {
     if (done) return;
     setDone(true);
     const rep = update((d) => playDay(d, m));
-    if (rep.userResult) toast(`試合終了 賞金 +€${rep.userResult.prize}M`);
+    if (rep.userResult) toast(`試合終了 賞金 +${fmtMoney(rep.userResult.prize)}`);
     onExit();
   };
 
@@ -67,18 +69,18 @@ export function Match({ onExit }: { onExit: () => void }) {
     <div className="match">
       <div className="scoreboard">
         <div className="sb-team">
-          <Crest team={home} size={32} />
-          <span>{home.short}</span>
+          <Crest team={home} size={30} />
+          <span className="sb-name">{home.name}</span>
         </div>
         <div className="sb-score">
           <b>
             {m.score.home} - {m.score.away}
           </b>
-          <small>{m.finished ? '試合終了' : m.minute <= 45 ? `前半 ${m.minute}'` : `後半 ${m.minute}'`}</small>
+          <small>{m.finished ? '試合終了' : !started ? 'キックオフ前' : m.halfTime ? 'ハーフタイム' : m.minute <= 45 ? `前半 ${m.minute}'` : `後半 ${m.minute}'`}</small>
         </div>
         <div className="sb-team right">
-          <span>{away.short}</span>
-          <Crest team={away} size={32} />
+          <span className="sb-name">{away.name}</span>
+          <Crest team={away} size={30} />
         </div>
       </div>
 
@@ -105,6 +107,33 @@ export function Match({ onExit }: { onExit: () => void }) {
           </div>
         )}
       </div>
+
+      {!started && (
+        <div className="half-start">
+          <button className="btn primary big" onClick={() => setStarted(true)}>
+            前半キックオフ ▶
+          </button>
+          <button className="btn ghost" onClick={() => setManage(true)}>
+            キックオフ前に采配を確認
+          </button>
+        </div>
+      )}
+      {m.halfTime && !manage && (
+        <div className="half-start">
+          <button
+            className="btn primary big"
+            onClick={() => {
+              startSecondHalf(m);
+              rerender();
+            }}
+          >
+            後半キックオフ ▶
+          </button>
+          <button className="btn ghost" onClick={() => setManage(true)}>
+            ハーフタイムの采配
+          </button>
+        </div>
+      )}
 
       <div className="match-controls">
         {SPEEDS.map((s, i) => (
@@ -141,7 +170,7 @@ export function Match({ onExit }: { onExit: () => void }) {
 
       {manage && !m.finished && (
         <Sheet
-          title={`采配 ${m.minute}'（交代 残り${MAX_SUBS - side.subsUsed}）`}
+          title={`${m.halfTime ? 'ハーフタイム' : !started ? 'キックオフ前' : `${m.minute}'`} 采配（交代 残り${MAX_SUBS - side.subsUsed}）`}
           onClose={() => {
             m.attention = undefined;
             setManage(false);
@@ -151,13 +180,15 @@ export function Match({ onExit }: { onExit: () => void }) {
           {m.attention && <div className="warn-box">{m.attention}</div>}
           <Seg
             scroll
-            value={side.formation}
-            options={FORMATION_LIST.map((f) => ({ v: f, label: f }))}
+            value={side.formation as Formation}
+            options={[...FORMATION_LIST.map((f) => ({ v: f, label: f })), ...(side.formation === 'カスタム' ? [{ v: 'カスタム' as Formation, label: 'カスタム' }] : [])]}
             onChange={(f: Formation) => {
+              if ((f as string) === 'カスタム') return;
               setFormation(m, userKey, f);
               rerender();
             }}
           />
+          <SpiritGauge v={side.spirit} />
           <div className="row gap">
             <span className="muted small">作戦</span>
             <Seg
@@ -173,7 +204,7 @@ export function Match({ onExit }: { onExit: () => void }) {
           <p className="hint">ピッチ上の選手同士をタップでポジション入れ替え（交代枠は使いません）。ピッチの選手 → ベンチの選手で交代。</p>
           <LineupBoard
             team={teamById(state, side.teamId)}
-            formation={side.formation}
+            slots={side.slots}
             lineup={side.lineup}
             bench={side.bench}
             players={state.players}
@@ -188,24 +219,31 @@ export function Match({ onExit }: { onExit: () => void }) {
                 if (pitch && bench) {
                   const outId = side.lineup[pitch.i];
                   if (!outId) return toast('退場者の枠には入れられません');
-                  const isGkSlot = FORMATIONS[side.formation][pitch.i].pos === 'GK';
+                  const isGkSlot = sideRoles(side)[pitch.i] === 'GK';
                   if (isGkSlot && state.players[bench.id].position !== 'GK' && !confirm('GK の枠に GK 以外の選手を入れますか？')) return;
                   if (!substitute(state, m, userKey, outId, bench.id)) toast('これ以上交代できません');
                 }
               }
               rerender();
             }}
+            onSlotMove={(i, x, y) => {
+              moveSideSlot(m, userKey, i, x, y);
+              rerender();
+            }}
+            hint="ドラッグで位置を変更・タップで適性表示。ピッチの選手 → 交代要員で交代（交代した選手は戻れません）"
             onDetail={openPlayer}
           />
           <button
             className="btn primary big"
             onClick={() => {
               m.attention = undefined;
+              if (!started) setStarted(true);
+              if (m.halfTime) startSecondHalf(m);
               setManage(false);
               setPaused(false);
             }}
           >
-            試合再開 ▶
+            {!started ? '前半キックオフ ▶' : m.halfTime ? '後半キックオフ ▶' : '試合再開 ▶'}
           </button>
         </Sheet>
       )}

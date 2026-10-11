@@ -110,7 +110,7 @@ function Table({ rows, teams, me, zones }: { rows: TableRow[]; teams: Record<str
               <td>{i + 1}</td>
               <td className="left">
                 <span className="tcell">
-                  <Crest team={t} size={20} /> {t.short}
+                  <Crest team={t} size={20} /> <span className="tname">{t.name}</span>
                 </span>
               </td>
               <td>{r.played}</td>
@@ -167,14 +167,14 @@ function FixtureRow({ f, teams, me }: { f: Fixture; teams: Record<string, Team>;
   return (
     <div className={'fixture' + (f.home === me || f.away === me ? ' me' : '')}>
       <span className="tcell right">
-        {h.short} <Crest team={h} size={20} />
+        <span className="tname">{h.name}</span> <Crest team={h} size={20} />
       </span>
       <b>
         {r ? `${r.home} - ${r.away}` : 'vs'}
         {r?.pkHome !== undefined && <small className="pk">PK {r.pkHome}-{r.pkAway}</small>}
       </b>
       <span className="tcell">
-        <Crest team={a} size={20} /> {a.short}
+        <Crest team={a} size={20} /> <span className="tname">{a.name}</span>
       </span>
     </div>
   );
@@ -194,7 +194,7 @@ function Scorers({ comp, teams }: { comp: 'PL' | 'CL'; teams: Record<string, Tea
         <button key={p.id} className="scorer" onClick={() => openPlayer(p.id)}>
           <span>{i + 1}</span>
           <span className="grow left">
-            {p.name} <small className="muted">{p.teamId ? teams[p.teamId]?.short : ''}</small>
+            {p.name} <small className="muted">{p.teamId ? teams[p.teamId]?.name : ''}</small>
           </span>
           <b>{g(p)}G</b>
           {comp === 'PL' && <small>{p.season.assists}A</small>}
@@ -235,11 +235,11 @@ function Knockout({ teams }: { teams: Record<string, Team> }) {
               return (
                 <div key={t.id} className={'tie' + (t.a === state.userTeamId || t.b === state.userTeamId ? ' me' : '')}>
                   <span className={'tcell right' + (t.winner === t.a ? ' win' : '')}>
-                    {teams[t.a]?.short} <Crest team={teams[t.a]} size={18} />
+                    <span className="tname">{teams[t.a]?.name}</span> <Crest team={teams[t.a]} size={18} />
                   </span>
                   <b>{played ? `${ga} - ${gb}` : 'vs'}</b>
                   <span className={'tcell' + (t.winner === t.b ? ' win' : '')}>
-                    <Crest team={teams[t.b]} size={18} /> {teams[t.b]?.short}
+                    <Crest team={teams[t.b]} size={18} /> <span className="tname">{teams[t.b]?.name}</span>
                   </span>
                 </div>
               );

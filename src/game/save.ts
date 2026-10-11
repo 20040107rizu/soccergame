@@ -5,7 +5,7 @@ import type { GameState } from './types';
  * JSON ファイルへの書き出し・読み込みで機種変更やバックアップにも対応。
  */
 const PREFIX = 'masterleague.save.';
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 export const SLOTS = [1, 2, 3] as const;
 export type Slot = (typeof SLOTS)[number];
 

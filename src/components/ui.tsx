@@ -46,12 +46,25 @@ export function CondArrow({ c, size = 20 }: { c: Condition; size?: number }) {
   );
 }
 
-/** 実在選手はユニフォーム、オリジナル選手は顔 */
+/** 選手の顔アイコン（所属クラブのユニフォーム＋背番号） */
 export function PlayerIcon({ p, team, size = 40 }: { p: Player; team?: Team; size?: number }) {
   const c1 = team?.color ?? '#475569';
   const c2 = team?.color2 ?? '#ffffff';
-  if (p.appearance) return <Avatar a={p.appearance} color={c1} color2={c2} number={p.number} size={size} />;
-  return <Jersey color={c1} color2={c2} number={p.number} size={size} />;
+  return <Avatar a={p.appearance ?? { skin: 1, hairStyle: 1, hairColor: 0 }} color={c1} color2={c2} number={p.number} size={size} />;
+}
+
+/** チームスピリットのゲージ */
+export function SpiritGauge({ v, label = 'チームスピリット' }: { v: number; label?: string }) {
+  const color = v >= 90 ? '#19d3c5' : v >= 75 ? '#3ccb5a' : v >= 60 ? '#f2d43d' : '#f28c28';
+  return (
+    <div className="spirit">
+      <span>{label}</span>
+      <div className="spirit-bar">
+        <i style={{ width: `${(v / 99) * 100}%`, background: color }} />
+      </div>
+      <b style={{ color }}>{v}</b>
+    </div>
+  );
 }
 
 export function Jersey({ color, color2, number, size = 40 }: { color: string; color2: string; number?: number; size?: number }) {
@@ -97,7 +110,7 @@ export function PlayerRow(props: {
           {p.injury > 0 && <span className="badge-inj">✚{p.injury}</span>}
           {p.suspension > 0 && <span className="badge-sus">停</span>}
         </div>
-        <div className="player-row-sub">{sub ?? `${p.age}歳 · ${p.nationality}${team ? ` · ${team.short}` : ' · フリー'}`}</div>
+        <div className="player-row-sub">{sub ?? `${p.age}歳 · ${p.nationality}${team ? ` · ${team.name}` : ' · フリー'}`}</div>
       </div>
       <div className="player-row-right">
         {right ?? (

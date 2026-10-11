@@ -1,7 +1,7 @@
-import { FORMATIONS } from './positions';
+import { FORMATIONS, posFromXY } from './positions';
 import { clamp, pick, rand, weighted } from './rng';
-import { ratingAt } from './stats';
-import type { Formation, GameState, Player, Position, Tactic } from './types';
+import { ratingAt, styleActive } from './stats';
+import type { Formation, FormationLabel, GameState, Player, Position, Tactic } from './types';
 import { available } from './lineup';
 
 /**
@@ -28,10 +28,12 @@ export interface MatchEvent {
 
 export interface SideState {
   teamId: string;
-  formation: Formation;
+  formation: FormationLabel;
   tactic: Tactic;
-  /** フォーメーション枠順。退場で空いた枠は '' */
+  /** スタメン（slots と同じ順）。退場で空いた枠は '' */
   lineup: string[];
+  slots: { x: number; y: number }[];
+  spirit: number;
   bench: string[];
   subsUsed: number;
   energy: Record<string, number>;
@@ -55,6 +57,11 @@ export interface LiveMatch {
   ratings: Record<string, number>;
   /** ユーザーの判断が必要（負傷者が出た等） */
   attention?: string;
+  /** ハーフタイムで止まっている（後半開始ボタン待ち） */
+  halfTime?: boolean;
+  secondHalf?: boolean;
+  /** 選手ごとのシュート数（ウィルパワー用） */
+  shots?: Record<string, number>;
 }
 
 export const MAX_SUBS = 5;
@@ -70,6 +77,8 @@ function sideFromTeam(state: GameState, teamId: string): SideState {
     formation: t.formation,
     tactic: t.tactic,
     lineup: [...t.lineup],
+    slots: t.slots.map((x) => ({ ...x })),
+    spirit: t.spirit ?? 75,
     bench: [...t.bench].filter((id) => state.players[id] && available(state.players[id])),
     subsUsed: 0,
     energy,
@@ -103,10 +112,15 @@ export function createMatch(state: GameState, fixtureId: string): LiveMatch {
 
 /* ---------------- 戦力計算 ---------------- */
 
-const ATTACK_W: Record<Position, number> = { GK: 0, CB: 0.1, LB: 0.4, RB: 0.4, DMF: 0.3, CMF: 0.6, LMF: 0.8, RMF: 0.8, AMF: 1, LWF: 1.1, RWF: 1.1, SS: 1.1, CF: 1.2 };
-const MID_W: Record<Position, number> = { GK: 0, CB: 0.15, LB: 0.3, RB: 0.3, DMF: 1, CMF: 1.2, LMF: 0.7, RMF: 0.7, AMF: 0.9, LWF: 0.4, RWF: 0.4, SS: 0.4, CF: 0.2 };
-const DEF_W: Record<Position, number> = { GK: 0, CB: 1.2, LB: 0.9, RB: 0.9, DMF: 0.9, CMF: 0.35, LMF: 0.3, RMF: 0.3, AMF: 0.1, LWF: 0.1, RWF: 0.1, SS: 0.05, CF: 0 };
-const SHOT_W: Record<Position, number> = { GK: 0, CB: 0.35, LB: 0.4, RB: 0.4, DMF: 0.5, CMF: 1.1, LMF: 1.6, RMF: 1.6, AMF: 2.5, LWF: 3, RWF: 3, SS: 4, CF: 5 };
+const ATTACK_W: Record<Position, number> = { GK: 0, CB: 0.1, LSB: 0.4, RSB: 0.4, DMF: 0.3, CMF: 0.6, LMF: 0.8, RMF: 0.8, OMF: 1, LWG: 1.1, RWG: 1.1, ST: 1.1, CF: 1.2 };
+const MID_W: Record<Position, number> = { GK: 0, CB: 0.15, LSB: 0.3, RSB: 0.3, DMF: 1, CMF: 1.2, LMF: 0.7, RMF: 0.7, OMF: 0.9, LWG: 0.4, RWG: 0.4, ST: 0.4, CF: 0.2 };
+const DEF_W: Record<Position, number> = { GK: 0, CB: 1.2, LSB: 0.9, RSB: 0.9, DMF: 0.9, CMF: 0.35, LMF: 0.3, RMF: 0.3, OMF: 0.1, LWG: 0.1, RWG: 0.1, ST: 0.05, CF: 0 };
+const SHOT_W: Record<Position, number> = { GK: 0, CB: 0.35, LSB: 0.4, RSB: 0.4, DMF: 0.5, CMF: 1.1, LMF: 1.6, RMF: 1.6, OMF: 2.5, LWG: 3, RWG: 3, ST: 4, CF: 5 };
+
+/** 枠のポジション */
+export function sideRoles(side: SideState): Position[] {
+  return side.slots.map((s) => posFromXY(s.x, s.y));
+}
 
 interface OnPitch {
   p: Player;
@@ -115,12 +129,14 @@ interface OnPitch {
 }
 
 export function onPitch(state: GameState, side: SideState): OnPitch[] {
-  const slots = FORMATIONS[side.formation];
+  const roles = sideRoles(side);
   const list: OnPitch[] = [];
   side.lineup.forEach((id, i) => {
     const p = state.players[id];
-    if (!p || !slots[i]) return;
-    list.push({ p, pos: slots[i].pos, eff: effRating(p, slots[i].pos, side.energy[id] ?? 100, side.injured.includes(id)) });
+    if (!p || !roles[i]) return;
+    // プレースタイルがそのポジションで有効ならわずかに能力が上がる（無効なら「無印」）
+    const style = styleActive(p.style, roles[i]) ? 1.01 : 1;
+    list.push({ p, pos: roles[i], eff: effRating(p, roles[i], side.energy[id] ?? 100, side.injured.includes(id)) * style });
   });
   return list;
 }
@@ -147,17 +163,23 @@ export interface Power {
   keeper: number;
 }
 
-export function sidePower(state: GameState, side: SideState): Power {
+export function sidePower(state: GameState, side: SideState, ctx?: { second: boolean; lead: number }): Power {
   const list = onPitch(state, side);
   const short = 11 - list.length; // 退場者
-  const captain = list.some((o) => o.p.skills.includes('captaincy')) ? 1 : 0;
-  const k = 1 - short * 0.07;
+  const has = (id: string) => list.some((o) => o.p.skills.includes(id));
+  const captain = has('captaincy') ? 1 : 0;
+  // チームスピリット：連携（パス・ポジショニング・反応）に影響
+  const k = (1 - short * 0.07) * (0.94 + 0.06 * (side.spirit ?? 75) / 99);
+  const second = ctx?.second ?? false;
+  const lead = ctx?.lead ?? 0;
+  const atkBonus = (has('attackTrigger') ? 0.6 : 0) + (has('attackSurge') ? 0.4 : 0) + (has('momentumDribble') ? 0.4 : 0) + (second && lead <= 0 && has('gameChanging') ? 0.8 : 0);
+  const defBonus = (has('gkDirecting') ? 0.6 : 0) + (second && lead > 0 && has('fortress') ? 1 : 0) + (second && lead > 0 && has('gkSpiritRoar') ? 0.6 : 0) + (has('chasing') ? 0.3 : 0);
   const mul = (o: OnPitch) => o.eff / Math.max(1, ratingAt(o.p, o.pos));
   const gk = list.find((o) => o.pos === 'GK');
   return {
-    attack: (wavg(list, ATTACK_W, (o) => (o.eff + (o.p.stats.offense + o.p.stats.finishing) / 2 * mul(o)) / 2) + captain) * k,
+    attack: (wavg(list, ATTACK_W, (o) => (o.eff + (o.p.stats.offense + o.p.stats.finishing) / 2 * mul(o)) / 2) + captain + atkBonus) * k,
     midfield: (wavg(list, MID_W, (o) => (o.eff + (o.p.stats.lowPass + o.p.stats.ballControl) / 2 * mul(o)) / 2) + captain) * k,
-    defense: (wavg(list, DEF_W, (o) => (o.eff + (o.p.stats.defense + o.p.stats.ballWinning) / 2 * mul(o)) / 2) + captain) * k,
+    defense: (wavg(list, DEF_W, (o) => (o.eff + (o.p.stats.defense + o.p.stats.ballWinning + o.p.stats.defEngagement) / 3 * mul(o)) / 2) + captain + defBonus) * k,
     keeper: gk ? gkRating(gk.p) * mul(gk) : 35,
   };
 }
@@ -191,17 +213,16 @@ const MISS_TEXT = ['シュートは枠の外！', '惜しくもバーの上！',
 /* ---------------- 1 分進める ---------------- */
 
 export function stepMinute(state: GameState, m: LiveMatch): MatchEvent[] {
-  if (m.finished) return [];
+  if (m.finished || m.halfTime) return [];
   const before = m.events.length;
   m.minute++;
   const minute = m.minute;
 
-  if (minute === 46) m.events.push({ minute: 45, type: 'half', text: `前半終了 ${m.score.home}-${m.score.away}` });
-
   for (const key of ['home', 'away'] as SideKey[]) drainEnergy(state, m[key]);
 
-  const ph = sidePower(state, m.home);
-  const pa = sidePower(state, m.away);
+  const second = minute > 45;
+  const ph = sidePower(state, m.home, { second, lead: m.score.home - m.score.away });
+  const pa = sidePower(state, m.away, { second, lead: m.score.away - m.score.home });
   const homeAdv = m.neutral ? 0 : 0.03;
   const possHome = clamp(0.5 + (ph.midfield - pa.midfield) / 80 + homeAdv, 0.25, 0.75);
   const atkKey: SideKey = rand() < possHome ? 'home' : 'away';
@@ -224,6 +245,11 @@ export function stepMinute(state: GameState, m: LiveMatch): MatchEvent[] {
     if (m[key].teamId !== state.userTeamId) aiManage(state, m, key);
   }
 
+  if (minute === 45 && !m.secondHalf) {
+    m.halfTime = true;
+    m.events.push({ minute: 45, type: 'half', text: `前半終了 ${m.score.home}-${m.score.away}` });
+  }
+
   if (minute >= 90) {
     m.finished = true;
     m.events.push({ minute: 90, type: 'full', text: `試合終了！ ${m.score.home}-${m.score.away}` });
@@ -239,11 +265,12 @@ function tacticMod(t: Tactic, kind: 'for' | 'against'): number {
 }
 
 function drainEnergy(state: GameState, side: SideState) {
-  const mul = side.tactic === 'attack' ? 1.12 : side.tactic === 'defense' ? 0.95 : 1;
+  let mul = side.tactic === 'attack' ? 1.12 : side.tactic === 'defense' ? 0.95 : 1;
+  if (side.lineup.some((id) => state.players[id]?.skills.includes('captaincy'))) mul *= 0.92;
   for (const id of side.lineup) {
     const p = state.players[id];
     if (!p) continue;
-    const drain = (0.5 + ((100 - p.stats.stamina) / 100) * 0.75) * mul;
+    const drain = (0.5 + ((100 - p.stats.stamina) / 100) * 0.75) * mul * (p.skills.includes('fighting') ? 0.92 : 1);
     side.energy[id] = Math.max(5, (side.energy[id] ?? 100) - drain);
   }
 }
@@ -258,7 +285,7 @@ function shotEvent(state: GameState, m: LiveMatch, atkKey: SideKey, defKey: Side
   const shooterO = weighted(attackers, (o) => {
     const s = o.p.stats;
     const key = type === 'header' ? (s.heading + s.jump) / 2 : type === 'long' ? (s.kickingPower + s.finishing) / 2 : (s.finishing + s.offense) / 2;
-    const sub = o.p.skills.includes('superSub') && (m[atkKey].enteredAt[o.p.id] ?? 0) > 0 ? 1.3 : 1;
+    const sub = o.p.skills.includes('superSub') && (m[atkKey].enteredAt[o.p.id] ?? 0) >= 45 ? 1.35 : 1;
     return SHOT_W[o.pos] * Math.pow(key / 70, 3) * sub * (o.eff / 70);
   });
   const shooter = shooterO.p;
@@ -268,7 +295,8 @@ function shotEvent(state: GameState, m: LiveMatch, atkKey: SideKey, defKey: Side
       ? weighted(others, (o) => {
           const s = o.p.stats;
           const key = type === 'header' ? s.loftedPass + s.curl / 2 : s.lowPass + s.offense / 2;
-          const sk = (o.p.skills.includes('throughPass') ? 1.2 : 1) * (type === 'header' && o.p.skills.includes('pinpointCross') ? 1.4 : 1);
+          const has = (x: string) => o.p.skills.includes(x);
+          const sk = (has('throughPass') || has('visionary') ? 1.2 : 1) * (type === 'header' && (has('pinpointCross') || has('edgeCross')) ? 1.4 : 1);
           return Math.pow(key / 100, 3) * (MID_W[o.pos] + ATTACK_W[o.pos]) * sk;
         })
       : null;
@@ -277,30 +305,41 @@ function shotEvent(state: GameState, m: LiveMatch, atkKey: SideKey, defKey: Side
   const gk = gkO?.p;
   const shotY = 15 + rand() * 70;
   const s = shooter.stats;
-  const effMul = shooterO.eff / Math.max(1, ratingAt(shooter, shooterO.pos));
+  const sub = shooter.skills.includes('superSub') && (m[atkKey].enteredAt[shooter.id] ?? 0) >= 45 ? 1.04 : 1;
+  const effMul = (shooterO.eff / Math.max(1, ratingAt(shooter, shooterO.pos))) * sub;
+  const sk = (id: string) => shooter.skills.includes(id);
+  const dsk = (id: string) => defenders.some((o) => o.p.skills.includes(id));
+  m.shots = m.shots ?? {};
+  m.shots[shooter.id] = (m.shots[shooter.id] ?? 0) + 1;
+  const will = sk('willpower') ? Math.min(8, m.shots[shooter.id]) * 0.4 : 0;
 
   let quality: number;
   if (type === 'header') {
     quality = (s.heading * 0.6 + s.jump * 0.25 + s.physical * 0.15) * effMul;
-    if (shooter.skills.includes('heading')) quality += 3;
-    if (defenders.some((o) => o.p.skills.includes('aerial'))) quality -= 2;
+    if (sk('header')) quality += 3;
+    if (sk('bulletHeader')) quality += 2;
+    if (dsk('aerial') || dsk('aerialFort')) quality -= 2;
   } else if (type === 'long') {
     quality = (s.kickingPower * 0.4 + s.finishing * 0.3 + s.curl * 0.3) * effMul - 8;
-    if (shooter.skills.includes('longShot') || shooter.skills.includes('knuckle')) quality += 4;
-    if (shooter.skills.includes('longCurler')) quality += 2;
+    if (sk('middleShot')) quality += 4;
+    if (sk('knuckle') || sk('dropShot') || sk('risingShot') || sk('lowScreamer')) quality += 2;
+    if (sk('controlCurve') || sk('blitzCurve')) quality += 2;
   } else {
     quality = (s.finishing * 0.6 + s.offense * 0.25 + s.ballControl * 0.15) * effMul;
-    if (shooter.skills.includes('firstTime') || shooter.skills.includes('acrobatic')) quality += 2;
-    if (shooter.skills.includes('chipShot')) quality += 1;
+    if (sk('oneTouchShot')) quality += 2;
+    if (sk('acrobaticShot') || sk('phenomFinish')) quality += 1.5;
+    if (sk('controlLoop') || sk('heelTrick') || sk('snapStrike')) quality += 1;
   }
-  if (defenders.some((o) => o.p.skills.includes('blocker'))) quality -= 1.5;
-  if (defenders.some((o) => o.p.skills.includes('manMarking') || o.p.skills.includes('interception'))) quality -= 1;
+  quality += will;
+  if (dsk('blocker')) quality -= 1.5;
+  if (dsk('manMarking') || dsk('interception')) quality -= 1;
+  if (dsk('sliding') || dsk('powerTackle') || dsk('longReach') || dsk('shadowHunt')) quality -= 0.5;
 
   const penalty = rand() < 0.03;
   let goalP = penalty ? 0.76 : clamp(0.3 + (quality - def.keeper * 0.55 - def.defense * 0.2) / 120, 0.05, 0.6);
   if (penalty) {
-    if (shooter.skills.includes('pkTaker')) goalP += 0.06;
-    if (gk?.skills.includes('gkPenalty')) goalP -= 0.1;
+    if (sk('pkTaker')) goalP += 0.06;
+    if (gk?.skills.includes('pkStopper')) goalP -= 0.1;
   }
 
   const name = last(shooter);
@@ -433,6 +472,21 @@ export function swapSlots(m: LiveMatch, key: SideKey, a: number, b: number) {
   [l[a], l[b]] = [l[b], l[a]];
 }
 
+/** 試合中に選手の位置を動かす（自由配置） */
+export function moveSideSlot(m: LiveMatch, key: SideKey, i: number, x: number, y: number) {
+  const side = m[key];
+  const isGk = posFromXY(side.slots[i].x, side.slots[i].y) === 'GK';
+  const cy = Math.max(2, Math.min(97, y));
+  side.slots[i] = { x: Math.round(Math.max(4, Math.min(96, x))), y: Math.round(isGk ? Math.min(cy, 11) : Math.max(cy, 12.5)) };
+  side.formation = 'カスタム';
+}
+
+/** 後半開始 */
+export function startSecondHalf(m: LiveMatch) {
+  m.halfTime = false;
+  m.secondHalf = true;
+}
+
 export function setTactic(m: LiveMatch, key: SideKey, t: Tactic) {
   if (m[key].tactic === t) return;
   m[key].tactic = t;
@@ -443,6 +497,7 @@ export function setTactic(m: LiveMatch, key: SideKey, t: Tactic) {
 export function setFormation(m: LiveMatch, key: SideKey, f: Formation) {
   if (m[key].formation === f) return;
   m[key].formation = f;
+  m[key].slots = FORMATIONS[f].map((x) => ({ ...x }));
   m.events.push({ minute: m.minute, type: 'tactic', side: key, text: `フォーメーション変更：${f}` });
 }
 
@@ -456,10 +511,10 @@ function aiManage(state: GameState, m: LiveMatch, key: SideKey) {
     if (side.lineup.includes(id) && canSub(side)) bestSubFor(state, m, key, id);
   }
   if ([58, 66, 74, 82].includes(minute)) {
-    const slots = FORMATIONS[side.formation];
+    const roles = sideRoles(side);
     const tired = side.lineup
       .map((id, i) => ({ id, i }))
-      .filter((x) => x.id && slots[x.i].pos !== 'GK' && (side.energy[x.id] ?? 100) < 62)
+      .filter((x) => x.id && roles[x.i] !== 'GK' && (side.energy[x.id] ?? 100) < 62)
       .sort((a, b) => (side.energy[a.id] ?? 100) - (side.energy[b.id] ?? 100));
     const n = minute === 58 ? 1 : minute === 66 ? 2 : 1;
     for (const t of tired.slice(0, n)) if (canSub(side)) bestSubFor(state, m, key, t.id);
@@ -473,7 +528,7 @@ function bestSubFor(state: GameState, m: LiveMatch, key: SideKey, outId: string)
   const side = m[key];
   const idx = side.lineup.indexOf(outId);
   if (idx < 0) return;
-  const pos = FORMATIONS[side.formation][idx].pos;
+  const pos = sideRoles(side)[idx];
   const cand = side.bench
     .map((id) => state.players[id])
     .filter((p): p is Player => !!p && (pos === 'GK') === (p.position === 'GK'))
@@ -484,6 +539,7 @@ function bestSubFor(state: GameState, m: LiveMatch, key: SideKey, outId: string)
 /** 試合を最後まで自動で進める */
 export function simulateToEnd(state: GameState, m: LiveMatch) {
   while (!m.finished) {
+    if (m.halfTime) startSecondHalf(m);
     stepMinute(state, m);
     // ユーザー側の負傷も自動で対応（観戦しない試合など）
     if (m.attention) {

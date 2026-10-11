@@ -1,14 +1,16 @@
 import { overall } from './stats';
 import type { Player, Team } from './types';
 
-/** お金はすべて「百万ユーロ」単位 */
+/** 内部の金額は「百万ユーロ」単位。表示は円（1ユーロ=160円換算）に統一する */
+export const YEN_PER_UNIT = 1.6e8;
+
 export function fmtMoney(v: number): string {
   const sign = v < 0 ? '-' : '';
-  const a = Math.abs(v);
-  if (a >= 100) return `${sign}€${a.toFixed(0)}M`;
-  if (a >= 10) return `${sign}€${a.toFixed(1)}M`;
-  if (a >= 1) return `${sign}€${a.toFixed(2)}M`;
-  return `${sign}€${Math.round(a * 1000)}K`;
+  const oku = (Math.abs(v) * YEN_PER_UNIT) / 1e8;
+  if (oku >= 100) return `${sign}￥${Math.round(oku).toLocaleString('ja-JP')}億`;
+  if (oku >= 10) return `${sign}￥${oku.toFixed(1)}億`;
+  if (oku >= 1) return `${sign}￥${oku.toFixed(2)}億`;
+  return `${sign}￥${Math.round(oku * 10000).toLocaleString('ja-JP')}万`;
 }
 
 export function round2(v: number): number {

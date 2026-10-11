@@ -9,7 +9,7 @@ import { acceptOffer, payrollInfo, rejectOffer } from '../game/transfer';
 import { POSITIONS, type Position } from '../game/types';
 import { useGame } from '../store';
 
-type Tab = 'search' | 'offers' | 'mine';
+type Tab = 'search' | 'watch' | 'offers' | 'mine';
 type League = 'all' | 'PL' | 'EU' | 'free';
 type Sort = 'ovr' | 'value' | 'age';
 
@@ -26,7 +26,12 @@ export function Transfer() {
   const { total, cap } = payrollInfo(state);
 
   const list = useMemo(() => {
-    let ps = tab === 'mine' ? squadOf(state, state.userTeamId) : Object.values(state.players).filter((p) => p.teamId !== state.userTeamId);
+    let ps =
+      tab === 'mine'
+        ? squadOf(state, state.userTeamId)
+        : tab === 'watch'
+          ? (state.watchlist ?? []).map((id) => state.players[id]).filter(Boolean)
+          : Object.values(state.players).filter((p) => p.teamId !== state.userTeamId);
     if (tab === 'search') {
       if (league === 'free') ps = ps.filter((p) => !p.teamId);
       else if (league !== 'all') ps = ps.filter((p) => p.teamId && teams[p.teamId]?.league === league);
@@ -36,6 +41,7 @@ export function Transfer() {
         ps = ps.filter((p) => p.name.toLowerCase().includes(s) || p.nameEn.toLowerCase().includes(s) || (p.teamId && teams[p.teamId]?.name.includes(q.trim())));
       }
     }
+    if (tab === 'watch') ps = [...ps];
     if (pos !== 'ALL') ps = ps.filter((p) => p.position === pos);
     const key = (p: (typeof ps)[number]) => (sort === 'ovr' ? -overall(p) : sort === 'value' ? -marketValue(p) : p.age);
     return ps.sort((a, b) => key(a) - key(b)).slice(0, 100);
@@ -56,6 +62,7 @@ export function Transfer() {
         onChange={setTab}
         options={[
           { v: 'search', label: '選手を探す' },
+          { v: 'watch', label: `マイリスト${state.watchlist?.length ? `(${state.watchlist.length})` : ''}` },
           { v: 'offers', label: `オファー${state.offers.length ? `(${state.offers.length})` : ''}` },
           { v: 'mine', label: '自クラブ' },
         ]}
@@ -115,6 +122,7 @@ export function Transfer() {
               />
             </>
           )}
+          {tab === 'watch' && <p className="hint">選手詳細の ☆ を押すとマイリストに追加できます。</p>}
           {tab === 'mine' && (
             <p className="hint">
               年俸総額 {fmtMoney(total)} / 上限 {fmtMoney(cap)}。選手をタップすると契約延長・売却・契約解除ができます。
@@ -144,7 +152,7 @@ export function Transfer() {
                 sub={
                   tab === 'mine'
                     ? `${p.age}歳 · 年俸${fmtMoney(p.salary)} · 契約残り${p.contractYears}年`
-                    : `${p.age}歳 · ${p.teamId ? teamById(state, p.teamId).short : 'フリー'} · ${fmtMoney(marketValue(p))}`
+                    : `${p.age}歳 · ${p.teamId ? teamById(state, p.teamId).name : 'フリー'} · ${fmtMoney(marketValue(p))}`
                 }
                 right={
                   <>

@@ -1,6 +1,6 @@
 import { LineupBoard } from '../components/LineupBoard';
-import { Crest, Seg } from '../components/ui';
-import { available, moveInTeam, repairLineup, setAutoLineup, squadOf } from '../game/lineup';
+import { Crest, Seg, SpiritGauge } from '../components/ui';
+import { applyFormation, available, moveInTeam, moveSlot, repairLineup, setAutoLineup, spiritPreview, squadOf } from '../game/lineup';
 import { FORMATION_LIST } from '../game/positions';
 import { teamById, today, userFixture } from '../game/season';
 import { overall } from '../game/stats';
@@ -37,7 +37,7 @@ export function Squad(props: { mode?: 'squad' | 'prematch'; onKickoff?: () => vo
           <div className="grow">
             <small className="muted">{today(state).label}</small>
             <div className="row gap">
-              <Crest team={team} size={26} /> <b>{team.short}</b> <span className="muted">vs</span> <Crest team={opp} size={26} /> <b>{opp.short}</b>
+              <Crest team={team} size={24} /> <b className="small">{team.name}</b> <span className="muted">vs</span> <Crest team={opp} size={24} /> <b className="small">{opp.name}</b>
             </div>
           </div>
         </div>
@@ -52,16 +52,18 @@ export function Squad(props: { mode?: 'squad' | 'prematch'; onKickoff?: () => vo
 
       <Seg
         scroll
-        value={team.formation}
-        options={FORMATION_LIST.map((f) => ({ v: f, label: f }))}
+        value={team.formation as Formation}
+        options={[...FORMATION_LIST.map((f) => ({ v: f, label: f })), ...(team.formation === 'カスタム' ? [{ v: 'カスタム' as Formation, label: 'カスタム' }] : [])]}
         onChange={(f: Formation) =>
           update((d) => {
+            if ((f as string) === 'カスタム') return;
             const t = teamById(d, d.userTeamId);
-            t.formation = f;
+            applyFormation(t, f);
             repairLineup(d, t);
           })
         }
       />
+      <SpiritGauge v={prematch ? spiritPreview(team) : team.spirit} />
       <div className="row gap">
         <span className="muted small">作戦</span>
         <Seg
@@ -87,12 +89,13 @@ export function Squad(props: { mode?: 'squad' | 'prematch'; onKickoff?: () => vo
 
       <LineupBoard
         team={team}
-        formation={team.formation}
+        slots={team.slots}
         lineup={team.lineup}
         bench={team.bench}
         reserves={reserves}
         players={state.players}
         onMove={(a, b) => update((d) => moveInTeam(teamById(d, d.userTeamId), a, b))}
+        onSlotMove={(i, x, y) => update((d) => moveSlot(teamById(d, d.userTeamId), i, x, y))}
         onDetail={openPlayer}
       />
 

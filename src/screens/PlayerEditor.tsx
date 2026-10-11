@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Avatar, HAIR_COLOR_LABEL, HAIR_COLORS, HAIR_STYLE_LABEL, SKIN_LABEL, SKINS } from '../components/Avatar';
+import { Avatar } from '../components/Avatar';
 import { Heatmap } from '../components/Heatmap';
 import { Ovr, Seg, Sheet, statColor } from '../components/ui';
 import { generatePlayer } from '../game/data';
 import { fairSalary } from '../game/economy';
 import { repairLineup, squadOf } from '../game/lineup';
 import { teamById } from '../game/season';
-import { GK_KEYS, overallFor, SKILLS, STAT_GROUPS, STAT_KEYS, STAT_LABEL, STYLES } from '../game/stats';
+import { GK_KEYS, overallFor, SKILL_CAT_LABEL, SKILLS, STAT_GROUPS, STAT_KEYS, STAT_LABEL, STYLES, type SkillCat } from '../game/stats';
+import { AppearanceFields } from './AppearanceEditor';
 import { MIN_SQUAD } from '../game/transfer';
 import { POSITIONS, type GrowthType, type Player, type Position, type StatKey } from '../game/types';
 import { useGame } from '../store';
@@ -181,9 +182,7 @@ export function PlayerEditor({ id, onClose }: { id: string | 'new'; onClose: () 
           <Level label="コンディション安定度" value={p.traits.form} max={8} onChange={(v) => set('traits', { ...p.traits, form: v })} />
           <Level label="ケガ耐性" value={p.traits.injuryRes} max={3} onChange={(v) => set('traits', { ...p.traits, injuryRes: v })} />
           <h4>見た目</h4>
-          <Picker label="肌" options={SKIN_LABEL} colors={SKINS} value={p.appearance?.skin ?? 0} onChange={(v) => set('appearance', { ...(p.appearance ?? { skin: 0, hairStyle: 1, hairColor: 0 }), skin: v })} />
-          <Picker label="髪型" options={HAIR_STYLE_LABEL} value={p.appearance?.hairStyle ?? 1} onChange={(v) => set('appearance', { ...(p.appearance ?? { skin: 0, hairStyle: 1, hairColor: 0 }), hairStyle: v })} />
-          <Picker label="髪色" options={HAIR_COLOR_LABEL} colors={HAIR_COLORS} value={p.appearance?.hairColor ?? 0} onChange={(v) => set('appearance', { ...(p.appearance ?? { skin: 0, hairStyle: 1, hairColor: 0 }), hairColor: v })} />
+          <AppearanceFields a={p.appearance} onChange={(a) => set('appearance', a)} />
         </>
       )}
 
@@ -238,9 +237,9 @@ export function PlayerEditor({ id, onClose }: { id: string | 'new'; onClose: () 
           <p className="hint">
             特殊スキルは最大{MAX_SKILLS}個まで（{p.skills.length}/{MAX_SKILLS}）。試合中のシュートやパス、守備に効果があります。
           </p>
-          {(['dribble', 'shoot', 'pass', 'defense', 'gk', 'other'] as const).map((cat) => (
+          {(Object.keys(SKILL_CAT_LABEL) as SkillCat[]).map((cat) => (
             <div key={cat}>
-              <h4>{{ dribble: 'ドリブル', shoot: 'シュート', pass: 'パス', defense: '守備', gk: 'GK', other: 'その他' }[cat]}</h4>
+              <h4>{SKILL_CAT_LABEL[cat]}</h4>
               <div className="skills">
                 {SKILLS.filter((s) => s.cat === cat).map((s) => {
                   const on = p.skills.includes(s.id);
@@ -287,22 +286,6 @@ function Level({ label, value, max, onChange }: { label: string; value: number; 
         ))}
       </div>
       <b>{value}</b>
-    </div>
-  );
-}
-
-function Picker(props: { label: string; options: string[]; colors?: string[]; value: number; onChange: (v: number) => void }) {
-  return (
-    <div className="field">
-      <span>{props.label}</span>
-      <div className="seg scroll small">
-        {props.options.map((o, i) => (
-          <button key={o} className={props.value === i ? 'on' : ''} onClick={() => props.onChange(i)}>
-            {props.colors && <i className="swatch" style={{ background: props.colors[i] }} />}
-            {o}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }

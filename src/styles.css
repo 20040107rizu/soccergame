@@ -1666,3 +1666,352 @@ h4 {
 .prematch-actions .btn {
   white-space: nowrap;
 }
+
+/* ===================== v0.3 ===================== */
+.help-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--accent);
+  font-weight: 900;
+  flex: none;
+}
+.topbar-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+.tab-icon {
+  position: relative;
+}
+.tab-badge {
+  position: absolute;
+  top: -6px;
+  right: -14px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: #e5484d;
+  color: #fff;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 17px;
+  text-align: center;
+}
+
+/* drag & pitch aptitude overlay */
+.pitch {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.pitch-player {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+  z-index: 2;
+  transition: background 0.15s;
+}
+.pitch-player.dragging {
+  z-index: 5;
+  cursor: grabbing;
+  transform: translateX(-50%) scale(1.1);
+  filter: drop-shadow(0 4px 8px #000a);
+}
+.apt-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.apt-zone {
+  position: absolute;
+  border-radius: 8px;
+  border: 1px solid #ffffff22;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  line-height: 1.1;
+}
+.apt-zone span {
+  font-size: 9px;
+  font-weight: 700;
+  color: #ffffffcc;
+}
+.apt-zone b {
+  font-size: 15px;
+  font-weight: 900;
+  text-shadow: 0 1px 2px #000;
+}
+.apt-zone.cur {
+  outline: 2px solid #fff;
+  border-color: #fff;
+}
+.mujirushi {
+  font-size: 9px;
+  background: #fff;
+  color: #333;
+  border-radius: 4px;
+  padding: 0 4px;
+  font-weight: 800;
+}
+.pp-energy {
+  display: block;
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: #0007;
+  overflow: hidden;
+  margin-top: 1px;
+}
+.pp-energy i {
+  display: block;
+  height: 100%;
+}
+.badge-supersub {
+  font-size: 10px;
+  font-weight: 900;
+  color: #1a1400;
+  background: linear-gradient(90deg, #ffd34d, #ff9f1c);
+  border-radius: 6px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+/* team spirit */
+.spirit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.spirit > span {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.spirit-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: #0006;
+  overflow: hidden;
+}
+.spirit-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+.spirit b {
+  min-width: 22px;
+  text-align: right;
+  font-size: 15px;
+}
+.card.tight {
+  padding: 8px 12px;
+}
+
+/* match */
+.half-start {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+  padding: 16px;
+  text-align: center;
+}
+.sb-name {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-all;
+}
+.vs-name {
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.2;
+}
+.tname {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* inbox */
+.inbox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mail-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  text-align: left;
+  color: var(--text);
+  width: 100%;
+}
+.mail-row.unread {
+  background: var(--card2);
+  border-color: #ffd34d66;
+}
+.mail-row.important {
+  border-left: 4px solid #e5484d;
+}
+.mail-icon {
+  font-size: 22px;
+  flex: none;
+}
+.mail-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.mail-main small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.mail-main b {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mail-row:not(.unread) .mail-main b {
+  font-weight: 500;
+}
+.dot-unread {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: none;
+}
+.unread-pill {
+  font-size: 11px;
+  background: #e5484d;
+  color: #fff;
+  border-radius: 10px;
+  padding: 1px 8px;
+  margin-left: 6px;
+  font-weight: 800;
+}
+.mail-view {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mail-view h3 {
+  font-size: 17px;
+}
+.mail-body {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  font-size: 14px;
+  background: var(--card);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+/* help */
+.help {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.help section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.help h3 {
+  font-size: 15px;
+  color: var(--accent);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 4px;
+}
+.help-item {
+  background: var(--card);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.help-item p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #d5eee0;
+}
+.help-pos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* player detail */
+.star-btn {
+  font-size: 26px;
+  color: var(--muted);
+  line-height: 1;
+  padding: 4px;
+}
+.star-btn.on {
+  color: var(--accent);
+}
+.skill.on {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.skill-desc {
+  font-size: 12px;
+  line-height: 1.6;
+  background: var(--card);
+  border-radius: 10px;
+  padding: 8px 10px;
+  color: #d5eee0;
+}
+.pitch-player .pp-name {
+  font-size: 9.5px;
+  line-height: 1.15;
+  white-space: normal;
+  text-align: center;
+  max-width: 76px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-all;
+}
+.apt-zone {
+  justify-content: flex-start;
+  align-items: flex-start;
+  flex-direction: row;
+  gap: 4px;
+  padding: 2px 5px;
+}
+.apt-zone span {
+  line-height: 17px;
+}

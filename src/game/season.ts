@@ -1,9 +1,10 @@
 import { CL_2026, EU_SEEDS, emptyStats, generateOriginalSquad, generatePlayer, PL_SEEDS, playerFromSeed, teamFromSeed } from './data';
-import { CL_STAGE_PRIZE, fairSalary, leaguePrize, marketValue, MATCH_PRIZE, payroll, round2, wageCap } from './economy';
+import { CL_STAGE_PRIZE, fairSalary, fmtMoney as fmtYen, leaguePrize, marketValue, MATCH_PRIZE, payroll, round2, wageCap } from './economy';
 import { advanceCL, buildCalendar, clLeagueFixtures, plFixtures, plTable, resolveTie, stageComplete, STAGE_LABEL, windowStatus } from './competitions';
-import { createMatch, simulateToEnd, sidePower, type LiveMatch } from './engine';
-import { autoLineup, available, repairLineup, setAutoLineup, squadOf } from './lineup';
-import { FORMATION_LIST, FORMATIONS } from './positions';
+import { createMatch, sideRoles, simulateToEnd, sidePower, type LiveMatch } from './engine';
+import { mailBestEleven, mailCompetition, mailContractAdvice, mailGrowth, mailInjury, mailPlayerFeelings, mailRedCard, mailScoutAdvice, mailTacticAdvice, mailWindow, sendMail, tryAptitudeGain, tryNewSkill } from './mail';
+import { applyFormation, autoLineup, available, repairLineup, setAutoLineup, squadOf, updateSpirit } from './lineup';
+import { FORMATION_LIST, FORMATIONS, rolesOf } from './positions';
 import { clamp, pick, rand, randInt, uid } from './rng';
 import { overall, OVR_WEIGHTS, STAT_KEYS, ratingAt } from './stats';
 import type { CLStage, Condition, Fixture, Formation, GameState, Player, Position, StatKey, Team } from './types';
@@ -54,6 +55,8 @@ export function newGame(managerName: string, userTeamId: string, original?: Orig
       formation: '4-3-3',
       tactic: 'balance',
       lineup: [],
+      slots: FORMATIONS['4-3-3'].map((x) => ({ ...x })),
+      spirit: 70,
       bench: [],
       budget: 0,
       original: true,
@@ -67,7 +70,7 @@ export function newGame(managerName: string, userTeamId: string, original?: Orig
   }
 
   const state: GameState = {
-    version: 2,
+    version: 3,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     managerName,
@@ -84,6 +87,8 @@ export function newGame(managerName: string, userTeamId: string, original?: Orig
     offers: [],
     negotiations: {},
     news: [],
+    mails: [],
+    watchlist: [],
     history: [],
   };
 
@@ -92,8 +97,10 @@ export function newGame(managerName: string, userTeamId: string, original?: Orig
     state.players[p.id] = p;
   }
   for (const t of teams) {
-    t.formation = bestFormation(state, t);
+    applyFormation(t, bestFormation(state, t));
     setAutoLineup(state, t);
+    t.lastLineup = [...t.lineup];
+    t.spirit = t.original ? 70 : 80;
   }
   setupFixtures(state);
   const user = teams.find((t) => t.id === userTeamId)!;
@@ -104,10 +111,19 @@ export function newGame(managerName: string, userTeamId: string, original?: Orig
     kind: 'info',
     text: `${managerName}監督が${user.name}の監督に就任。マスターリーグ 2026-27 シーズン開幕！`,
   });
+  sendMail(state, {
+    from: 'board',
+    sender: `${user.name} 会長`,
+    subject: 'ようこそ、監督',
+    body: `${managerName}監督、${user.name}へようこそ。\n\n今シーズンの移籍資金は ${fmtYen(state.money)} です。夏の移籍市場は第4節の前まで開いています。\nクラブの未来をあなたに託します。`,
+    important: true,
+  });
+  mailWindow(state, true);
+  mailScoutAdvice(state);
   return state;
 }
 
-const FA_POSITIONS: Position[] = ['GK', 'CB', 'CB', 'LB', 'RB', 'DMF', 'CMF', 'CMF', 'AMF', 'LMF', 'RMF', 'LWF', 'RWF', 'CF', 'CF'];
+const FA_POSITIONS: Position[] = ['GK', 'CB', 'CB', 'LSB', 'RSB', 'DMF', 'CMF', 'CMF', 'OMF', 'LMF', 'RMF', 'LWG', 'RWG', 'CF', 'CF'];
 
 function setupFixtures(state: GameState) {
   const plIds = state.teams.filter((t) => t.league === 'PL').map((t) => t.id);
@@ -120,19 +136,15 @@ export function bestFormation(state: GameState, team: Team): Formation {
   let best: Formation = '4-3-3';
   let bestV = -1;
   for (const f of FORMATION_LIST) {
-    const { lineup } = autoLineup(squad, f);
-    const slots = lineup.map((id) => state.players[id]);
-    const v = slots.reduce((s, p, i) => s + (p ? ratingAt(p, formationPos(f, i)) : 0), 0);
+    const roles = rolesOf(FORMATIONS[f]);
+    const { lineup } = autoLineup(squad, roles);
+    const v = lineup.reduce((s, id, i) => s + (state.players[id] ? ratingAt(state.players[id], roles[i]) : 0), 0);
     if (v > bestV) {
       bestV = v;
       best = f;
     }
   }
   return best;
-}
-
-function formationPos(f: Formation, i: number): Position {
-  return FORMATIONS[f][i].pos;
 }
 
 /* ---------------- 日程の参照 ---------------- */
@@ -209,7 +221,9 @@ export function playDay(state: GameState, userMatch?: LiveMatch): DayReport {
   }
 
   // 移籍期間中の CPU からのオファーと補強
+  const wasOpen = windowStatus(state).open;
   aiTransferActivity(state);
+  periodicMails(state, day, wasOpen);
 
   state.day++;
   state.updatedAt = Date.now();
@@ -234,9 +248,36 @@ function userResultNews(state: GameState, f: Fixture, m: LiveMatch) {
     season: state.season,
     day: state.day,
     kind: 'match',
-    text: `${label} ${gf > ga ? '勝利' : gf === ga ? '引き分け' : '敗戦'}${scorers.length ? `（得点：${scorers.join('、')}）` : ''} 賞金 +€${prize}M`,
+    text: `${label} ${gf > ga ? '勝利' : gf === ga ? '引き分け' : '敗戦'}${scorers.length ? `（得点：${scorers.join('、')}）` : ''} 賞金 +${fmtYen(prize)}`,
   });
   return { gf, ga, prize, label };
+}
+
+/** 節の進行に合わせて届くメール */
+function periodicMails(state: GameState, day: { type: string; round: number }, wasOpen: boolean) {
+  const nextDay = state.calendar[state.day + 1];
+  const nextRound = nextDay?.type === 'PL' ? nextDay.round : -1;
+  if (day.type === 'PL') {
+    const r = day.round + 1;
+    if (r % 5 === 0) mailBestEleven(state, `第${r - 4}〜${r}節`);
+    if (r % 6 === 3) mailTacticAdvice(state);
+    if (r % 7 === 4) mailPlayerFeelings(state);
+    if (r === 19) mailContractAdvice(state);
+  }
+  // 移籍市場の開閉
+  state.flags = state.flags ?? {};
+  const next = windowStatus({ ...state, day: state.day + 1 } as GameState);
+  if (!wasOpen && next.open) {
+    state.day++;
+    mailWindow(state, true);
+    mailScoutAdvice(state);
+    state.day--;
+  }
+  const key = `close-${state.season}-${next.label}`;
+  if (next.open && next.remaining === 1 && nextRound >= 0 && !state.flags[key]) {
+    state.flags[key] = true;
+    mailWindow(state, false);
+  }
 }
 
 function progressCL(state: GameState, stage: CLStage, leg?: 1 | 2) {
@@ -256,6 +297,7 @@ function progressCL(state: GameState, stage: CLStage, leg?: 1 | 2) {
     const tie = state.ties.find((t) => t.stage === 'F')!;
     const winner = teamById(state, tie.winner!);
     state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'info', text: `🏆 チャンピオンズリーグ優勝は${winner.name}！` });
+    mailCompetition(state, `🏆 チャンピオンズリーグ優勝は${winner.name}`, tie.winner === user ? `おめでとうございます！ ${winner.name}がヨーロッパの頂点に立ちました！\n優勝賞金 ${fmtYen(CL_STAGE_PRIZE.win)} を獲得しました。` : `今季のチャンピオンズリーグは${winner.name}の優勝で幕を閉じました。`);
     if (tie.winner === user) state.money = round2(state.money + CL_STAGE_PRIZE.win);
     return;
   }
@@ -267,9 +309,13 @@ function progressCL(state: GameState, stage: CLStage, leg?: 1 | 2) {
     if (inNext) {
       const prize = (CL_STAGE_PRIZE as Record<string, number>)[next] ?? 0;
       state.money = round2(state.money + prize);
-      state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'info', text: `CL ${STAGE_LABEL[next]}進出！${prize ? ` 賞金 +€${prize}M` : ''}` });
+      state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'info', text: `CL ${STAGE_LABEL[next]}進出！${prize ? ` 賞金 +${fmtYen(prize)}` : ''}` });
+      const tie = state.ties.find((t) => t.stage === next && (t.a === user || t.b === user));
+      const opp = tie ? teamById(state, tie.a === user ? tie.b : tie.a).name : '';
+      mailCompetition(state, `【CL】${STAGE_LABEL[next]}進出！`, `チャンピオンズリーグ ${STAGE_LABEL[next]}への進出が決まりました。\n対戦相手：${opp}${prize ? `\nステージ賞金 ${fmtYen(prize)} を獲得しました。` : ''}`);
     } else {
       state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'info', text: `CL ${STAGE_LABEL[stage]}で敗退…` });
+      mailCompetition(state, `【CL】${STAGE_LABEL[stage]}で敗退`, `チャンピオンズリーグは${STAGE_LABEL[stage]}で敗退となりました。\n来季、再びこの舞台に戻ってきましょう。`);
     }
   }
 }
@@ -282,27 +328,47 @@ function applyMatch(state: GameState, f: Fixture, m: LiveMatch) {
     const team = teamById(state, side.teamId);
     // 出場停止の消化（この試合に出られなかった選手）
     for (const p of squadOf(state, team.id)) if (p.suspension > 0) p.suspension--;
+    const mine = team.id === state.userTeamId;
+    const roles = sideRoles(side);
     for (const id of side.usedPlayers) {
       const p = state.players[id];
       if (!p) continue;
       if (isCL) p.season.clApps++;
-      else p.season.apps++;
+      else {
+        p.season.apps++;
+        p.ratingSum = (p.ratingSum ?? 0) + (m.ratings[id] ?? 6);
+      }
       p.career.apps++;
       const r = m.ratings[id] ?? 6;
-      if (p.age <= 25 && overall(p) < p.potential && rand() < (r >= 7 ? 0.3 : 0.12)) bumpStats(p, 1);
+      const before = overall(p);
+      if (p.age <= 25 && before < p.potential && rand() < (r >= 7 ? 0.3 : 0.12)) bumpStats(p, 1);
+      if (mine) {
+        // 急成長・新スキル・適性拡大
+        if (p.age <= 23 && r >= 7.5 && before < p.potential && rand() < 0.06) {
+          for (let i = 0; i < 6; i++) bumpStats(p, 1);
+          mailGrowth(state, p, before, overall(p), true);
+        } else if (overall(p) > before) {
+          mailGrowth(state, p, before, overall(p), false);
+        }
+        if (p.age <= 26 && r >= 8 && rand() < 0.05) tryNewSkill(state, p);
+      }
+      const idx = side.lineup.indexOf(id);
+      if (idx >= 0 && roles[idx]) tryAptitudeGain(state, p, roles[idx]);
     }
     for (const id of side.sentOff) {
       const p = state.players[id];
-      if (p) p.suspension = 1;
+      if (!p) continue;
+      p.suspension = 1;
+      if (mine) mailRedCard(state, p);
     }
     for (const id of side.injured) {
       const p = state.players[id];
       if (!p) continue;
       p.injury = randInt(1, 3) + randInt(0, 4 - p.traits.injuryRes) * 2;
-      if (team.id === state.userTeamId) {
-        state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'injury', text: `【負傷】${p.name}が負傷。全治 約${p.injury}試合` });
-      }
+      if (mine) mailInjury(state, p);
     }
+    // チームスピリット（試合で使ったスタメンを基準に）
+    updateSpirit(state, team);
   }
   for (const e of m.events) {
     if (e.type !== 'goal') continue;
@@ -358,8 +424,18 @@ function aiTransferActivity(state: GameState) {
       const buyer = buyers.length ? pick(buyers) : null;
       if (buyer) {
         const fee = round2(marketValue(target) * (0.85 + rand() * 0.4));
-        state.offers.push({ id: uid('o'), playerId: target.id, fromTeam: buyer.id, fee, day: state.day });
-        state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'transfer', text: `【オファー】${buyer.name}が${target.name}に €${fee}M のオファー` });
+        const offerId = uid('o');
+        state.offers.push({ id: offerId, playerId: target.id, fromTeam: buyer.id, fee, day: state.day });
+        state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'transfer', text: `【オファー】${buyer.name}が${target.name}に ${fmtYen(fee)} のオファー` });
+        sendMail(state, {
+          from: 'club',
+          sender: buyer.name,
+          subject: `【獲得オファー】${target.name}について`,
+          body: `${buyer.name}です。貴クラブの${target.name}選手の獲得を希望します。\n\n移籍金として ${fmtYen(fee)} を提示いたします。\n（市場価値 ${fmtYen(marketValue(target))}）\n\nご検討のほど、よろしくお願いいたします。`,
+          playerId: target.id,
+          offerId,
+          important: true,
+        });
       }
     }
   }
@@ -392,7 +468,7 @@ export function aiFillSquads(state: GameState) {
 }
 
 function neededPosition(squad: Player[]): Position {
-  const want: Partial<Record<Position, number>> = { GK: 2, CB: 4, LB: 2, RB: 2, DMF: 2, CMF: 3, AMF: 1, LWF: 1, RWF: 1, CF: 2 };
+  const want: Partial<Record<Position, number>> = { GK: 2, CB: 4, LSB: 2, RSB: 2, DMF: 2, CMF: 3, OMF: 1, LWG: 1, RWG: 1, CF: 2 };
   for (const p of squad) if (want[p.position] !== undefined) want[p.position]!--;
   return (Object.keys(want) as Position[]).sort((a, b) => want[b]! - want[a]!)[0];
 }
@@ -514,7 +590,7 @@ export function endSeason(state: GameState): SeasonSummary {
     season: state.season,
     day: 0,
     kind: 'info',
-    text: `シーズン${state.season - 1}終了：プレミアリーグ ${rank}位（優勝 ${champion}）。分配金 +€${prize.toFixed(1)}M${inCl ? ` / 来季CL出場（+€${CL_STAGE_PRIZE.start}M）` : ''}`,
+    text: `シーズン${state.season - 1}終了：プレミアリーグ ${rank}位（優勝 ${champion}）。分配金 +${fmtYen(prize)}${inCl ? ` / 来季CL出場（+${fmtYen(CL_STAGE_PRIZE.start)}）` : ''}`,
   });
   state.updatedAt = Date.now();
   return summary;
