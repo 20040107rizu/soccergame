@@ -3,7 +3,6 @@ import { Crest, PlayerRow, RepStars } from '../components/ui';
 import { fmtMoney } from '../game/economy';
 import { squadOf } from '../game/lineup';
 import { POSITIONS } from '../game/types';
-import { exportJson } from '../game/save';
 import { teamById, userPayroll } from '../game/season';
 import { MAX_SQUAD } from '../game/transfer';
 import { useGame } from '../store';
@@ -101,11 +100,8 @@ export function Club() {
 
       <h3 className="section-title">データ</h3>
       <div className="card">
-        <p className="hint">スロット{slot}に自動セーブされています。機種変更やバックアップには、ファイルに書き出してタイトル画面から読み込んでください。</p>
+        <p className="hint">💾 スロット{slot}に自動で保存されています（アプリの中に保存。操作するたびに保存されます）。</p>
         <div className="row gap wrap">
-          <button className="btn" onClick={() => download(`masterleague-slot${slot}-s${state.season}.json`, exportJson(state))}>
-            ファイルに書き出す
-          </button>
           <button className="btn ghost" onClick={quit}>
             タイトルへ戻る
           </button>
@@ -114,16 +110,4 @@ export function Club() {
       </div>
     </div>
   );
-}
-
-function download(name: string, text: string) {
-  const blob = new Blob([text], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

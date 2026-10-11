@@ -79,20 +79,6 @@ export function slotInfo(slot: Slot): SlotInfo | null {
   };
 }
 
-export function exportJson(state: GameState): string {
-  return JSON.stringify(state);
-}
-
-export function importJson(text: string): GameState {
-  const data = JSON.parse(text);
-  if (!data || !Array.isArray(data.teams) || typeof data.players !== 'object' || !data.userTeamId) {
-    throw new Error('セーブデータの形式が正しくありません');
-  }
-  const s = migrate(data);
-  if (!s) throw new Error('このセーブデータは古いバージョンのため読み込めません');
-  return s;
-}
-
 /**
  * 古いセーブを今のデータ構造に変換する。
  * アップデート（メンテナンス）でプレイ中のデータを消さないため、どの版のセーブも捨てずに補完する。

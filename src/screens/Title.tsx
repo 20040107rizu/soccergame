@@ -1,8 +1,8 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Crest, RepStars } from '../components/ui';
 import { PL_SEEDS, playerFromSeed, teamFromSeed } from '../game/data';
 import { fmtMoney } from '../game/economy';
-import { deleteGame, importJson, loadGame, saveGame, SLOTS, slotInfo, type Slot } from '../game/save';
+import { deleteGame, loadGame, saveGame, SLOTS, slotInfo, type Slot } from '../game/save';
 import { newGame } from '../game/season';
 import { overall } from '../game/stats';
 import type { GameState } from '../game/types';
@@ -18,7 +18,6 @@ export function Title({ onStart }: { onStart: (s: GameState, slot: Slot, firstRu
   const [orig, setOrig] = useState({ name: 'FCマスターズ', short: 'FCM', color: '#0f766e', color2: '#fde047', replaces: 'hul' });
   const [busy, setBusy] = useState(false);
   const [, force] = useState(0);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const clubs = useMemo(
     () =>
@@ -208,30 +207,7 @@ export function Title({ onStart }: { onStart: (s: GameState, slot: Slot, firstRu
         })}
       </div>
 
-      <button className="btn ghost" onClick={() => fileRef.current?.click()}>
-        ファイルから読み込む
-      </button>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="application/json,.json"
-        hidden
-        onChange={async (e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          try {
-            const g = importJson(await f.text());
-            const free = SLOTS.find((s) => !slotInfo(s)) ?? 1;
-            if (slotInfo(free) && !confirm(`スロット${free}に上書きして読み込みます。よろしいですか？`)) return;
-            saveGame(free, g);
-            onStart(g, free);
-          } catch (err) {
-            alert((err as Error).message);
-          } finally {
-            e.target.value = '';
-          }
-        }}
-      />
+      <p className="hint center">💾 セーブはこのアプリの中に自動で保存されます。</p>
       <p className="hint center">
         選手データは 2026-27 シーズン開幕時点の所属をもとにしています。能力値は推定値です。
       </p>

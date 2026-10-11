@@ -3,9 +3,14 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.6.2';
+export const APP_VERSION = '0.6.3';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.6.3',
+    date: '2026-10-11',
+    items: ['セーブはアプリの中だけに自動保存するようにしました（ファイルへの書き出し・読み込みを廃止）'],
+  },
   {
     version: '0.6.2',
     date: '2026-10-11',
