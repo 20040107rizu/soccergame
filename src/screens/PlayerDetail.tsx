@@ -6,6 +6,8 @@ import { fmtMoney, marketValue } from '../game/economy';
 import { teamById } from '../game/season';
 import { overall, SKILLS, STAT_GROUPS, STAT_LABEL, STYLES } from '../game/stats';
 import { AppearanceEditor } from './AppearanceEditor';
+import { LegendPanel } from './LegendPanel';
+import { LEGEND_LABEL } from '../game/legend';
 import { releaseCost, releasePlayer, renewContract, renewDemand, seekBuyer } from '../game/transfer';
 import { useGame } from '../store';
 
@@ -37,6 +39,7 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
             <PosTag pos={p.position} /> {p.age}歳 · {p.nationality} · {p.foot === 'R' ? '右足' : '左足'} · #{p.number}
           </div>
           <div className="pd-sub">{team ? team.name : 'フリー'}</div>
+          {p.legend && <span className="legend-badge">🌟 レジェンド・{LEGEND_LABEL[p.legend.kind]}</span>}
         </div>
         <button
           className={'star-btn' + ((state.watchlist ?? []).includes(p.id) ? ' on' : '')}
@@ -179,7 +182,8 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
       )}
 
       <div className="pd-actions">
-        {!mine && (
+        {p.legend && !p.teamId && <LegendPanel playerId={p.id} onDone={onClose} />}
+        {!mine && !(p.legend && !p.teamId) && (
           <button
             className="btn primary"
             disabled={!w.open}

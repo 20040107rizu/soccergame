@@ -8,6 +8,7 @@ import { overall } from '../game/stats';
 import { acceptOffer, payrollInfo, rejectOffer } from '../game/transfer';
 import { POSITIONS, type Position } from '../game/types';
 import { useGame } from '../store';
+import { OfferNegotiation } from './OfferNegotiation';
 
 type Tab = 'search' | 'watch' | 'offers' | 'mine';
 type League = 'all' | 'PL' | 'EU' | 'free';
@@ -21,6 +22,7 @@ export function Transfer() {
   const [sort, setSort] = useState<Sort>('ovr');
   const [q, setQ] = useState('');
   const [affordable, setAffordable] = useState(false);
+  const [nego, setNego] = useState<string | null>(null);
   const w = windowStatus(state);
   const teams = useMemo(() => Object.fromEntries(state.teams.map((t) => [t.id, t])), [state.teams]);
   const { total, cap } = payrollInfo(state);
@@ -31,7 +33,7 @@ export function Transfer() {
         ? squadOf(state, state.userTeamId)
         : tab === 'watch'
           ? (state.watchlist ?? []).map((id) => state.players[id]).filter(Boolean)
-          : Object.values(state.players).filter((p) => p.teamId !== state.userTeamId);
+          : Object.values(state.players).filter((p) => p.teamId !== state.userTeamId && !(p.legend && !p.teamId));
     if (tab === 'search') {
       if (league === 'free') ps = ps.filter((p) => !p.teamId);
       else if (league !== 'all') ps = ps.filter((p) => p.teamId && teams[p.teamId]?.league === league);
@@ -81,12 +83,16 @@ export function Transfer() {
                 <div className="row between">
                   <span>
                     {from?.name}から <b>{fmtMoney(o.fee)}</b>
+                    {o.agreed && <span className="chip accent">合意済み</span>}
                     <small className="muted">（市場価値 {fmtMoney(marketValue(p))}）</small>
                   </span>
                 </div>
                 <div className="row gap">
                   <button className="btn ghost grow" onClick={() => update((d) => rejectOffer(d, o.id))}>
                     断る
+                  </button>
+                  <button className="btn grow" onClick={() => setNego(o.id)}>
+                    交渉する
                   </button>
                   <button
                     className="btn primary grow"
@@ -165,6 +171,7 @@ export function Transfer() {
           </div>
         </>
       )}
+      {nego && <OfferNegotiation offerId={nego} onClose={() => setNego(null)} />}
     </div>
   );
 }

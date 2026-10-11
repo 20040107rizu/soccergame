@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import type { Loc } from '../game/lineup';
 import { POS_ZONE, posFromXY } from '../game/positions';
 import { overall, ratingAt, styleActive } from '../game/stats';
@@ -9,13 +9,34 @@ import { CondArrow, PlayerIcon, PosTag, statColor } from './ui';
 const toBottom = (y: number) => 2 + y * 0.86;
 const fromBottom = (b: number) => (b - 2) / 0.86;
 
+/** この時間押さえるとドラッグできる（それより早く縦に動かすと画面スクロール） */
+const HOLD_MS = 200;
+/** 長押しで選手詳細 */
+const LONG_MS = 550;
+
+type Press = {
+  i: number;
+  id: string;
+  pointerId: number;
+  cx: number;
+  cy: number;
+  armed: boolean;
+  moved: boolean;
+  long: boolean;
+  timers: number[];
+  /** 指の位置と選手の基準点（足元）のずれ */
+  off: { x: number; y: number };
+};
+
 const APT_COLOR = ['rgba(255,255,255,0.05)', 'rgba(47,158,106,0.55)', 'rgba(242,179,61,0.6)', 'rgba(229,72,77,0.65)'];
 
 /**
  * チーム編成ボード（チーム画面・試合前・試合中で共通）。
- * - 選手をドラッグすると、ピッチ上の好きな位置に配置できる（位置からポジションが決まる）
- * - 選手をタップすると選択され、ピッチ上に適性ポジションのヒートマップが重なる
- * - 選択中に別の選手をタップで入れ替え、同じ選手をもう一度タップで詳細
+ * - タップ：選択してピッチ上に適性ヒートマップを表示（同じ選手をもう一度タップで解除）
+ * - 長押し：選手詳細
+ * - 少し押さえてからスライド：好きな位置へ移動（他の選手に重ねて離すと位置を入れ替え）
+ *   すぐに縦へスライドした場合は画面のスクロールになる
+ * - ピッチの選手を選択中にベンチの選手をタップで交代
  */
 export function LineupBoard(props: {
   team: Team;
@@ -36,17 +57,126 @@ export function LineupBoard(props: {
   const { team, slots, lineup, bench, reserves, players, energy, injured, onMove, onSlotMove, onDetail } = props;
   const [sel, setSel] = useState<Loc | null>(null);
   const [drag, setDrag] = useState<{ i: number; x: number; y: number } | null>(null);
+  const [armedI, setArmedI] = useState<number | null>(null);
   const pitchRef = useRef<HTMLDivElement>(null);
-  const down = useRef<{ i: number; cx: number; cy: number; moved: boolean } | null>(null);
+  const press = useRef<Press | null>(null);
 
-  const tap = (loc: Loc, id: string) => {
+  // ドラッグ中だけ画面のスクロールを止める（非 passive で登録する必要がある）
+  useEffect(() => {
+    const el = pitchRef.current;
+    if (!el) return;
+    const h = (e: TouchEvent) => {
+      if (press.current?.armed) e.preventDefault();
+    };
+    el.addEventListener('touchmove', h, { passive: false });
+    return () => el.removeEventListener('touchmove', h);
+  }, []);
+
+  const tap = (loc: Loc) => {
     if (!sel) return setSel(loc);
-    if (sameLoc(sel, loc)) {
-      setSel(null);
-      return onDetail(id);
-    }
+    // 同じ選手をもう一度タップで解除
+    if (sameLoc(sel, loc)) return setSel(null);
+    // ピッチ同士は表示する選手の切り替え（入れ替えはドラッグで）
+    if (sel.kind === 'pitch' && loc.kind === 'pitch') return setSel(loc);
     onMove(sel, loc);
     setSel(null);
+  };
+
+  const anchorAt = (cx: number, cy: number, pr: Press) => {
+    const pt = toPitch(cx, cy);
+    return { x: Math.max(0, Math.min(100, pt.x - pr.off.x)), y: Math.max(0, Math.min(100, pt.y - pr.off.y)) };
+  };
+
+  const endPress = () => {
+    const pr = press.current;
+    if (pr) pr.timers.forEach((t) => clearTimeout(t));
+    press.current = null;
+    setArmedI(null);
+    return pr;
+  };
+
+  /** ドロップ位置に重なっている他の選手 */
+  const swapTargetAt = (pt: { x: number; y: number }, i: number): number => {
+    let best = -1;
+    let bestD = Infinity;
+    slots.forEach((s, j) => {
+      if (j === i || !players[lineup[j]]) return;
+      const dx = Math.abs(s.x - pt.x);
+      const dy = Math.abs(s.y - pt.y);
+      if (dx < 9 && dy < 7 && dx + dy < bestD) {
+        best = j;
+        bestD = dx + dy;
+      }
+    });
+    return best;
+  };
+
+  const onDown = (e: RPointerEvent<HTMLDivElement>, i: number, id: string) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    endPress();
+    const mouse = e.pointerType === 'mouse';
+    const at = toPitch(e.clientX, e.clientY);
+    const off = { x: at.x - slots[i].x, y: at.y - slots[i].y };
+    const pr: Press = { i, id, pointerId: e.pointerId, cx: e.clientX, cy: e.clientY, armed: mouse, moved: false, long: false, timers: [], off };
+    if (mouse) e.currentTarget.setPointerCapture?.(e.pointerId);
+    pr.timers.push(
+      window.setTimeout(() => {
+        if (press.current !== pr || pr.moved) return;
+        pr.armed = true;
+        setArmedI(i);
+      }, HOLD_MS),
+      window.setTimeout(() => {
+        if (press.current !== pr || pr.moved) return;
+        pr.long = true;
+        endPress();
+        setSel(null);
+        onDetail(id);
+      }, LONG_MS),
+    );
+    press.current = pr;
+  };
+
+  const onMoveP = (e: RPointerEvent<HTMLDivElement>) => {
+    const pr = press.current;
+    if (!pr || pr.pointerId !== e.pointerId) return;
+    const dx = e.clientX - pr.cx;
+    const dy = e.clientY - pr.cy;
+    if (!pr.moved && Math.hypot(dx, dy) < 8) return;
+    if (!pr.armed) {
+      // 押してすぐ縦に動かした → 画面スクロール。横方向ならドラッグ
+      if (Math.abs(dx) > Math.abs(dy) * 1.5) pr.armed = true;
+      else {
+        endPress();
+        return;
+      }
+    }
+    if (!pr.moved) {
+      pr.moved = true;
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    }
+    setDrag({ i: pr.i, ...anchorAt(e.clientX, e.clientY, pr) });
+  };
+
+  const onUp = (e: RPointerEvent<HTMLDivElement>) => {
+    const pr = press.current;
+    if (!pr || pr.pointerId !== e.pointerId) return;
+    endPress();
+    if (pr.long) return;
+    if (pr.moved) {
+      const pt = anchorAt(e.clientX, e.clientY, pr);
+      setDrag(null);
+      setSel(null);
+      const j = swapTargetAt(pt, pr.i);
+      if (j >= 0) onMove({ kind: 'pitch', i: pr.i }, { kind: 'pitch', i: j });
+      else onSlotMove(pr.i, pt.x, pt.y);
+      return;
+    }
+    tap({ kind: 'pitch', i: pr.i });
+  };
+
+  const onCancel = () => {
+    endPress();
+    setDrag(null);
   };
 
   const toPitch = (cx: number, cy: number) => {
@@ -60,6 +190,7 @@ export function LineupBoard(props: {
   const focusId = drag ? lineup[drag.i] : sel?.kind === 'pitch' ? lineup[sel.i] : sel ? sel.id : undefined;
   const focus = focusId ? players[focusId] : undefined;
   const dragRole = drag ? posFromXY(drag.x, drag.y) : null;
+  const swapJ = drag ? swapTargetAt(drag, drag.i) : -1;
   const selRole = sel?.kind === 'pitch' ? posFromXY(slots[sel.i].x, slots[sel.i].y) : null;
 
   return (
@@ -104,35 +235,13 @@ export function LineupBoard(props: {
           return (
             <div
               key={i}
-              className={'pitch-player' + (isSel ? ' sel' : '') + (isDrag ? ' dragging' : '')}
+              className={'pitch-player' + (isSel ? ' sel' : '') + (isDrag ? ' dragging' : armedI === i ? ' armed' : '') + (swapJ === i ? ' swap-target' : '')}
               style={{ left: `${x}%`, bottom: `${toBottom(y)}%` }}
-              onPointerDown={(e) => {
-                (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-                down.current = { i, cx: e.clientX, cy: e.clientY, moved: false };
-              }}
-              onPointerMove={(e) => {
-                const d = down.current;
-                if (!d || d.i !== i) return;
-                if (!d.moved && Math.hypot(e.clientX - d.cx, e.clientY - d.cy) < 8) return;
-                d.moved = true;
-                const pt = toPitch(e.clientX, e.clientY);
-                setDrag({ i, ...pt });
-              }}
-              onPointerUp={(e) => {
-                const d = down.current;
-                down.current = null;
-                if (!d) return;
-                if (d.moved) {
-                  const pt = toPitch(e.clientX, e.clientY);
-                  setDrag(null);
-                  setSel(null);
-                  onSlotMove(i, pt.x, pt.y);
-                } else tap({ kind: 'pitch', i }, p.id);
-              }}
-              onPointerCancel={() => {
-                down.current = null;
-                setDrag(null);
-              }}
+              onPointerDown={(e) => onDown(e, i, p.id)}
+              onPointerMove={onMoveP}
+              onPointerUp={onUp}
+              onPointerCancel={onCancel}
+              onContextMenu={(e) => e.preventDefault()}
             >
               <div className="pp-icon">
                 <PlayerIcon p={p} team={team} size={34} />
@@ -156,7 +265,9 @@ export function LineupBoard(props: {
         })}
       </div>
       <p className="hint center">
-        {sel ? '入れ替える選手をタップ（同じ選手をもう一度タップで詳細）' : props.hint ?? '選手をドラッグで好きな位置へ。タップで適性ポジションを表示'}
+        {sel
+          ? 'ベンチの選手をタップで交代 · 同じ選手をもう一度タップで解除'
+          : props.hint ?? 'タップで適性表示 · 長押しで詳細 · 少し押さえてからスライドで移動（他の選手に重ねると入れ替え）'}
       </p>
 
       <h3 className="section-title">
@@ -176,7 +287,8 @@ export function LineupBoard(props: {
               rating={selRole ? ratingAt(p, selRole) : undefined}
               ratingPos={selRole ?? undefined}
               energy={energy?.[id]}
-              onClick={() => tap({ kind: 'bench', id }, id)}
+              onClick={() => tap({ kind: 'bench', id })}
+              onLong={() => onDetail(id)}
             />
           );
         })}
@@ -197,7 +309,8 @@ export function LineupBoard(props: {
                   hl={!!sel && !(sel.kind === 'res' && sel.id === id)}
                   rating={selRole ? ratingAt(p, selRole) : undefined}
                   ratingPos={selRole ?? undefined}
-                  onClick={() => tap({ kind: 'res', id }, id)}
+                  onClick={() => tap({ kind: 'res', id })}
+                  onLong={() => onDetail(id)}
                 />
               );
             })}
@@ -213,11 +326,12 @@ function sameLoc(a: Loc, b: Loc) {
   return a.kind === 'pitch' ? a.i === (b as { i: number }).i : a.id === (b as { id: string }).id;
 }
 
-function BenchRow(props: { p: Player; team: Team; sel: boolean; hl: boolean; rating?: number; ratingPos?: string; energy?: number; onClick: () => void }) {
-  const { p, team, sel, hl, rating, ratingPos, energy, onClick } = props;
+function BenchRow(props: { p: Player; team: Team; sel: boolean; hl: boolean; rating?: number; ratingPos?: string; energy?: number; onClick: () => void; onLong: () => void }) {
+  const { p, team, sel, hl, rating, ratingPos, energy, onClick, onLong } = props;
   const ovr = overall(p);
+  const lp = useLongPress(onLong, onClick);
   return (
-    <button className={'bench-row' + (sel ? ' sel' : '') + (hl ? ' hl' : '')} onClick={onClick}>
+    <button className={'bench-row' + (sel ? ' sel' : '') + (hl ? ' hl' : '')} {...lp}>
       <PlayerIcon p={p} team={team} size={30} />
       <PosTag pos={p.position} />
       <span className="bench-name">
@@ -240,4 +354,37 @@ export function lastName(p: Player): string {
   const parts = p.name.split('・');
   const n = parts[parts.length - 1];
   return n.length > 8 ? n.slice(0, 8) : n;
+}
+
+/** 長押しとタップを区別する（長押しで詳細） */
+function useLongPress(onLong: () => void, onTap: () => void) {
+  const st = useRef<{ t: number; x: number; y: number; fired: boolean } | null>(null);
+  const clear = () => {
+    if (st.current) clearTimeout(st.current.t);
+  };
+  return {
+    onPointerDown: (e: RPointerEvent) => {
+      clear();
+      const s = { t: 0, x: e.clientX, y: e.clientY, fired: false };
+      s.t = window.setTimeout(() => {
+        s.fired = true;
+        onLong();
+      }, LONG_MS);
+      st.current = s;
+    },
+    onPointerMove: (e: RPointerEvent) => {
+      const s = st.current;
+      if (s && Math.hypot(e.clientX - s.x, e.clientY - s.y) > 8) clear();
+    },
+    onPointerUp: clear,
+    onPointerCancel: clear,
+    onPointerLeave: clear,
+    onContextMenu: (e: { preventDefault: () => void }) => e.preventDefault(),
+    onClick: () => {
+      const s = st.current;
+      st.current = null;
+      if (s?.fired) return;
+      onTap();
+    },
+  };
 }

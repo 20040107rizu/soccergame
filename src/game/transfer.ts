@@ -244,6 +244,56 @@ export function acceptOffer(state: GameState, offerId: string): Result {
   return { ok: true };
 }
 
+export interface OfferReply {
+  result: 'accept' | 'counter' | 'reject' | 'walkaway';
+  message: string;
+}
+
+/** 届いたオファーに対して、こちらから希望額を提示する */
+export function negotiateOffer(state: GameState, offerId: string, ask: number): OfferReply {
+  const o = state.offers.find((x) => x.id === offerId);
+  if (!o) return { result: 'walkaway', message: 'オファーはすでに取り下げられています' };
+  const buyer = teamById(state, o.fromTeam);
+  const p = state.players[o.playerId];
+  const max = o.maxFee ?? round2(o.fee * 1.2);
+  o.tries = (o.tries ?? 0) + 1;
+  ask = round2(ask);
+  if (ask <= o.fee) {
+    o.agreed = true;
+    return { result: 'accept', message: `${buyer.name}「もちろん、その条件で問題ない」` };
+  }
+  if (ask <= max) {
+    o.fee = ask;
+    o.agreed = true;
+    return { result: 'accept', message: `${buyer.name}「…いいだろう。${fmtMoney(ask)}で合意だ」` };
+  }
+  // 吹っかけすぎ・粘りすぎると交渉を打ち切られる
+  const over = ask / max;
+  if (o.tries >= MAX_TRIES || over > 1.6 || (over > 1.3 && Math.random() < 0.4)) {
+    state.offers = state.offers.filter((x) => x.id !== o.id);
+    return { result: 'walkaway', message: `${buyer.name}「その額は払えない。${p?.name ?? 'この選手'}の獲得は見送らせてもらう」交渉は決裂しました。` };
+  }
+  if (over <= 1.25) {
+    const counter = round2(o.fee + (max - o.fee) * (0.55 + Math.random() * 0.35));
+    o.fee = Math.max(o.fee, counter);
+    return { result: 'counter', message: `${buyer.name}「さすがにそこまでは出せない。${fmtMoney(o.fee)}まで上げよう」` };
+  }
+  return { result: 'reject', message: `${buyer.name}「高すぎる。考え直してほしい」（残り${MAX_TRIES - o.tries}回）` };
+}
+
+/** オファーに対する選手本人の気持ち */
+export function offerFeeling(state: GameState, offerId: string): string {
+  const o = state.offers.find((x) => x.id === offerId);
+  if (!o) return '';
+  const p = state.players[o.playerId];
+  const buyer = teamById(state, o.fromTeam);
+  const user = teamById(state, state.userTeamId);
+  const diff = buyer.rep - user.rep + (p.ambition - 50) * 0.2 - (p.loyalty - 50) * 0.3;
+  if (diff > 8) return `${p.name}は${buyer.name}への移籍に乗り気のようです`;
+  if (diff > -4) return `${p.name}はどちらでも構わないと考えているようです`;
+  return `${p.name}はクラブに残りたいと思っているようです`;
+}
+
 export function rejectOffer(state: GameState, offerId: string) {
   state.offers = state.offers.filter((x) => x.id !== offerId);
 }
@@ -258,7 +308,7 @@ export function seekBuyer(state: GameState, playerId: string): Result {
   if (!buyers.length) return { ok: false, message: '興味を示すクラブは見つかりませんでした' };
   const b = buyers[Math.floor(Math.random() * buyers.length)];
   const fee = round2(v * (0.7 + Math.random() * 0.3));
-  state.offers.push({ id: uid('o'), playerId, fromTeam: b.id, fee, day: state.day });
+  state.offers.push({ id: uid('o'), playerId, fromTeam: b.id, fee, day: state.day, maxFee: round2(fee * (1.05 + Math.random() * 0.3)), tries: 0 });
   return { ok: true, message: `${b.name}から ${fmtMoney(fee)} のオファーが届きました` };
 }
 

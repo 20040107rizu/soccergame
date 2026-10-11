@@ -171,16 +171,19 @@ export function fitRatio(state: GameState, team: Team): number {
 }
 
 /**
- * 試合後のスピリット更新。適性ポジションで同じメンバーを使い続けると約1節で最大近くになり、
- * メンバーを入れ替えると少し下がる。
+ * 試合後のスピリット更新。適性ポジションで同じメンバーを使い続けると、
+ * 1シーズンほどかけて最大近くまで上がる。メンバーを入れ替えると少し下がる。
  */
+export const SPIRIT_CHANGE_PENALTY = 0.8;
+
 export function updateSpirit(state: GameState, team: Team) {
   const prev = new Set(team.lastLineup ?? []);
   const changed = team.lastLineup ? team.lineup.filter((id) => !prev.has(id)).length : 0;
   const target = 55 + 44 * fitRatio(state, team);
-  let s = team.spirit - changed * 2.5;
-  s += (target - s) * 0.85;
-  team.spirit = Math.round(Math.max(30, Math.min(99, s)));
+  let s = team.spirit - changed * SPIRIT_CHANGE_PENALTY;
+  // 上がるのはゆっくり（約1シーズンで最大近く）、適性外の起用で目標が下がった時は早めに下がる
+  s += (target - s) * (target > s ? 0.06 : 0.15);
+  team.spirit = Math.round(Math.max(30, Math.min(99, s)) * 10) / 10;
   team.lastLineup = [...team.lineup];
 }
 
@@ -188,5 +191,5 @@ export function updateSpirit(state: GameState, team: Team) {
 export function spiritPreview(team: Team): number {
   const prev = new Set(team.lastLineup ?? team.lineup);
   const changed = team.lineup.filter((id) => !prev.has(id)).length;
-  return Math.max(30, Math.round(team.spirit - changed * 2.5));
+  return Math.max(30, team.spirit - changed * SPIRIT_CHANGE_PENALTY);
 }

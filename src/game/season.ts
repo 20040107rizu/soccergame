@@ -2,6 +2,7 @@ import { CL_2026, EU_SEEDS, emptyStats, generateOriginalSquad, generatePlayer, P
 import { CL_STAGE_PRIZE, fairSalary, fmtMoney as fmtYen, leaguePrize, marketValue, MATCH_PRIZE, payroll, round2, wageCap } from './economy';
 import { advanceCL, buildCalendar, clLeagueFixtures, plFixtures, plTable, resolveTie, stageComplete, STAGE_LABEL, windowStatus } from './competitions';
 import { createMatch, sideRoles, simulateToEnd, sidePower, type LiveMatch } from './engine';
+import { legendGrowth, legendTick } from './legend';
 import { mailBestEleven, mailCompetition, mailContractAdvice, mailGrowth, mailInjury, mailPlayerFeelings, mailRedCard, mailScoutAdvice, mailTacticAdvice, mailWindow, sendMail, tryAptitudeGain, tryNewSkill } from './mail';
 import { applyFormation, autoLineup, available, repairLineup, setAutoLineup, squadOf, updateSpirit } from './lineup';
 import { FORMATION_LIST, FORMATIONS, rolesOf } from './positions';
@@ -224,6 +225,7 @@ export function playDay(state: GameState, userMatch?: LiveMatch): DayReport {
   const wasOpen = windowStatus(state).open;
   aiTransferActivity(state);
   periodicMails(state, day, wasOpen);
+  legendTick(state);
 
   state.day++;
   state.updatedAt = Date.now();
@@ -341,8 +343,12 @@ function applyMatch(state: GameState, f: Fixture, m: LiveMatch) {
       p.career.apps++;
       const r = m.ratings[id] ?? 6;
       const before = overall(p);
-      if (p.age <= 25 && before < p.potential && rand() < (r >= 7 ? 0.3 : 0.12)) bumpStats(p, 1);
-      if (mine) {
+      if (p.legend) {
+        // レジェンドは試合を重ねるほどとんでもない速さで成長する
+        const g = legendGrowth(p, r, bumpStats);
+        if (g && mine) mailGrowth(state, p, g.from, g.to, true);
+      } else if (p.age <= 25 && before < p.potential && rand() < (r >= 7 ? 0.3 : 0.12)) bumpStats(p, 1);
+      if (mine && !p.legend) {
         // 急成長・新スキル・適性拡大
         if (p.age <= 23 && r >= 7.5 && before < p.potential && rand() < 0.06) {
           for (let i = 0; i < 6; i++) bumpStats(p, 1);
@@ -425,7 +431,7 @@ function aiTransferActivity(state: GameState) {
       if (buyer) {
         const fee = round2(marketValue(target) * (0.85 + rand() * 0.4));
         const offerId = uid('o');
-        state.offers.push({ id: offerId, playerId: target.id, fromTeam: buyer.id, fee, day: state.day });
+        state.offers.push({ id: offerId, playerId: target.id, fromTeam: buyer.id, fee, day: state.day, maxFee: round2(fee * (1.08 + rand() * 0.4)), tries: 0 });
         state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'transfer', text: `【オファー】${buyer.name}が${target.name}に ${fmtYen(fee)} のオファー` });
         sendMail(state, {
           from: 'club',
@@ -451,7 +457,7 @@ export function aiFillSquads(state: GameState) {
     while (squad.length < min) {
       const need = neededPosition(squad);
       const free = Object.values(state.players)
-        .filter((p) => !p.teamId && p.position === need && available(p))
+        .filter((p) => !p.teamId && !p.legend && p.position === need && available(p))
         .sort((a, b) => overall(b) - overall(a));
       const level = Math.min(80, 50 + t.rep * 0.25);
       const sign = free.find((p) => overall(p) <= level + 6) ?? generatePlayer({ position: need, level, teamId: null, age: randInt(18, 21) });

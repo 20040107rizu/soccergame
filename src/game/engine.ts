@@ -143,7 +143,8 @@ export function onPitch(state: GameState, side: SideState): OnPitch[] {
 
 export function effRating(p: Player, pos: Position, energy: number, injured = false): number {
   const base = ratingAt(p, pos);
-  return base * COND_MUL[p.condition] * (0.8 + 0.2 * energy / 100) * (injured ? 0.7 : 1);
+  const legend = p.legend ? (p.legend.kind === 'monster' ? 1.05 : 1.02) : 1;
+  return base * legend * COND_MUL[p.condition] * (0.8 + 0.2 * energy / 100) * (injured ? 0.7 : 1);
 }
 
 function wavg(list: OnPitch[], w: Record<Position, number>, f: (o: OnPitch) => number): number {
@@ -253,7 +254,7 @@ export function stepMinute(state: GameState, m: LiveMatch): MatchEvent[] {
   if (minute >= 90) {
     m.finished = true;
     m.events.push({ minute: 90, type: 'full', text: `試合終了！ ${m.score.home}-${m.score.away}` });
-    finalizeRatings(m);
+    finalizeRatings(state, m);
   }
   return m.events.slice(before);
 }
@@ -286,7 +287,7 @@ function shotEvent(state: GameState, m: LiveMatch, atkKey: SideKey, defKey: Side
     const s = o.p.stats;
     const key = type === 'header' ? (s.heading + s.jump) / 2 : type === 'long' ? (s.kickingPower + s.finishing) / 2 : (s.finishing + s.offense) / 2;
     const sub = o.p.skills.includes('superSub') && (m[atkKey].enteredAt[o.p.id] ?? 0) >= 45 ? 1.35 : 1;
-    return SHOT_W[o.pos] * Math.pow(key / 70, 3) * sub * (o.eff / 70);
+    return SHOT_W[o.pos] * Math.pow(key / 70, 3) * sub * (o.eff / 70) * (o.p.legend ? 1.3 : 1);
   });
   const shooter = shooterO.p;
   const others = attackers.filter((o) => o.p.id !== shooter.id);
@@ -314,6 +315,7 @@ function shotEvent(state: GameState, m: LiveMatch, atkKey: SideKey, defKey: Side
   const will = sk('willpower') ? Math.min(8, m.shots[shooter.id]) * 0.4 : 0;
 
   let quality: number;
+  const legendQ = shooter.legend ? (shooter.legend.kind === 'monster' ? 4 : 2) : 0;
   if (type === 'header') {
     quality = (s.heading * 0.6 + s.jump * 0.25 + s.physical * 0.15) * effMul;
     if (sk('header')) quality += 3;
@@ -330,7 +332,7 @@ function shotEvent(state: GameState, m: LiveMatch, atkKey: SideKey, defKey: Side
     if (sk('acrobaticShot') || sk('phenomFinish')) quality += 1.5;
     if (sk('controlLoop') || sk('heelTrick') || sk('snapStrike')) quality += 1;
   }
-  quality += will;
+  quality += will + legendQ;
   if (dsk('blocker')) quality -= 1.5;
   if (dsk('manMarking') || dsk('interception')) quality -= 1;
   if (dsk('sliding') || dsk('powerTackle') || dsk('longReach') || dsk('shadowHunt')) quality -= 0.5;
@@ -428,13 +430,15 @@ function bump(m: LiveMatch, id: string, v: number) {
   m.ratings[id] = (m.ratings[id] ?? 6) + v;
 }
 
-function finalizeRatings(m: LiveMatch) {
+function finalizeRatings(state: GameState, m: LiveMatch) {
   const diff = m.score.home - m.score.away;
   for (const key of ['home', 'away'] as SideKey[]) {
     const bonus = key === 'home' ? Math.sign(diff) * 0.3 : -Math.sign(diff) * 0.3;
     for (const id of m[key].usedPlayers) {
       const conceded = key === 'home' ? m.score.away : m.score.home;
       let r = (m.ratings[id] ?? 6) + bonus + (rand() - 0.5) * 0.6;
+      const lg = state.players[id]?.legend;
+      if (lg) r += lg.kind === 'monster' ? 0.6 : 0.3;
       if (conceded === 0) r += 0.2;
       m.ratings[id] = Math.round(clamp(r, 3, 10) * 10) / 10;
     }

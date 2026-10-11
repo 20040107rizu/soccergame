@@ -6,6 +6,8 @@ import { teamById } from '../game/season';
 import { acceptOffer, rejectOffer } from '../game/transfer';
 import type { Mail } from '../game/types';
 import { useGame } from '../store';
+import { OfferNegotiation } from './OfferNegotiation';
+import { LegendPanel } from './LegendPanel';
 
 const FROM_ICON: Record<string, string> = {
   club: '🏢',
@@ -32,7 +34,7 @@ export function InboxList({ limit }: { limit?: number }) {
         {list.map((m) => (
           <button
             key={m.id}
-            className={'mail-row' + (m.read ? '' : ' unread') + (m.important ? ' important' : '')}
+            className={'mail-row' + (m.read ? '' : ' unread') + (m.important ? ' important' : '') + (m.legend ? ' legend' : '')}
             onClick={() => {
               setOpen(m.id);
               if (!m.read)
@@ -42,7 +44,7 @@ export function InboxList({ limit }: { limit?: number }) {
                 });
             }}
           >
-            <span className="mail-icon">{FROM_ICON[m.from] ?? '✉️'}</span>
+            <span className="mail-icon">{m.legend ? '🌟' : FROM_ICON[m.from] ?? '✉️'}</span>
             <span className="mail-main">
               <small>
                 {m.sender} · {state.calendar[Math.min(m.day, state.calendar.length - 1)]?.label ?? ''}
@@ -62,6 +64,8 @@ function MailView({ mail, onClose }: { mail: Mail; onClose: () => void }) {
   const { state, update, toast, openPlayer } = useGame();
   const offer = mail.offerId ? state.offers.find((o) => o.id === mail.offerId) : undefined;
   const p = mail.playerId ? state.players[mail.playerId] : undefined;
+  const [nego, setNego] = useState(false);
+  if (nego && offer) return <OfferNegotiation offerId={offer.id} onClose={() => setNego(false)} />;
   return (
     <Sheet title={FROM_LABEL[mail.from]} onClose={onClose}>
       <div className="mail-view">
@@ -100,6 +104,7 @@ function MailView({ mail, onClose }: { mail: Mail; onClose: () => void }) {
           </div>
         )}
 
+        {mail.legend && mail.playerId && <LegendPanel playerId={mail.playerId} onDone={onClose} />}
         {mail.offerId &&
           (offer ? (
             <div className="row gap">
@@ -113,6 +118,9 @@ function MailView({ mail, onClose }: { mail: Mail; onClose: () => void }) {
               >
                 断る
               </button>
+              <button className="btn grow" onClick={() => setNego(true)}>
+                交渉する
+              </button>
               <button
                 className="btn primary grow"
                 onClick={() => {
@@ -122,7 +130,7 @@ function MailView({ mail, onClose }: { mail: Mail; onClose: () => void }) {
                   if (r.ok) onClose();
                 }}
               >
-                受け入れる（{fmtMoney(offer.fee)}）
+                受諾（{fmtMoney(offer.fee)}）
               </button>
             </div>
           ) : (

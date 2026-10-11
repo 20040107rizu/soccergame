@@ -102,6 +102,33 @@ export interface Player {
   roleApps?: Partial<Record<Position, number>>;
   /** 実在選手（初期データ由来） */
   real?: boolean;
+  /** レジェンド（極稀に現れるレア選手） */
+  legend?: LegendInfo;
+}
+
+export type LegendKind = 'prodigy' | 'monster';
+
+export interface LegendInfo {
+  kind: LegendKind;
+  /** 入団済み */
+  signed?: boolean;
+  /** 最後に成長メールを送った総合値 */
+  mailedOvr?: number;
+}
+
+/** 代理人から届いたレジェンド選手の極秘情報 */
+export interface LegendOffer {
+  playerId: string;
+  kind: LegendKind;
+  /** 移籍金（契約金） */
+  fee: number;
+  salary: number;
+  years: number;
+  /** 入団の確率 0〜1 */
+  chance: number;
+  conditions: string[];
+  /** この日まで有効 */
+  expires: number;
 }
 
 export interface SeasonStats {
@@ -183,6 +210,12 @@ export interface Offer {
   fromTeam: string;
   fee: number;
   day: number;
+  /** 買い手が出せる上限（非公開） */
+  maxFee?: number;
+  /** こちらから条件を提示した回数 */
+  tries?: number;
+  /** 提示額で合意済み */
+  agreed?: boolean;
 }
 
 export interface NewsItem {
@@ -218,6 +251,8 @@ export interface Mail {
   /** 補強アドバイスなどで紹介する選手 */
   players?: string[];
   important?: boolean;
+  /** レジェンド選手の極秘情報 */
+  legend?: boolean;
 }
 
 export interface GameState {
@@ -243,5 +278,6 @@ export interface GameState {
   mails: Mail[];
   watchlist: string[];
   flags?: Record<string, boolean>;
+  legendOffer?: LegendOffer;
   history: { season: number; rank: number; champion: string; clWinner?: string; userCl?: string }[];
 }

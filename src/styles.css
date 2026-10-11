@@ -2015,3 +2015,101 @@ h4 {
 .apt-zone span {
   line-height: 17px;
 }
+
+/* ===================== v0.4 ===================== */
+/* sheet: 本文だけをスクロールし、後ろの画面は動かさない */
+.sheet-backdrop {
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+.sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+body.sheet-open .content {
+  overflow: hidden;
+}
+body.sheet-open {
+  overflow: hidden;
+}
+
+/* lineup board gestures */
+.pitch,
+.pitch-player {
+  touch-action: pan-y;
+  -webkit-touch-callout: none;
+}
+.pitch-player.armed {
+  transform: translateX(-50%) scale(1.08);
+  background: #ffffff33;
+}
+.pitch-player.swap-target {
+  outline: 3px dashed #fff;
+  background: #ffffff44;
+}
+.bench-row {
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* legend */
+.mail-row.legend {
+  border: 1px solid #ffd34d;
+  background: linear-gradient(100deg, #3a2a00, #1b3a2c 60%);
+  box-shadow: 0 0 12px #ffd34d55;
+}
+.legend-card {
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #4a3400, #1b2b20);
+  border: 1px solid #ffd34d;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.legend-card ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.legend-card.result {
+  font-size: 18px;
+  font-weight: 900;
+  text-align: center;
+  padding: 18px;
+}
+.legend-title {
+  font-weight: 900;
+  color: #ffd34d;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.legend-title small {
+  color: var(--muted);
+  font-weight: 500;
+}
+.legend-btn {
+  background: linear-gradient(90deg, #ffd34d, #ff9f1c);
+  color: #1a1400;
+  font-weight: 900;
+}
+.legend-badge {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 900;
+  color: #1a1400;
+  background: linear-gradient(90deg, #ffd34d, #ff9f1c);
+  border-radius: 8px;
+  padding: 2px 8px;
+}
+.offer-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}

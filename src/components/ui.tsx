@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { posGroup } from '../game/positions';
 import { overall } from '../game/stats';
 import type { Condition, Player, Position, Team } from '../game/types';
@@ -54,7 +55,8 @@ export function PlayerIcon({ p, team, size = 40 }: { p: Player; team?: Team; siz
 }
 
 /** チームスピリットのゲージ */
-export function SpiritGauge({ v, label = 'チームスピリット' }: { v: number; label?: string }) {
+export function SpiritGauge({ v: raw, label = 'チームスピリット' }: { v: number; label?: string }) {
+  const v = Math.round(raw);
   const color = v >= 90 ? '#19d3c5' : v >= 75 ? '#3ccb5a' : v >= 60 ? '#f2d43d' : '#f28c28';
   return (
     <div className="spirit">
@@ -124,8 +126,19 @@ export function PlayerRow(props: {
   );
 }
 
+let openSheets = 0;
+
+/** 下から出るシート。body 直下に描画し、開いている間は後ろの画面をスクロールさせない */
 export function Sheet(props: { title: string; onClose: () => void; children: ReactNode; full?: boolean }) {
-  return (
+  useEffect(() => {
+    openSheets++;
+    document.body.classList.add('sheet-open');
+    return () => {
+      openSheets--;
+      if (openSheets <= 0) document.body.classList.remove('sheet-open');
+    };
+  }, []);
+  return createPortal(
     <div className="sheet-backdrop" onClick={props.onClose}>
       <div className={'sheet' + (props.full ? ' full' : '')} onClick={(e) => e.stopPropagation()}>
         <div className="sheet-head">
@@ -136,7 +149,8 @@ export function Sheet(props: { title: string; onClose: () => void; children: Rea
         </div>
         <div className="sheet-body">{props.children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

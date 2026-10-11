@@ -1,0 +1,66 @@
+import { describe, expect, it } from 'vitest';
+import { acceptLegend, spawnLegend } from '../legend';
+import { prepareDay, playDay, newGame, teamById } from '../season';
+import { overall } from '../stats';
+import { negotiateOffer } from '../transfer';
+import { round2 } from '../economy';
+
+describe('レジェンド', () => {
+  it('急成長期待の選手は試合を重ねると急激に成長する', () => {
+    const s = newGame('テスト', 'ars');
+    const p = spawnLegend(s, 'prodigy')!;
+    expect(p.legend?.kind).toBe('prodigy');
+    expect(s.legendOffer?.playerId).toBe(p.id);
+    expect(s.mails[0].legend).toBe(true);
+    s.money = 9999;
+    s.legendOffer!.chance = 1;
+    const r = acceptLegend(s);
+    expect(r.ok && r.joined).toBe(true);
+    expect(s.players[p.id].teamId).toBe('ars');
+    expect(s.players[p.id].number).toBe(10);
+    const start = overall(s.players[p.id]);
+    for (let i = 0; i < 20; i++) {
+      const t = teamById(s, 'ars');
+      if (!t.lineup.includes(p.id)) t.lineup[t.lineup.length - 1] = p.id;
+      prepareDay(s);
+      playDay(s);
+    }
+    expect(overall(s.players[p.id])).toBeGreaterThan(start + 6);
+  }, 60000);
+
+  it('断られると選手は消える', () => {
+    const s = newGame('テスト', 'ars');
+    const p = spawnLegend(s, 'monster')!;
+    expect(overall(p)).toBeGreaterThanOrEqual(90);
+    s.money = 9999;
+    s.legendOffer!.chance = 0;
+    const r = acceptLegend(s);
+    expect(r.ok && r.joined).toBe(false);
+    expect(s.players[p.id]).toBeUndefined();
+    expect(s.legendOffer).toBeUndefined();
+  });
+});
+
+describe('チームスピリット', () => {
+  it('1シーズンかけて最大近くまで上がる（1節では上がりきらない）', () => {
+    const s = newGame('テスト', 'ars');
+    const t = teamById(s, 'ars');
+    t.spirit = 70;
+    prepareDay(s);
+    playDay(s);
+    expect(teamById(s, 'ars').spirit).toBeLessThan(76);
+  });
+});
+
+describe('オファー交渉', () => {
+  it('上限内の希望額なら合意、吹っかけすぎると決裂', () => {
+    const s = newGame('テスト', 'ars');
+    const pid = Object.values(s.players).find((p) => p.teamId === 'ars')!.id;
+    s.offers.push({ id: 'o1', playerId: pid, fromTeam: 'mci', fee: 50, day: 0, maxFee: 60, tries: 0 });
+    expect(negotiateOffer(s, 'o1', 58).result).toBe('accept');
+    expect(s.offers[0].fee).toBe(58);
+    s.offers.push({ id: 'o2', playerId: pid, fromTeam: 'liv', fee: 50, day: 0, maxFee: 60, tries: 0 });
+    expect(negotiateOffer(s, 'o2', round2(50 * 3)).result).toBe('walkaway');
+    expect(s.offers.find((o) => o.id === 'o2')).toBeUndefined();
+  });
+});
