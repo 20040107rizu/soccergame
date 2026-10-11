@@ -2318,3 +2318,17 @@ body.sheet-open {
 .sheet-body > .btn {
   margin-top: 8px;
 }
+
+/* iPhone（ホーム画面アプリ）でステータスバーの下に潜り込まないようにする */
+.sheet {
+  max-height: calc(100% - var(--safe-t) - 12px);
+}
+.sheet.full {
+  position: fixed;
+  inset: 0;
+  margin: 0 auto;
+  height: auto;
+  max-height: none;
+  padding-top: var(--safe-t);
+  border-radius: 0;
+}

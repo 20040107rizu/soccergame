@@ -3,9 +3,14 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.6.0';
+export const APP_VERSION = '0.6.1';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.6.1',
+    date: '2026-10-11',
+    items: ['ホーム画面アプリで、ヘルプなどの画面がステータスバーに重なって閉じるボタンを押せなかった問題を修正'],
+  },
   {
     version: '0.6.0',
     date: '2026-10-11',
