@@ -7,6 +7,7 @@ import type { GameState } from './game/types';
 import { Club } from './screens/Club';
 import { Competitions } from './screens/Competitions';
 import { Help } from './screens/Help';
+import { InstallGuide, UpdateBanner, WhatsNew } from './components/AppShellExtras';
 import { Home } from './screens/Home';
 import { Match } from './screens/Match';
 import { Negotiation } from './screens/Negotiation';
@@ -61,6 +62,9 @@ export function App() {
     return (
       <>
         <Title onStart={(state, slot, firstRun) => setGame({ state, slot, firstRun })} />
+        <WhatsNew />
+        <UpdateBanner />
+        <InstallGuide />
         {toastMsg && <div className="toast">{toastMsg}</div>}
       </>
     );
@@ -72,6 +76,7 @@ export function App() {
       {detail && <PlayerDetail id={detail} onClose={() => setDetail(null)} />}
       {nego && <Negotiation id={nego} onClose={() => setNego(null)} />}
       {editing && <PlayerEditor id={editing} onClose={() => setEditing(null)} />}
+      <UpdateBanner />
       {toastMsg && <div className="toast">{toastMsg}</div>}
     </GameProvider>
   );

@@ -8,6 +8,8 @@ import { teamById, userPayroll } from '../game/season';
 import { MAX_SQUAD } from '../game/transfer';
 import { useGame } from '../store';
 import { Records } from './Records';
+import { Feedback } from './Feedback';
+import { APP_VERSION } from '../version';
 
 export function Club() {
   const { state, update, editPlayer, openPlayer, toast, quit, slot } = useGame();
@@ -15,6 +17,7 @@ export function Club() {
   const [info, setInfo] = useState({ name: team.name, short: team.short, color: team.color, color2: team.color2 });
   const squad = squadOf(state, team.id).sort((a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position));
   const { total, cap } = userPayroll(state);
+  const [fb, setFb] = useState(false);
 
   return (
     <div className="screen">
@@ -30,6 +33,11 @@ export function Club() {
           </div>
         </div>
       </div>
+
+      <button className="btn feedback-btn" onClick={() => setFb(true)}>
+        📝 感想・不具合を送る
+      </button>
+      {fb && <Feedback onClose={() => setFb(false)} />}
 
       <Records />
 
@@ -102,6 +110,7 @@ export function Club() {
             タイトルへ戻る
           </button>
         </div>
+        <p className="muted small">バージョン {APP_VERSION}</p>
       </div>
     </div>
   );
