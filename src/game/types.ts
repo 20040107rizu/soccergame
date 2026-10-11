@@ -1,132 +1,186 @@
-export type Position = 'GK' | 'CB' | 'SB' | 'DMF' | 'CMF' | 'OMF' | 'WG' | 'CF';
+export type Position = 'GK' | 'CB' | 'LB' | 'RB' | 'DMF' | 'CMF' | 'LMF' | 'RMF' | 'AMF' | 'LWF' | 'RWF' | 'SS' | 'CF';
 
-export const POSITIONS: Position[] = ['GK', 'CB', 'SB', 'DMF', 'CMF', 'OMF', 'WG', 'CF'];
+export const POSITIONS: Position[] = ['GK', 'CB', 'LB', 'RB', 'DMF', 'CMF', 'LMF', 'RMF', 'AMF', 'LWF', 'RWF', 'SS', 'CF'];
 
-export const POSITION_LABEL: Record<Position, string> = {
-  GK: 'GK',
-  CB: 'CB',
-  SB: 'SB',
-  DMF: 'DMF',
-  CMF: 'CMF',
-  OMF: 'OMF',
-  WG: 'WG',
-  CF: 'CF',
-};
-
-/** 能力値（40〜99） */
+/** eFootball の能力値 25 項目 */
 export interface Stats {
   offense: number; // オフェンスセンス
-  defense: number; // ディフェンスセンス
+  ballControl: number; // ボールコントロール
+  dribbling: number; // ドリブル
+  tightPossession: number; // ボールキープ
+  lowPass: number; // グラウンダーパス
+  loftedPass: number; // フライパス
+  finishing: number; // 決定力
+  heading: number; // ヘディング
+  setPiece: number; // プレースキック
+  curl: number; // カーブ
   speed: number; // スピード
+  acceleration: number; // 瞬発力
+  kickingPower: number; // キック力
+  jump: number; // ジャンプ
+  physical: number; // フィジカルコンタクト
+  balance: number; // ボディコントロール
   stamina: number; // スタミナ
-  dribble: number; // ドリブル
-  pass: number; // パス
-  shoot: number; // シュート
-  physical: number; // フィジカル
-  keeper: number; // GK能力
+  defense: number; // ディフェンスセンス
+  ballWinning: number; // ボール奪取
+  aggression: number; // アグレッシブネス
+  gkAwareness: number; // GKセンス
+  gkCatching: number; // キャッチング
+  gkClearing: number; // クリアリング
+  gkReflexes: number; // コラプシング
+  gkReach: number; // ディフレクティング
 }
 
 export type StatKey = keyof Stats;
 
-export const STAT_KEYS: StatKey[] = [
-  'offense',
-  'defense',
-  'speed',
-  'stamina',
-  'dribble',
-  'pass',
-  'shoot',
-  'physical',
-  'keeper',
-];
+/** 能力値以外の特性 */
+export interface Traits {
+  weakFootUse: number; // 逆足頻度 1-4
+  weakFootAcc: number; // 逆足精度 1-4
+  form: number; // コンディション安定度 1-8
+  injuryRes: number; // ケガ耐性 1-3
+}
 
-export const STAT_LABEL: Record<StatKey, string> = {
-  offense: 'オフェンス',
-  defense: 'ディフェンス',
-  speed: 'スピード',
-  stamina: 'スタミナ',
-  dribble: 'ドリブル',
-  pass: 'パス',
-  shoot: 'シュート',
-  physical: 'フィジカル',
-  keeper: 'GK',
-};
-
-/** 成長タイプ（マスターリーグの早熟/晩成をイメージ） */
 export type GrowthType = 'early' | 'normal' | 'late';
 
-export const GROWTH_LABEL: Record<GrowthType, string> = {
-  early: '早熟',
-  normal: '標準',
-  late: '晩成',
-};
-
 export interface Appearance {
-  skin: number; // 0..4
-  hairStyle: number; // 0..5
-  hairColor: number; // 0..5
+  skin: number;
+  hairStyle: number;
+  hairColor: number;
 }
+
+/** ポジション適性：3=メイン 2=サブ（高い） 1=サブ（可） */
+export type Aptitudes = Partial<Record<Position, 1 | 2 | 3>>;
+
+/** 調子 1(⬇)〜5(⬆) */
+export type Condition = 1 | 2 | 3 | 4 | 5;
 
 export interface Player {
   id: string;
   name: string;
+  nameEn: string;
   nationality: string;
   age: number;
   position: Position;
+  aptitudes: Aptitudes;
   foot: 'R' | 'L';
   number: number;
   stats: Stats;
-  /** 能力の上限の目安（総合値ベース、ユーザーには伏せる） */
+  traits: Traits;
+  skills: string[];
+  style: string;
   potential: number;
   growth: GrowthType;
-  appearance: Appearance;
-  teamId: string | null; // null = フリー
+  teamId: string | null;
   contractYears: number;
-  salary: number; // 1シーズンあたりのポイント
-  /** 今季の記録 */
-  season: { apps: number; goals: number; assists: number };
-  /** 通算 */
-  career: { apps: number; goals: number; assists: number };
-  /** ユーザーが作成・エディットした選手か */
+  /** 年俸（百万ユーロ） */
+  salary: number;
+  condition: Condition;
+  /** 離脱する残り試合日数 */
+  injury: number;
+  /** 出場停止の残り試合数 */
+  suspension: number;
+  /** 移籍に対する性格 0-100（野心） */
+  ambition: number;
+  /** 現所属への愛着 0-100 */
+  loyalty: number;
+  season: SeasonStats;
+  career: SeasonStats;
+  /** オリジナルチーム用に作成された選手（エディット可能） */
   custom?: boolean;
+  appearance?: Appearance;
+  /** 実在選手（初期データ由来） */
+  real?: boolean;
 }
 
-export type Formation = '4-4-2' | '4-3-3' | '3-5-2' | '4-2-3-1';
+export interface SeasonStats {
+  apps: number;
+  goals: number;
+  assists: number;
+  clApps: number;
+  clGoals: number;
+}
+
+export type Formation = '4-3-3' | '4-2-3-1' | '4-4-2' | '3-5-2' | '3-4-3' | '4-1-2-3';
+export type Tactic = 'attack' | 'balance' | 'defense';
 
 export interface Team {
   id: string;
   name: string;
+  en: string;
   short: string;
   color: string;
   color2: string;
+  rep: number;
+  country: string;
+  league: 'PL' | 'EU';
   formation: Formation;
+  tactic: Tactic;
   /** スタメン11人（フォーメーションの枠順） */
   lineup: string[];
+  /** 控え（ベンチ入り）最大 9 人 */
+  bench: string[];
+  /** CPU クラブの移籍資金（百万ユーロ） */
+  budget: number;
+  original?: boolean;
 }
+
+export type Competition = 'PL' | 'CL';
+export type CLStage = 'LP' | 'PO' | 'R16' | 'QF' | 'SF' | 'F';
 
 export interface Fixture {
-  round: number;
+  id: string;
+  comp: Competition;
+  /** カレンダー上の日付インデックス */
+  day: number;
   home: string;
   away: string;
-  result?: { home: number; away: number };
+  stage?: CLStage;
+  tieId?: string;
+  leg?: 1 | 2;
+  result?: { home: number; away: number; pkHome?: number; pkAway?: number };
 }
 
-export interface StandingRow {
-  teamId: string;
-  played: number;
-  win: number;
-  draw: number;
-  loss: number;
-  gf: number;
-  ga: number;
-  points: number;
+export interface CalendarDay {
+  type: Competition;
+  /** PL: 節番号(0-37) / CL: リーグフェーズは 0-7 */
+  round: number;
+  stage?: CLStage;
+  leg?: 1 | 2;
+  label: string;
+}
+
+export interface Tie {
+  id: string;
+  stage: CLStage;
+  a: string;
+  b: string;
+  winner?: string;
+}
+
+export interface Offer {
+  id: string;
+  playerId: string;
+  fromTeam: string;
+  fee: number;
+  day: number;
 }
 
 export interface NewsItem {
   id: string;
   season: number;
-  round: number;
+  day: number;
   text: string;
+  kind?: 'transfer' | 'match' | 'info' | 'injury';
+}
+
+export interface NegotiationRecord {
+  /** この移籍期間に交渉が打ち切られた */
+  closed: boolean;
+  clubTries: number;
+  playerTries: number;
+  /** クラブとの移籍金合意額 */
+  agreedFee?: number;
 }
 
 export interface GameState {
@@ -135,12 +189,19 @@ export interface GameState {
   updatedAt: number;
   managerName: string;
   userTeamId: string;
-  season: number; // 1年目, 2年目...
-  round: number; // 次に行う節（0始まり）
-  points: number; // マスターリーグのポイント（予算）
+  season: number;
+  /** 次に行うカレンダー日付 */
+  day: number;
+  calendar: CalendarDay[];
+  /** 移籍資金（百万ユーロ） */
+  money: number;
   teams: Team[];
   players: Record<string, Player>;
   fixtures: Fixture[];
+  clTeams: string[];
+  ties: Tie[];
+  offers: Offer[];
+  negotiations: Record<string, NegotiationRecord>;
   news: NewsItem[];
-  history: { season: number; rank: number; champion: string }[];
+  history: { season: number; rank: number; champion: string; clWinner?: string; userCl?: string }[];
 }

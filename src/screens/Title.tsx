@@ -1,19 +1,47 @@
-import { useRef, useState } from 'react';
-import { Crest } from '../components/ui';
-import { DEFAULT_TEAMS, newGame } from '../game/data';
+import { useMemo, useRef, useState } from 'react';
+import { Crest, RepStars } from '../components/ui';
+import { PL_SEEDS, playerFromSeed, teamFromSeed } from '../game/data';
+import { fmtMoney } from '../game/economy';
 import { deleteGame, importJson, loadGame, saveGame, SLOTS, slotInfo, type Slot } from '../game/save';
-import type { GameState, Team } from '../game/types';
+import { newGame } from '../game/season';
+import { overall } from '../game/stats';
+import type { GameState } from '../game/types';
 
-export function Title({ onStart }: { onStart: (s: GameState, slot: Slot) => void }) {
-  const [mode, setMode] = useState<'menu' | 'new'>('menu');
+type Mode = 'menu' | 'club' | 'original';
+
+export function Title({ onStart }: { onStart: (s: GameState, slot: Slot, firstRun?: 'original') => void }) {
+  const [mode, setMode] = useState<Mode>('menu');
   const [slot, setSlot] = useState<Slot>(1);
   const [name, setName] = useState('');
-  const [teamId, setTeamId] = useState(DEFAULT_TEAMS[0].id);
+  const [teamId, setTeamId] = useState('ars');
+  const [orig, setOrig] = useState({ name: 'FCマスターズ', short: 'FCM', color: '#0f766e', color2: '#fde047', replaces: 'hul' });
+  const [busy, setBusy] = useState(false);
   const [, force] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
-  const infos = SLOTS.map((s) => ({ s, info: slotInfo(s) }));
 
-  if (mode === 'new') {
+  const clubs = useMemo(
+    () =>
+      [...PL_SEEDS]
+        .map((s) => {
+          const ps = s.players.map((l) => playerFromSeed(l, s.id)).map(overall).sort((a, b) => b - a);
+          const top = ps.slice(0, 11);
+          return { seed: s, team: teamFromSeed(s), avg: Math.round(top.reduce((a, b) => a + b, 0) / top.length) };
+        })
+        .sort((a, b) => b.avg - a.avg),
+    [],
+  );
+
+  const start = (original?: boolean) => {
+    if (slotInfo(slot) && !confirm(`スロット${slot}のデータを上書きします。よろしいですか？`)) return;
+    setBusy(true);
+    setTimeout(() => {
+      const s = newGame(name.trim() || 'ゲスト', teamId, original ? { ...orig, name: orig.name.trim() || 'FCマスターズ', short: (orig.short.trim() || 'FCM').slice(0, 4) } : undefined);
+      saveGame(slot, s);
+      onStart(s, slot, original ? 'original' : undefined);
+    }, 30);
+  };
+
+  if (mode === 'club' || mode === 'original') {
     return (
       <div className="title-screen">
         <h1 className="title-logo small">新しいキャリア</h1>
@@ -32,32 +60,84 @@ export function Title({ onStart }: { onStart: (s: GameState, slot: Slot) => void
             ))}
           </div>
         </div>
-        <div className="field">
-          <span>率いるクラブ</span>
-          <p className="hint">あなたのクラブは他より戦力が低い状態から始まります。移籍とポイント運用で強くしましょう。</p>
-          <div className="team-pick">
-            {DEFAULT_TEAMS.map((t) => (
-              <button key={t.id} className={'team-pick-item' + (teamId === t.id ? ' on' : '')} onClick={() => setTeamId(t.id)}>
-                <Crest team={{ ...t, lineup: [] } as Team} size={36} />
-                <span>{t.name}</span>
+
+        {mode === 'club' ? (
+          <>
+            <div className="field">
+              <span>ベースチームを選ぶ（プレミアリーグ 2026-27）</span>
+            </div>
+            <div className="club-grid">
+              {clubs.map(({ seed, team, avg }) => (
+                <button key={seed.id} className={'club-pick' + (teamId === seed.id ? ' on' : '')} onClick={() => setTeamId(seed.id)}>
+                  <Crest team={team} size={34} />
+                  <div className="club-pick-main">
+                    <b>{seed.name}</b>
+                    <small>
+                      <RepStars rep={seed.rep} /> 戦力{avg} · 資金{fmtMoney(seed.budget)}
+                    </small>
+                  </div>
+                </button>
+              ))}
+              <button className="club-pick original" onClick={() => setMode('original')}>
+                <span className="orig-icon">＋</span>
+                <div className="club-pick-main">
+                  <b>オリジナルチーム</b>
+                  <small>選手を全員自分で作成（21チーム目）</small>
+                </div>
               </button>
-            ))}
-          </div>
-        </div>
-        <div className="row gap">
-          <button className="btn ghost" onClick={() => setMode('menu')}>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="card">
+              <div className="row gap">
+                <Crest team={{ ...teamFromSeed(PL_SEEDS[0]), color: orig.color, color2: orig.color2, short: orig.short || 'FCM' }} size={56} />
+                <div>
+                  <b>{orig.name || 'クラブ名'}</b>
+                  <p className="hint">オリジナルチームは選手の名前・能力値・特殊スキルまで全て自由に作れます。</p>
+                </div>
+              </div>
+              <label className="field">
+                <span>クラブ名</span>
+                <input value={orig.name} maxLength={20} onChange={(e) => setOrig({ ...orig, name: e.target.value })} />
+              </label>
+              <div className="grid2">
+                <label className="field">
+                  <span>略称（3〜4文字）</span>
+                  <input value={orig.short} maxLength={4} onChange={(e) => setOrig({ ...orig, short: e.target.value.toUpperCase() })} />
+                </label>
+                <div className="grid2">
+                  <label className="field">
+                    <span>メイン</span>
+                    <input type="color" value={orig.color} onChange={(e) => setOrig({ ...orig, color: e.target.value })} />
+                  </label>
+                  <label className="field">
+                    <span>サブ</span>
+                    <input type="color" value={orig.color2} onChange={(e) => setOrig({ ...orig, color2: e.target.value })} />
+                  </label>
+                </div>
+              </div>
+              <label className="field">
+                <span>入れ替えるクラブ（このクラブの代わりにプレミアリーグへ参戦）</span>
+                <select value={orig.replaces} onChange={(e) => setOrig({ ...orig, replaces: e.target.value })}>
+                  {PL_SEEDS.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="hint">開始後、「クラブ」タブのエディットで全選手を作り込めます（最初は仮の選手が 22 人入っています）。</p>
+            </div>
+          </>
+        )}
+
+        <div className="row gap sticky-bottom">
+          <button className="btn ghost" onClick={() => setMode(mode === 'original' ? 'club' : 'menu')}>
             戻る
           </button>
-          <button
-            className="btn primary grow"
-            onClick={() => {
-              if (slotInfo(slot) && !confirm(`スロット${slot}のデータを上書きします。よろしいですか？`)) return;
-              const s = newGame(name.trim() || '監督', teamId);
-              saveGame(slot, s);
-              onStart(s, slot);
-            }}
-          >
-            キャリア開始
+          <button className="btn primary grow" disabled={busy} onClick={() => start(mode === 'original')}>
+            {busy ? '準備中…' : mode === 'original' ? 'オリジナルチームで開始' : `${clubs.find((c) => c.seed.id === teamId)?.seed.name}で開始`}
           </button>
         </div>
       </div>
@@ -67,7 +147,7 @@ export function Title({ onStart }: { onStart: (s: GameState, slot: Slot) => void
   return (
     <div className="title-screen">
       <div className="title-hero">
-        <svg viewBox="0 0 120 80" width="160" aria-hidden>
+        <svg viewBox="0 0 120 80" width="150" aria-hidden>
           <rect x="4" y="4" width="112" height="72" rx="6" fill="#1f7a45" stroke="#e8fff0" strokeWidth="2" />
           <line x1="60" y1="4" x2="60" y2="76" stroke="#e8fff0" strokeWidth="1.5" />
           <circle cx="60" cy="40" r="12" fill="none" stroke="#e8fff0" strokeWidth="1.5" />
@@ -75,53 +155,56 @@ export function Title({ onStart }: { onStart: (s: GameState, slot: Slot) => void
           <rect x="102" y="24" width="14" height="32" fill="none" stroke="#e8fff0" strokeWidth="1.5" />
           <circle cx="60" cy="40" r="4" fill="#ffd34d" />
         </svg>
-        <h1 className="title-logo">マイクラブ・マスターズ</h1>
-        <p className="title-sub">弱小クラブを、あなたの手で頂点へ。</p>
+        <h1 className="title-logo">マスターリーグ</h1>
+        <p className="title-sub">PREMIER LEAGUE 2026-27</p>
       </div>
 
-      <button className="btn primary big" onClick={() => setMode('new')}>
+      <button className="btn primary big" onClick={() => setMode('club')}>
         ニューゲーム
       </button>
 
       <h3 className="section-title">つづきから</h3>
       <div className="slots">
-        {infos.map(({ s, info }) => (
-          <div key={s} className="slot">
-            <button
-              className="slot-main"
-              disabled={!info}
-              onClick={() => {
-                const g = loadGame(s);
-                if (g) onStart(g, s);
-              }}
-            >
-              <b>スロット{s}</b>
-              {info ? (
-                <span>
-                  {info.teamName} / {info.managerName}監督 / シーズン{info.season} 第{info.round + 1}節
-                  <br />
-                  <small>{new Date(info.updatedAt).toLocaleString('ja-JP')}</small>
-                </span>
-              ) : (
-                <span className="muted">データなし</span>
-              )}
-            </button>
-            {info && (
+        {SLOTS.map((s) => {
+          const info = slotInfo(s);
+          return (
+            <div key={s} className="slot">
               <button
-                className="icon-btn"
-                aria-label="削除"
+                className="slot-main"
+                disabled={!info}
                 onClick={() => {
-                  if (confirm(`スロット${s}を削除しますか？`)) {
-                    deleteGame(s);
-                    force((x) => x + 1);
-                  }
+                  const g = loadGame(s);
+                  if (g) onStart(g, s);
                 }}
               >
-                🗑
+                <b>スロット{s}</b>
+                {info ? (
+                  <span>
+                    {info.teamName} / {info.managerName}監督 / シーズン{info.season}
+                    <br />
+                    <small>{new Date(info.updatedAt).toLocaleString('ja-JP')}</small>
+                  </span>
+                ) : (
+                  <span className="muted">データなし</span>
+                )}
               </button>
-            )}
-          </div>
-        ))}
+              {info && (
+                <button
+                  className="icon-btn"
+                  aria-label="削除"
+                  onClick={() => {
+                    if (confirm(`スロット${s}を削除しますか？`)) {
+                      deleteGame(s);
+                      force((x) => x + 1);
+                    }
+                  }}
+                >
+                  🗑
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <button className="btn ghost" onClick={() => fileRef.current?.click()}>
@@ -148,6 +231,9 @@ export function Title({ onStart }: { onStart: (s: GameState, slot: Slot) => void
           }
         }}
       />
+      <p className="hint center">
+        選手データは 2026-27 シーズン開幕時点の所属をもとにしています。能力値は推定値です。
+      </p>
     </div>
   );
 }

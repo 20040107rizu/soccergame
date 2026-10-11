@@ -1,120 +1,116 @@
-import { useState } from 'react';
-import { Avatar } from '../components/Avatar';
-import { Ovr, PlayerRow, PosTag, fmtP } from '../components/ui';
-import { autoLineup, FORMATIONS, overall, ratingAt } from '../game/rating';
-import { fixUserLineup, squadOf } from '../game/season';
-import type { Formation } from '../game/types';
+import { LineupBoard } from '../components/LineupBoard';
+import { Crest, Seg } from '../components/ui';
+import { available, moveInTeam, repairLineup, setAutoLineup, squadOf } from '../game/lineup';
+import { FORMATION_LIST } from '../game/positions';
+import { teamById, today, userFixture } from '../game/season';
+import { overall } from '../game/stats';
+import type { Formation, Tactic } from '../game/types';
 import { useGame } from '../store';
 
-export function Squad() {
+export const TACTIC_OPTIONS: { v: Tactic; label: string }[] = [
+  { v: 'defense', label: '守備的' },
+  { v: 'balance', label: 'バランス' },
+  { v: 'attack', label: '攻撃的' },
+];
+
+/** チーム画面と試合前画面で共通の編成画面 */
+export function Squad(props: { mode?: 'squad' | 'prematch'; onKickoff?: () => void; onQuick?: () => void; onBack?: () => void }) {
   const { state, update, openPlayer } = useGame();
-  const team = state.teams.find((t) => t.id === state.userTeamId)!;
+  const team = teamById(state, state.userTeamId);
   const squad = squadOf(state, team.id);
-  const slots = FORMATIONS[team.formation];
-  const [sel, setSel] = useState<number | null>(null);
-  const bench = squad.filter((p) => !team.lineup.includes(p.id)).sort((a, b) => overall(b) - overall(a));
-
-  const setFormation = (f: Formation) =>
-    update((d) => {
-      const t = d.teams.find((x) => x.id === d.userTeamId)!;
-      t.formation = f;
-      fixUserLineup(d);
-    });
-
-  const swap = (slotIdx: number, playerId: string) =>
-    update((d) => {
-      const t = d.teams.find((x) => x.id === d.userTeamId)!;
-      const other = t.lineup.indexOf(playerId);
-      if (other >= 0) t.lineup[other] = t.lineup[slotIdx];
-      t.lineup[slotIdx] = playerId;
-    });
+  const reserves = squad
+    .filter((p) => !team.lineup.includes(p.id) && !team.bench.includes(p.id))
+    .sort((a, b) => overall(b) - overall(a))
+    .map((p) => p.id);
+  const prematch = props.mode === 'prematch';
+  const fx = prematch ? userFixture(state) : undefined;
+  const opp = fx ? teamById(state, fx.home === team.id ? fx.away : fx.home) : undefined;
+  const unavailable = team.lineup.filter((id) => state.players[id] && !available(state.players[id]));
 
   return (
     <div className="screen">
-      <div className="row between">
-        <h2 className="screen-title">チーム編成</h2>
-        <button
-          className="btn small"
-          onClick={() =>
+      {prematch && fx && opp ? (
+        <div className="prematch-head">
+          <button className="icon-btn" onClick={props.onBack} aria-label="戻る">
+            ←
+          </button>
+          <div className="grow">
+            <small className="muted">{today(state).label}</small>
+            <div className="row gap">
+              <Crest team={team} size={26} /> <b>{team.short}</b> <span className="muted">vs</span> <Crest team={opp} size={26} /> <b>{opp.short}</b>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="row between">
+          <h2 className="screen-title">チーム編成</h2>
+          <button className="btn small" onClick={() => update((d) => setAutoLineup(d, teamById(d, d.userTeamId)))}>
+            おまかせ
+          </button>
+        </div>
+      )}
+
+      <Seg
+        scroll
+        value={team.formation}
+        options={FORMATION_LIST.map((f) => ({ v: f, label: f }))}
+        onChange={(f: Formation) =>
+          update((d) => {
+            const t = teamById(d, d.userTeamId);
+            t.formation = f;
+            repairLineup(d, t);
+          })
+        }
+      />
+      <div className="row gap">
+        <span className="muted small">作戦</span>
+        <Seg
+          small
+          value={team.tactic}
+          options={TACTIC_OPTIONS}
+          onChange={(v) =>
             update((d) => {
-              const t = d.teams.find((x) => x.id === d.userTeamId)!;
-              t.lineup = autoLineup(squadOf(d, t.id), t.formation);
+              teamById(d, d.userTeamId).tactic = v;
             })
           }
-        >
-          おまかせ
-        </button>
+        />
       </div>
-      <div className="seg scroll">
-        {(Object.keys(FORMATIONS) as Formation[]).map((f) => (
-          <button key={f} className={team.formation === f ? 'on' : ''} onClick={() => setFormation(f)}>
-            {f}
+
+      {unavailable.length > 0 && (
+        <div className="warn-box">
+          出場できない選手（負傷・出場停止）がスタメンにいます。
+          <button className="btn small" onClick={() => update((d) => repairLineup(d, teamById(d, d.userTeamId), true))}>
+            自動で入れ替え
           </button>
-        ))}
-      </div>
-      <p className="hint">選手をタップして選択 → 入れ替えたい選手をタップ。選択中にもう一度タップで詳細。</p>
+        </div>
+      )}
 
-      <div className="pitch">
-        {slots.map((s, i) => {
-          const p = state.players[team.lineup[i]];
-          if (!p) return null;
-          const r = ratingAt(p, s.pos);
-          const off = p.position !== s.pos;
-          return (
-            <button
-              key={i}
-              className={'pitch-player' + (sel === i ? ' sel' : '')}
-              style={{ left: `${s.x}%`, bottom: `${1 + s.y * 0.82}%` }}
-              onClick={() => {
-                if (sel === null) setSel(i);
-                else if (sel === i) {
-                  openPlayer(p.id);
-                  setSel(null);
-                } else {
-                  swap(sel, p.id);
-                  setSel(null);
-                }
-              }}
-            >
-              <Avatar a={p.appearance} color={team.color} color2={team.color2} number={p.number} size={38} />
-              <span className="pp-name">{p.name.split('・').pop()}</span>
-              <span className={'pp-pos' + (off ? ' off' : '')}>
-                {s.pos} {r}
-              </span>
+      <LineupBoard
+        team={team}
+        formation={team.formation}
+        lineup={team.lineup}
+        bench={team.bench}
+        reserves={reserves}
+        players={state.players}
+        onMove={(a, b) => update((d) => moveInTeam(teamById(d, d.userTeamId), a, b))}
+        onDetail={openPlayer}
+      />
+
+      {prematch && (
+        <div className="prematch-actions">
+          {prematch && (
+            <button className="btn small ghost" onClick={() => update((d) => setAutoLineup(d, teamById(d, d.userTeamId)))}>
+              おまかせ
             </button>
-          );
-        })}
-      </div>
-
-      <h3 className="section-title">
-        控え（{bench.length}人） · 全{squad.length}人 · 年俸計 {fmtP(squad.reduce((a, p) => a + p.salary, 0))}
-      </h3>
-      <div className="list">
-        {bench.map((p) => (
-          <PlayerRow
-            key={p.id}
-            p={p}
-            team={team}
-            highlight={sel !== null}
-            onClick={() => {
-              if (sel !== null) {
-                swap(sel, p.id);
-                setSel(null);
-              } else openPlayer(p.id);
-            }}
-            right={
-              <div className="right-stack">
-                <Ovr v={overall(p)} />
-                {sel !== null && (
-                  <small>
-                    <PosTag pos={slots[sel].pos} /> {ratingAt(p, slots[sel].pos)}
-                  </small>
-                )}
-              </div>
-            }
-          />
-        ))}
-      </div>
+          )}
+          <button className="btn ghost" onClick={props.onQuick}>
+            結果のみ
+          </button>
+          <button className="btn primary grow" onClick={props.onKickoff}>
+            キックオフ ▶
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,98 +1,162 @@
 import { useMemo, useState } from 'react';
-import { PlayerRow, fmtP } from '../components/ui';
-import { overall } from '../game/rating';
-import { squadOf } from '../game/season';
-import { saleValue, transferFee } from '../game/transfer';
+import { CondArrow, Ovr, PlayerRow, Seg } from '../components/ui';
+import { windowStatus } from '../game/competitions';
+import { fmtMoney, marketValue } from '../game/economy';
+import { squadOf } from '../game/lineup';
+import { teamById } from '../game/season';
+import { overall } from '../game/stats';
+import { acceptOffer, payrollInfo, rejectOffer } from '../game/transfer';
 import { POSITIONS, type Position } from '../game/types';
 import { useGame } from '../store';
 
-type Tab = 'free' | 'clubs' | 'mine';
-type Sort = 'ovr' | 'price' | 'age';
+type Tab = 'search' | 'offers' | 'mine';
+type League = 'all' | 'PL' | 'EU' | 'free';
+type Sort = 'ovr' | 'value' | 'age';
 
 export function Transfer() {
-  const { state, openPlayer } = useGame();
-  const [tab, setTab] = useState<Tab>('free');
+  const { state, update, toast, openPlayer } = useGame();
+  const [tab, setTab] = useState<Tab>('search');
+  const [league, setLeague] = useState<League>('all');
   const [pos, setPos] = useState<Position | 'ALL'>('ALL');
   const [sort, setSort] = useState<Sort>('ovr');
-  const [maxPrice, setMaxPrice] = useState(false);
-  const teamsById = useMemo(() => Object.fromEntries(state.teams.map((t) => [t.id, t])), [state.teams]);
+  const [q, setQ] = useState('');
+  const [affordable, setAffordable] = useState(false);
+  const w = windowStatus(state);
+  const teams = useMemo(() => Object.fromEntries(state.teams.map((t) => [t.id, t])), [state.teams]);
+  const { total, cap } = payrollInfo(state);
 
   const list = useMemo(() => {
-    let ps = Object.values(state.players);
-    if (tab === 'free') ps = ps.filter((p) => !p.teamId);
-    else if (tab === 'clubs') ps = ps.filter((p) => p.teamId && p.teamId !== state.userTeamId);
-    else ps = squadOf(state, state.userTeamId);
+    let ps = tab === 'mine' ? squadOf(state, state.userTeamId) : Object.values(state.players).filter((p) => p.teamId !== state.userTeamId);
+    if (tab === 'search') {
+      if (league === 'free') ps = ps.filter((p) => !p.teamId);
+      else if (league !== 'all') ps = ps.filter((p) => p.teamId && teams[p.teamId]?.league === league);
+      if (affordable) ps = ps.filter((p) => marketValue(p) <= state.money);
+      if (q.trim()) {
+        const s = q.trim().toLowerCase();
+        ps = ps.filter((p) => p.name.toLowerCase().includes(s) || p.nameEn.toLowerCase().includes(s) || (p.teamId && teams[p.teamId]?.name.includes(q.trim())));
+      }
+    }
     if (pos !== 'ALL') ps = ps.filter((p) => p.position === pos);
-    if (maxPrice && tab !== 'mine') ps = ps.filter((p) => transferFee(p) <= state.points);
-    const key = (p: (typeof ps)[number]) =>
-      sort === 'ovr' ? -overall(p) : sort === 'age' ? p.age : tab === 'mine' ? -saleValue(p) : transferFee(p);
-    return ps.sort((a, b) => key(a) - key(b)).slice(0, 80);
-  }, [state, tab, pos, sort, maxPrice]);
+    const key = (p: (typeof ps)[number]) => (sort === 'ovr' ? -overall(p) : sort === 'value' ? -marketValue(p) : p.age);
+    return ps.sort((a, b) => key(a) - key(b)).slice(0, 100);
+  }, [state, tab, league, pos, sort, q, affordable, teams]);
 
   return (
     <div className="screen">
       <div className="row between">
-        <h2 className="screen-title">移籍市場</h2>
-        <span className="points-badge">{fmtP(state.points)}</span>
+        <h2 className="screen-title">移籍</h2>
+        <span className="money-badge">{fmtMoney(state.money)}</span>
       </div>
-      <div className="seg">
-        <button className={tab === 'free' ? 'on' : ''} onClick={() => setTab('free')}>
-          フリー
-        </button>
-        <button className={tab === 'clubs' ? 'on' : ''} onClick={() => setTab('clubs')}>
-          他クラブ
-        </button>
-        <button className={tab === 'mine' ? 'on' : ''} onClick={() => setTab('mine')}>
-          放出・契約
-        </button>
+      <div className={'window-banner' + (w.open ? ' open' : '')}>
+        <b>{w.open ? `🔓 ${w.label}` : '🔒 移籍市場 CLOSED'}</b>
+        <span>{w.open ? (w.remaining ? `あと${w.remaining}節` : '') : w.label}</span>
       </div>
-      <div className="seg scroll small">
-        <button className={pos === 'ALL' ? 'on' : ''} onClick={() => setPos('ALL')}>
-          全て
-        </button>
-        {POSITIONS.map((p) => (
-          <button key={p} className={pos === p ? 'on' : ''} onClick={() => setPos(p)}>
-            {p}
-          </button>
-        ))}
-      </div>
-      <div className="row gap wrap">
-        <select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
-          <option value="ovr">総合値順</option>
-          <option value="price">{tab === 'mine' ? '売却額順' : '移籍金が安い順'}</option>
-          <option value="age">年齢が若い順</option>
-        </select>
-        {tab !== 'mine' && (
-          <label className="check">
-            <input type="checkbox" checked={maxPrice} onChange={(e) => setMaxPrice(e.target.checked)} /> 獲得可能のみ
-          </label>
-        )}
-      </div>
+      <Seg
+        value={tab}
+        onChange={setTab}
+        options={[
+          { v: 'search', label: '選手を探す' },
+          { v: 'offers', label: `オファー${state.offers.length ? `(${state.offers.length})` : ''}` },
+          { v: 'mine', label: '自クラブ' },
+        ]}
+      />
 
-      <div className="list">
-        {list.length === 0 && <p className="muted center">該当する選手がいません</p>}
-        {list.map((p) => {
-          const price = tab === 'mine' ? saleValue(p) : transferFee(p);
-          const afford = tab === 'mine' || price <= state.points;
-          return (
-            <PlayerRow
-              key={p.id}
-              p={p}
-              team={p.teamId ? teamsById[p.teamId] : undefined}
-              onClick={() => openPlayer(p.id)}
-              right={
-                <div className="right-stack">
-                  <span className={'ovr-inline'}>{overall(p)}</span>
-                  <small className={afford ? '' : 'neg'}>
-                    {tab === 'mine' ? `売 ${fmtP(price)}` : fmtP(price)}
-                  </small>
-                  {tab === 'mine' && <small className={p.contractYears <= 1 ? 'warn' : 'muted'}>契約{p.contractYears}年</small>}
+      {tab === 'offers' ? (
+        <div className="list">
+          {state.offers.length === 0 && <p className="muted center">届いているオファーはありません</p>}
+          {state.offers.map((o) => {
+            const p = state.players[o.playerId];
+            if (!p) return null;
+            const from = teams[o.fromTeam];
+            return (
+              <div key={o.id} className="card offer">
+                <PlayerRow p={p} team={teams[state.userTeamId]} onClick={() => openPlayer(p.id)} />
+                <div className="row between">
+                  <span>
+                    {from?.name}から <b>{fmtMoney(o.fee)}</b>
+                    <small className="muted">（市場価値 {fmtMoney(marketValue(p))}）</small>
+                  </span>
                 </div>
-              }
-            />
-          );
-        })}
-      </div>
+                <div className="row gap">
+                  <button className="btn ghost grow" onClick={() => update((d) => rejectOffer(d, o.id))}>
+                    断る
+                  </button>
+                  <button
+                    className="btn primary grow"
+                    disabled={!w.open}
+                    onClick={() => {
+                      if (!confirm(`${p.name}を${from?.name}へ ${fmtMoney(o.fee)} で売却しますか？`)) return;
+                      const r = update((d) => acceptOffer(d, o.id));
+                      toast(r.ok ? '売却が成立しました' : r.message);
+                    }}
+                  >
+                    受け入れる
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <>
+          {tab === 'search' && (
+            <>
+              <input className="search" placeholder="名前・クラブで検索" value={q} onChange={(e) => setQ(e.target.value)} />
+              <Seg
+                small
+                value={league}
+                onChange={setLeague}
+                options={[
+                  { v: 'all', label: '全て' },
+                  { v: 'PL', label: 'プレミア' },
+                  { v: 'EU', label: '欧州' },
+                  { v: 'free', label: 'フリー' },
+                ]}
+              />
+            </>
+          )}
+          {tab === 'mine' && (
+            <p className="hint">
+              年俸総額 {fmtMoney(total)} / 上限 {fmtMoney(cap)}。選手をタップすると契約延長・売却・契約解除ができます。
+            </p>
+          )}
+          <Seg scroll small value={pos} onChange={setPos} options={[{ v: 'ALL' as const, label: '全' }, ...POSITIONS.map((p) => ({ v: p, label: p }))]} />
+          <div className="row gap wrap">
+            <select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+              <option value="ovr">総合値順</option>
+              <option value="value">市場価値順</option>
+              <option value="age">若い順</option>
+            </select>
+            {tab === 'search' && (
+              <label className="check">
+                <input type="checkbox" checked={affordable} onChange={(e) => setAffordable(e.target.checked)} /> 資金内
+              </label>
+            )}
+          </div>
+          <div className="list">
+            {list.length === 0 && <p className="muted center">該当する選手がいません</p>}
+            {list.map((p) => (
+              <PlayerRow
+                key={p.id}
+                p={p}
+                team={p.teamId ? teams[p.teamId] : undefined}
+                onClick={() => openPlayer(p.id)}
+                sub={
+                  tab === 'mine'
+                    ? `${p.age}歳 · 年俸${fmtMoney(p.salary)} · 契約残り${p.contractYears}年`
+                    : `${p.age}歳 · ${p.teamId ? teamById(state, p.teamId).short : 'フリー'} · ${fmtMoney(marketValue(p))}`
+                }
+                right={
+                  <>
+                    <CondArrow c={p.condition} size={18} />
+                    <Ovr v={overall(p)} />
+                  </>
+                }
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -1,230 +1,471 @@
-import { generatePlayer } from './data';
-import type { MatchResult } from './match';
-import { simulateMatch } from './match';
-import { autoLineup, fairSalary, FORMATIONS, overall, ratingAt } from './rating';
+import { CL_2026, EU_SEEDS, emptyStats, generateOriginalSquad, generatePlayer, PL_SEEDS, playerFromSeed, teamFromSeed } from './data';
+import { CL_STAGE_PRIZE, fairSalary, leaguePrize, marketValue, MATCH_PRIZE, payroll, round2, wageCap } from './economy';
+import { advanceCL, buildCalendar, clLeagueFixtures, plFixtures, plTable, resolveTie, stageComplete, STAGE_LABEL, windowStatus } from './competitions';
+import { createMatch, simulateToEnd, sidePower, type LiveMatch } from './engine';
+import { autoLineup, available, repairLineup, setAutoLineup, squadOf } from './lineup';
+import { FORMATION_LIST, FORMATIONS } from './positions';
 import { clamp, pick, rand, randInt, uid } from './rng';
-import type { Fixture, GameState, Player, Position, StandingRow, StatKey } from './types';
-import { STAT_KEYS } from './types';
+import { overall, OVR_WEIGHTS, STAT_KEYS, ratingAt } from './stats';
+import type { CLStage, Condition, Fixture, Formation, GameState, Player, Position, StatKey, Team } from './types';
 
-/** 登録の最低人数（transfer.ts の MIN_SQUAD と同じ） */
-export const MIN_SQUAD_SIZE = 16;
+export interface OriginalSetup {
+  name: string;
+  short: string;
+  color: string;
+  color2: string;
+  /** 入れ替えるクラブ */
+  replaces: string;
+}
 
-/** 総当たり（ホーム＆アウェー）の日程を作る */
-export function makeSchedule(teamIds: string[]): Fixture[] {
-  const ids = [...teamIds].sort(() => rand() - 0.5);
-  if (ids.length % 2) ids.push('BYE');
-  const n = ids.length;
-  const fixtures: Fixture[] = [];
-  const rounds = n - 1;
-  const arr = [...ids];
-  for (let r = 0; r < rounds; r++) {
-    for (let i = 0; i < n / 2; i++) {
-      const a = arr[i];
-      const b = arr[n - 1 - i];
-      if (a === 'BYE' || b === 'BYE') continue;
-      const flip = (r + i) % 2 === 0;
-      fixtures.push({ round: r, home: flip ? a : b, away: flip ? b : a });
-    }
-    arr.splice(1, 0, arr.pop()!);
+export const ORIGINAL_ID = 'orig';
+
+/* ---------------- 新規ゲーム ---------------- */
+
+export function newGame(managerName: string, userTeamId: string, original?: OriginalSetup): GameState {
+  const teams: Team[] = [];
+  const players: Record<string, Player> = {};
+  const seeds = [...PL_SEEDS, ...EU_SEEDS];
+  for (const seed of seeds) {
+    if (original && seed.id === original.replaces) continue;
+    const t = teamFromSeed(seed);
+    teams.push(t);
+    const used = new Set<number>();
+    seed.players.forEach((line, i) => {
+      const p = playerFromSeed(line, t.id);
+      while (players[p.id]) p.id += '_' + i;
+      while (used.has(p.number)) p.number = p.number < 99 ? p.number + 1 : 2;
+      used.add(p.number);
+      players[p.id] = p;
+    });
   }
-  // 後半戦はホーム・アウェーを入れ替え
-  const second = fixtures.map((f) => ({ round: f.round + rounds, home: f.away, away: f.home }));
-  return [...fixtures, ...second];
+  let budget = 0;
+  if (original) {
+    const replaced = seeds.find((s) => s.id === original.replaces)!;
+    const t: Team = {
+      id: ORIGINAL_ID,
+      name: original.name,
+      en: original.name,
+      short: original.short,
+      color: original.color,
+      color2: original.color2,
+      rep: 50,
+      country: 'イングランド',
+      league: 'PL',
+      formation: '4-3-3',
+      tactic: 'balance',
+      lineup: [],
+      bench: [],
+      budget: 0,
+      original: true,
+    };
+    teams.push(t);
+    for (const p of generateOriginalSquad(t.id)) players[p.id] = p;
+    budget = Math.max(40, replaced.budget);
+    userTeamId = ORIGINAL_ID;
+  } else {
+    budget = seeds.find((s) => s.id === userTeamId)!.budget;
+  }
+
+  const state: GameState = {
+    version: 2,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    managerName,
+    userTeamId,
+    season: 1,
+    day: 0,
+    calendar: buildCalendar(),
+    money: budget,
+    teams,
+    players,
+    fixtures: [],
+    clTeams: CL_2026.map((id) => (original && id === original.replaces ? ORIGINAL_ID : id)),
+    ties: [],
+    offers: [],
+    negotiations: {},
+    news: [],
+    history: [],
+  };
+
+  for (let i = 0; i < 40; i++) {
+    const p = generatePlayer({ position: pick(FA_POSITIONS), level: 58 + randInt(0, 14), teamId: null });
+    state.players[p.id] = p;
+  }
+  for (const t of teams) {
+    t.formation = bestFormation(state, t);
+    setAutoLineup(state, t);
+  }
+  setupFixtures(state);
+  const user = teams.find((t) => t.id === userTeamId)!;
+  state.news.unshift({
+    id: uid('n'),
+    season: 1,
+    day: 0,
+    kind: 'info',
+    text: `${managerName}監督が${user.name}の監督に就任。マスターリーグ 2026-27 シーズン開幕！`,
+  });
+  return state;
 }
 
-export function totalRounds(state: GameState): number {
-  return Math.max(...state.fixtures.map((f) => f.round)) + 1;
+const FA_POSITIONS: Position[] = ['GK', 'CB', 'CB', 'LB', 'RB', 'DMF', 'CMF', 'CMF', 'AMF', 'LMF', 'RMF', 'LWF', 'RWF', 'CF', 'CF'];
+
+function setupFixtures(state: GameState) {
+  const plIds = state.teams.filter((t) => t.league === 'PL').map((t) => t.id);
+  state.fixtures = [...plFixtures(plIds, state.calendar), ...clLeagueFixtures(state.clTeams, state.teams, state.calendar)];
+  state.ties = [];
 }
 
-export function standings(state: GameState): StandingRow[] {
-  const rows: Record<string, StandingRow> = {};
-  for (const t of state.teams) rows[t.id] = { teamId: t.id, played: 0, win: 0, draw: 0, loss: 0, gf: 0, ga: 0, points: 0 };
-  for (const f of state.fixtures) {
-    if (!f.result) continue;
-    const h = rows[f.home];
-    const a = rows[f.away];
-    if (!h || !a) continue;
-    h.played++;
-    a.played++;
-    h.gf += f.result.home;
-    h.ga += f.result.away;
-    a.gf += f.result.away;
-    a.ga += f.result.home;
-    if (f.result.home > f.result.away) {
-      h.win++;
-      h.points += 3;
-      a.loss++;
-    } else if (f.result.home < f.result.away) {
-      a.win++;
-      a.points += 3;
-      h.loss++;
+export function bestFormation(state: GameState, team: Team): Formation {
+  const squad = squadOf(state, team.id);
+  let best: Formation = '4-3-3';
+  let bestV = -1;
+  for (const f of FORMATION_LIST) {
+    const { lineup } = autoLineup(squad, f);
+    const slots = lineup.map((id) => state.players[id]);
+    const v = slots.reduce((s, p, i) => s + (p ? ratingAt(p, formationPos(f, i)) : 0), 0);
+    if (v > bestV) {
+      bestV = v;
+      best = f;
+    }
+  }
+  return best;
+}
+
+function formationPos(f: Formation, i: number): Position {
+  return FORMATIONS[f][i].pos;
+}
+
+/* ---------------- 日程の参照 ---------------- */
+
+export function today(state: GameState) {
+  return state.calendar[state.day];
+}
+
+export function fixturesOfDay(state: GameState, day = state.day): Fixture[] {
+  return state.fixtures.filter((f) => f.day === day);
+}
+
+export function userFixture(state: GameState, day = state.day): Fixture | undefined {
+  return fixturesOfDay(state, day).find((f) => f.home === state.userTeamId || f.away === state.userTeamId);
+}
+
+export function isSeasonOver(state: GameState): boolean {
+  return state.day >= state.calendar.length;
+}
+
+export function teamById(state: GameState, id: string): Team {
+  return state.teams.find((t) => t.id === id)!;
+}
+
+/* ---------------- 試合日の処理 ---------------- */
+
+export interface DayReport {
+  userResult?: { gf: number; ga: number; prize: number; label: string };
+  news: string[];
+}
+
+/** 試合前の準備：CPU はベストメンバー、ユーザーは出場できない選手を自動で入れ替え */
+export function prepareDay(state: GameState) {
+  for (const f of fixturesOfDay(state)) {
+    for (const id of [f.home, f.away]) {
+      const t = teamById(state, id);
+      if (id === state.userTeamId) repairLineup(state, t, true);
+      else {
+        // CPU は大会や疲労に応じて少しローテーション
+        setAutoLineup(state, t);
+      }
+    }
+  }
+}
+
+/** その日の全試合を行う。userMatch はユーザーが観戦・采配した試合 */
+export function playDay(state: GameState, userMatch?: LiveMatch): DayReport {
+  const report: DayReport = { news: [] };
+  const day = today(state);
+  if (!day) return report;
+  let userGame: { f: Fixture; m: LiveMatch } | undefined;
+  for (const f of fixturesOfDay(state)) {
+    if (f.result) continue;
+    const isUser = f.home === state.userTeamId || f.away === state.userTeamId;
+    let m: LiveMatch;
+    if (isUser && userMatch && userMatch.fixtureId === f.id && userMatch.finished) m = userMatch;
+    else {
+      m = createMatch(state, f.id);
+      simulateToEnd(state, m);
+    }
+    applyMatch(state, f, m);
+    if (isUser) userGame = { f, m };
+  }
+
+  // CL のステージ進行
+  if (day.type === 'CL' && day.stage) progressCL(state, day.stage, day.leg);
+
+  if (userGame) report.userResult = userResultNews(state, userGame.f, userGame.m);
+
+  // 負傷の回復・調子の変化
+  for (const p of Object.values(state.players)) {
+    if (p.injury > 0) p.injury--;
+    updateCondition(p);
+  }
+
+  // 移籍期間中の CPU からのオファーと補強
+  aiTransferActivity(state);
+
+  state.day++;
+  state.updatedAt = Date.now();
+  return report;
+}
+
+function userResultNews(state: GameState, f: Fixture, m: LiveMatch) {
+  const day = today(state);
+  const home = f.home === state.userTeamId;
+  const gf = home ? m.score.home : m.score.away;
+  const ga = home ? m.score.away : m.score.home;
+  const prizeTable = MATCH_PRIZE[f.comp];
+  const prize = gf > ga ? prizeTable.win : gf === ga ? prizeTable.draw : prizeTable.loss;
+  state.money = round2(state.money + prize);
+  const opp = teamById(state, home ? f.away : f.home);
+  const scorers = m.events.filter((e) => e.type === 'goal' && e.side === (home ? 'home' : 'away')).map((e) => state.players[e.playerId!]?.name);
+  const r = f.result!;
+  const pk = r.pkHome !== undefined ? `（PK ${home ? r.pkHome : r.pkAway}-${home ? r.pkAway : r.pkHome}）` : '';
+  const label = `${day.label} vs ${opp.name} ${gf}-${ga}${pk}`;
+  state.news.unshift({
+    id: uid('n'),
+    season: state.season,
+    day: state.day,
+    kind: 'match',
+    text: `${label} ${gf > ga ? '勝利' : gf === ga ? '引き分け' : '敗戦'}${scorers.length ? `（得点：${scorers.join('、')}）` : ''} 賞金 +€${prize}M`,
+  });
+  return { gf, ga, prize, label };
+}
+
+function progressCL(state: GameState, stage: CLStage, leg?: 1 | 2) {
+  if (stage !== 'LP' && (leg === 2 || stage === 'F')) {
+    for (const tie of state.ties.filter((t) => t.stage === stage && !t.winner)) {
+      resolveTie(state, tie, (id) => {
+        const t = teamById(state, id);
+        const m = createMatch(state, state.fixtures.find((f) => f.tieId === tie.id)!.id);
+        const p = sidePower(state, m[m.home.teamId === t.id ? 'home' : 'away']);
+        return p.attack + p.midfield + p.defense;
+      });
+    }
+  }
+  if (!stageComplete(state, stage)) return;
+  const user = state.userTeamId;
+  if (stage === 'F') {
+    const tie = state.ties.find((t) => t.stage === 'F')!;
+    const winner = teamById(state, tie.winner!);
+    state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'info', text: `🏆 チャンピオンズリーグ優勝は${winner.name}！` });
+    if (tie.winner === user) state.money = round2(state.money + CL_STAGE_PRIZE.win);
+    return;
+  }
+  const next = advanceCL(state, stage);
+  if (!next) return;
+  const inNext = state.ties.some((t) => t.stage === next && (t.a === user || t.b === user));
+  const wasIn = stage === 'LP' ? state.clTeams.includes(user) : state.ties.some((t) => t.stage === stage && (t.a === user || t.b === user));
+  if (wasIn) {
+    if (inNext) {
+      const prize = (CL_STAGE_PRIZE as Record<string, number>)[next] ?? 0;
+      state.money = round2(state.money + prize);
+      state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'info', text: `CL ${STAGE_LABEL[next]}進出！${prize ? ` 賞金 +€${prize}M` : ''}` });
     } else {
-      h.draw++;
-      a.draw++;
-      h.points++;
-      a.points++;
+      state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'info', text: `CL ${STAGE_LABEL[stage]}で敗退…` });
     }
   }
-  return Object.values(rows).sort(
-    (x, y) => y.points - x.points || y.gf - y.ga - (x.gf - x.ga) || y.gf - x.gf,
-  );
 }
 
-export function squadOf(state: GameState, teamId: string): Player[] {
-  return Object.values(state.players).filter((p) => p.teamId === teamId);
-}
-
-export function userFixture(state: GameState): Fixture | undefined {
-  return state.fixtures.find((f) => f.round === state.round && (f.home === state.userTeamId || f.away === state.userTeamId));
-}
-
-/** 試合1つ分の結果を状態へ反映（破壊的に更新） */
-function applyResult(state: GameState, f: Fixture, res: MatchResult) {
-  f.result = { home: res.home, away: res.away };
-  for (const id of res.appeared) {
-    const p = state.players[id];
-    if (!p) continue;
-    p.season.apps++;
-    p.career.apps++;
-    // 試合経験で少しずつ成長（若手ほど伸びやすい）
-    if (p.age <= 28 && overall(p) < p.potential && rand() < (p.age <= 23 ? 0.35 : 0.15)) {
-      bumpStats(p, 1);
+function applyMatch(state: GameState, f: Fixture, m: LiveMatch) {
+  f.result = { home: m.score.home, away: m.score.away };
+  const isCL = f.comp === 'CL';
+  for (const key of ['home', 'away'] as const) {
+    const side = m[key];
+    const team = teamById(state, side.teamId);
+    // 出場停止の消化（この試合に出られなかった選手）
+    for (const p of squadOf(state, team.id)) if (p.suspension > 0) p.suspension--;
+    for (const id of side.usedPlayers) {
+      const p = state.players[id];
+      if (!p) continue;
+      if (isCL) p.season.clApps++;
+      else p.season.apps++;
+      p.career.apps++;
+      const r = m.ratings[id] ?? 6;
+      if (p.age <= 25 && overall(p) < p.potential && rand() < (r >= 7 ? 0.3 : 0.12)) bumpStats(p, 1);
+    }
+    for (const id of side.sentOff) {
+      const p = state.players[id];
+      if (p) p.suspension = 1;
+    }
+    for (const id of side.injured) {
+      const p = state.players[id];
+      if (!p) continue;
+      p.injury = randInt(1, 3) + randInt(0, 4 - p.traits.injuryRes) * 2;
+      if (team.id === state.userTeamId) {
+        state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'injury', text: `【負傷】${p.name}が負傷。全治 約${p.injury}試合` });
+      }
     }
   }
-  for (const e of res.events) {
+  for (const e of m.events) {
     if (e.type !== 'goal') continue;
     const s = state.players[e.playerId!];
     if (s) {
-      s.season.goals++;
+      if (isCL) s.season.clGoals++;
+      else s.season.goals++;
       s.career.goals++;
     }
     const a = e.assistId ? state.players[e.assistId] : undefined;
-    if (a) {
+    if (a && !isCL) {
       a.season.assists++;
       a.career.assists++;
     }
   }
 }
 
+/** 調子（コンディション）の変化。安定度が高いほど変わりにくい */
+export function updateCondition(p: Player) {
+  const changeP = 0.55 - p.traits.form * 0.05;
+  if (rand() > changeP) return;
+  const toward = p.condition < 3 ? 0.62 : p.condition > 3 ? 0.38 : 0.5;
+  const c = clamp(p.condition + (rand() < toward ? 1 : -1), 1, 5);
+  p.condition = c as Condition;
+}
+
 /** ポジションに関係する能力を中心に上げ下げする */
-const KEY_STATS: Record<Position, StatKey[]> = {
-  GK: ['keeper', 'physical'],
-  CB: ['defense', 'physical', 'speed'],
-  SB: ['defense', 'speed', 'stamina', 'pass'],
-  DMF: ['defense', 'pass', 'stamina', 'physical'],
-  CMF: ['pass', 'stamina', 'dribble', 'offense'],
-  OMF: ['pass', 'dribble', 'offense', 'shoot'],
-  WG: ['speed', 'dribble', 'offense', 'pass'],
-  CF: ['shoot', 'offense', 'physical', 'dribble'],
-};
-
 export function bumpStats(p: Player, amount: number) {
-  const keys = rand() < 0.7 ? KEY_STATS[p.position] : STAT_KEYS.filter((k) => k !== 'keeper' || p.position === 'GK');
-  const k = pick(keys);
-  p.stats[k] = clamp(p.stats[k] + amount, 30, 99);
+  const w = OVR_WEIGHTS[p.position];
+  const keys = Object.keys(w) as StatKey[];
+  const k: StatKey = rand() < 0.75 ? pick(keys) : pick(STAT_KEYS.filter((x) => !x.startsWith('gk') || p.position === 'GK'));
+  p.stats[k] = clamp(p.stats[k] + amount, 35, 99);
 }
 
-/** 収入（ポイント）：勝利 1500 / 引分 800 / 敗戦 400 */
-export function matchIncome(gf: number, ga: number): number {
-  return gf > ga ? 1500 : gf === ga ? 800 : 400;
-}
+/* ---------------- CPU の移籍活動 ---------------- */
 
-/**
- * 節を進める。ユーザーの試合結果（観戦済み）があれば使い、他は自動シミュレート。
- */
-export function playRound(state: GameState, userResult?: MatchResult): { income: number } {
-  let income = 0;
-  for (const f of state.fixtures.filter((x) => x.round === state.round && !x.result)) {
-    const isUser = f.home === state.userTeamId || f.away === state.userTeamId;
-    const res = isUser && userResult ? userResult : simulateMatch(state, f.home, f.away);
-    applyResult(state, f, res);
-    if (isUser) {
-      const home = f.home === state.userTeamId;
-      const gf = home ? res.home : res.away;
-      const ga = home ? res.away : res.home;
-      income = matchIncome(gf, ga);
-      state.points += income;
-      const opp = state.teams.find((t) => t.id === (home ? f.away : f.home))!;
-      const scorers = res.events
-        .filter((e) => e.type === 'goal' && e.side === (home ? 'home' : 'away'))
-        .map((e) => state.players[e.playerId!]?.name)
-        .filter(Boolean);
-      state.news.unshift({
-        id: uid('n'),
-        season: state.season,
-        round: state.round,
-        text: `第${state.round + 1}節 vs ${opp.name} ${gf}-${ga} ${gf > ga ? '勝利' : gf === ga ? '引き分け' : '敗戦'}` +
-          (scorers.length ? `（得点：${scorers.join('、')}）` : '') + ` +${income}P`,
-      });
+function aiTransferActivity(state: GameState) {
+  const w = windowStatus(state);
+  if (!w.open) {
+    // 移籍期間が終わったらオファーと交渉記録は無効
+    state.offers = [];
+    state.negotiations = {};
+    return;
+  }
+  // ユーザーの選手へのオファー
+  const userSquad = squadOf(state, state.userTeamId);
+  if (rand() < 0.35 && userSquad.length > 16) {
+    const target = userSquad
+      .filter((p) => !state.offers.some((o) => o.playerId === p.id))
+      .sort((a, b) => marketValue(b) * rand() - marketValue(a) * rand())[0];
+    if (target) {
+      const buyers = state.teams.filter((t) => t.id !== state.userTeamId && t.rep >= 55 && t.budget >= marketValue(target) * 0.8);
+      const buyer = buyers.length ? pick(buyers) : null;
+      if (buyer) {
+        const fee = round2(marketValue(target) * (0.85 + rand() * 0.4));
+        state.offers.push({ id: uid('o'), playerId: target.id, fromTeam: buyer.id, fee, day: state.day });
+        state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'transfer', text: `【オファー】${buyer.name}が${target.name}に €${fee}M のオファー` });
+      }
     }
   }
-  state.round++;
-  state.updatedAt = Date.now();
-  return { income };
+  // CPU クラブ同士の補強（人数が足りないクラブがフリー選手を獲得）
+  aiFillSquads(state);
 }
 
-export function isSeasonOver(state: GameState): boolean {
-  return state.round >= totalRounds(state);
+export function aiFillSquads(state: GameState) {
+  for (const t of state.teams) {
+    if (t.id === state.userTeamId) continue;
+    let squad = squadOf(state, t.id);
+    const min = t.league === 'PL' ? 22 : 18;
+    while (squad.length < min) {
+      const need = neededPosition(squad);
+      const free = Object.values(state.players)
+        .filter((p) => !p.teamId && p.position === need && available(p))
+        .sort((a, b) => overall(b) - overall(a));
+      const level = Math.min(80, 50 + t.rep * 0.25);
+      const sign = free.find((p) => overall(p) <= level + 6) ?? generatePlayer({ position: need, level, teamId: null, age: randInt(18, 21) });
+      state.players[sign.id] = sign;
+      sign.teamId = t.id;
+      sign.contractYears = randInt(1, 3);
+      sign.salary = fairSalary(sign);
+      const used = new Set(squad.map((p) => p.number));
+      while (used.has(sign.number)) sign.number = randInt(2, 99);
+      squad = squadOf(state, t.id);
+    }
+    repairLineup(state, t);
+  }
 }
 
-/** 成長カーブ：成長期と衰退開始年齢 */
+function neededPosition(squad: Player[]): Position {
+  const want: Partial<Record<Position, number>> = { GK: 2, CB: 4, LB: 2, RB: 2, DMF: 2, CMF: 3, AMF: 1, LWF: 1, RWF: 1, CF: 2 };
+  for (const p of squad) if (want[p.position] !== undefined) want[p.position]!--;
+  return (Object.keys(want) as Position[]).sort((a, b) => want[b]! - want[a]!)[0];
+}
+
+/* ---------------- シーズン終了 ---------------- */
+
 const CURVE = {
-  early: { growUntil: 24, declineFrom: 28 },
-  normal: { growUntil: 27, declineFrom: 30 },
-  late: { growUntil: 30, declineFrom: 32 },
+  early: { growUntil: 23, declineFrom: 28 },
+  normal: { growUntil: 26, declineFrom: 30 },
+  late: { growUntil: 29, declineFrom: 32 },
 };
 
 export interface SeasonSummary {
   rank: number;
   champion: string;
-  bonus: number;
-  salaries: number;
+  clWinner?: string;
+  userCl: string;
+  prize: number;
   retired: string[];
   left: string[];
   promoted: string[];
   grown: { name: string; diff: number }[];
+  repChange: number;
 }
 
-/** シーズン終了処理：順位ボーナス、年俸支払い、成長・衰退、引退、契約満了、新人補充、新日程 */
 export function endSeason(state: GameState): SeasonSummary {
-  const table = standings(state);
-  const rank = table.findIndex((r) => r.teamId === state.userTeamId) + 1;
-  const champion = state.teams.find((t) => t.id === table[0].teamId)!.name;
-  const bonus = Math.max(0, 12000 - (rank - 1) * 1500);
-  const userPlayers = squadOf(state, state.userTeamId);
-  const salaries = userPlayers.reduce((s, p) => s + p.salary, 0);
-  state.points += bonus - salaries;
+  const tbl = plTable(state);
+  const rank = tbl.findIndex((r) => r.teamId === state.userTeamId) + 1;
+  const champion = teamById(state, tbl[0].teamId).name;
+  const finalTie = state.ties.find((t) => t.stage === 'F');
+  const clWinner = finalTie?.winner ? teamById(state, finalTie.winner).name : undefined;
+  const userCl = clResultLabel(state);
+  const prize = leaguePrize(rank);
+  state.money = round2(state.money + prize);
 
-  const summary: SeasonSummary = { rank, champion, bonus, salaries, retired: [], left: [], promoted: [], grown: [] };
+  const user = teamById(state, state.userTeamId);
+  const oldRep = user.rep;
+  const clBonus = userCl === '優勝' ? 4 : userCl === '決勝' ? 3 : userCl === '準決勝' ? 2 : userCl === '準々決勝' ? 1.5 : userCl === 'ラウンド16' ? 1 : 0;
+  user.rep = Math.round(clamp(user.rep + (10.5 - rank) * 0.5 + clBonus, 40, 99));
+  // CPU クラブの評価も成績で少し動く
+  tbl.forEach((r, i) => {
+    if (r.teamId === state.userTeamId) return;
+    const t = teamById(state, r.teamId);
+    t.rep = Math.round(clamp(t.rep + (10.5 - (i + 1)) * 0.15, 40, 99));
+  });
+
+  const summary: SeasonSummary = { rank, champion, clWinner, userCl, prize, retired: [], left: [], promoted: [], grown: [], repChange: user.rep - oldRep };
 
   for (const p of Object.values(state.players)) {
     const before = overall(p);
     const curve = CURVE[p.growth];
     p.age++;
     if (p.age <= curve.growUntil && before < p.potential) {
-      const playBoost = clamp(p.season.apps / 10, 0.3, 1.3);
-      const steps = Math.round((p.potential - before) * 0.35 * playBoost + rand() * 2);
-      for (let i = 0; i < steps * 2; i++) bumpStats(p, 1);
+      const apps = p.season.apps + p.season.clApps;
+      const playBoost = clamp(apps / 20, 0.3, 1.3);
+      const steps = Math.round((p.potential - before) * 0.4 * playBoost + rand() * 2);
+      for (let i = 0; i < steps * 3; i++) bumpStats(p, 1);
     } else if (p.age >= curve.declineFrom) {
-      const steps = randInt(1, 3) + Math.max(0, p.age - curve.declineFrom);
-      for (let i = 0; i < steps * 2; i++) bumpStats(p, -1);
-      // 年齢とともにスピード・スタミナが落ちる
-      p.stats.speed = clamp(p.stats.speed - randInt(0, 2), 30, 99);
-      p.stats.stamina = clamp(p.stats.stamina - randInt(0, 2), 30, 99);
+      const steps = randInt(1, 2) + Math.max(0, p.age - curve.declineFrom);
+      for (let i = 0; i < steps * 3; i++) bumpStats(p, -1);
+      for (const k of ['speed', 'acceleration', 'stamina'] as StatKey[]) p.stats[k] = clamp(p.stats[k] - randInt(0, 2), 35, 99);
     }
     const after = overall(p);
     if (p.teamId === state.userTeamId && after !== before) summary.grown.push({ name: p.name, diff: after - before });
+    p.season = emptyStats();
+    p.injury = 0;
+    p.suspension = 0;
 
-    p.season = { apps: 0, goals: 0, assists: 0 };
-
-    // 引退
-    if (p.age >= 34 && rand() < 0.25 + (p.age - 34) * 0.2) {
+    if (p.age >= 34 && rand() < 0.2 + (p.age - 34) * 0.18) {
       if (p.teamId === state.userTeamId) summary.retired.push(p.name);
       delete state.players[p.id];
       continue;
     }
-
-    // 契約
     if (p.teamId) {
       p.contractYears--;
       if (p.contractYears <= 0) {
@@ -232,6 +473,8 @@ export function endSeason(state: GameState): SeasonSummary {
           summary.left.push(p.name);
           p.teamId = null;
           p.contractYears = 0;
+        } else if (p.age >= 33 && rand() < 0.5) {
+          p.teamId = null;
         } else {
           p.contractYears = randInt(1, 3);
           p.salary = fairSalary(p);
@@ -241,106 +484,73 @@ export function endSeason(state: GameState): SeasonSummary {
   }
   summary.grown.sort((a, b) => b.diff - a.diff);
 
-  // 新人・ベテランをフリー市場に補充
-  const positions: Position[] = ['GK', 'CB', 'CB', 'SB', 'DMF', 'CMF', 'CMF', 'OMF', 'WG', 'WG', 'CF', 'CF'];
-  for (let i = 0; i < 16; i++) {
-    const young = rand() < 0.6;
-    const p = generatePlayer({
-      position: pick(positions),
-      level: young ? 44 + randInt(0, 10) : 50 + randInt(0, 14),
-      age: young ? randInt(17, 19) : randInt(22, 32),
-      teamId: null,
-    });
+  // 新人・ベテランをフリー市場へ
+  for (let i = 0; i < 30; i++) {
+    const young = rand() < 0.65;
+    const p = generatePlayer({ position: pick(FA_POSITIONS), level: young ? 55 + randInt(0, 12) : 60 + randInt(0, 14), age: young ? randInt(17, 19) : randInt(23, 31), teamId: null });
     state.players[p.id] = p;
   }
-
   summary.promoted = promoteYouth(state);
   aiFillSquads(state);
 
-  state.history.push({ season: state.season, rank, champion });
+  state.history.push({ season: state.season, rank, champion, clWinner, userCl });
+
+  // 来季の CL 出場：PL 上位 5 クラブ＋欧州クラブ
+  const plTop = tbl.slice(0, 5).map((r) => r.teamId);
+  const eu = state.teams.filter((t) => t.league === 'EU').map((t) => t.id);
+  state.clTeams = [...plTop, ...eu];
+
   state.season++;
-  state.round = 0;
-  state.fixtures = makeSchedule(state.teams.map((t) => t.id));
+  state.day = 0;
+  state.offers = [];
+  state.negotiations = {};
+  setupFixtures(state);
+  for (const t of state.teams) if (t.id !== state.userTeamId) setAutoLineup(state, t);
+  repairLineup(state, user);
+  const inCl = state.clTeams.includes(user.id);
+  if (inCl) state.money = round2(state.money + CL_STAGE_PRIZE.start);
   state.news.unshift({
     id: uid('n'),
     season: state.season,
-    round: 0,
-    text: `シーズン${state.season - 1}終了：${rank}位（優勝 ${champion}）。順位ボーナス +${bonus}P / 年俸 -${salaries}P`,
+    day: 0,
+    kind: 'info',
+    text: `シーズン${state.season - 1}終了：プレミアリーグ ${rank}位（優勝 ${champion}）。分配金 +€${prize.toFixed(1)}M${inCl ? ` / 来季CL出場（+€${CL_STAGE_PRIZE.start}M）` : ''}`,
   });
   state.updatedAt = Date.now();
   return summary;
 }
 
-/** CPUクラブの補強：人数が足りないクラブがフリー選手を獲得 */
-export function aiFillSquads(state: GameState) {
-  for (const t of state.teams) {
-    if (t.id === state.userTeamId) continue;
-    let squad = squadOf(state, t.id);
-    while (squad.length < 22) {
-      const need = neededPosition(squad);
-      const free = Object.values(state.players)
-        .filter((p) => !p.teamId && (p.position === need || rand() < 0.1))
-        .sort((a, b) => overall(b) - overall(a));
-      const sign = free[0] ?? generatePlayer({ position: need, level: 55, teamId: null });
-      state.players[sign.id] = sign;
-      sign.teamId = t.id;
-      sign.contractYears = randInt(1, 3);
-      sign.salary = fairSalary(sign);
-      squad = squadOf(state, t.id);
-    }
-    t.lineup = autoLineup(squad, t.formation);
+function clResultLabel(state: GameState): string {
+  const u = state.userTeamId;
+  if (!state.clTeams.includes(u)) return '出場なし';
+  const order: CLStage[] = ['F', 'SF', 'QF', 'R16', 'PO'];
+  const fin = state.ties.find((t) => t.stage === 'F');
+  if (fin?.winner === u) return '優勝';
+  for (const s of order) {
+    if (state.ties.some((t) => t.stage === s && (t.a === u || t.b === u))) return s === 'F' ? '決勝' : STAGE_LABEL[s];
   }
-  fixUserLineup(state);
+  return 'リーグフェーズ敗退';
 }
 
-function neededPosition(squad: Player[]): Position {
-  const want: Record<Position, number> = { GK: 2, CB: 4, SB: 3, DMF: 2, CMF: 3, OMF: 2, WG: 3, CF: 3 };
-  for (const p of squad) want[p.position]--;
-  const sorted = (Object.keys(want) as Position[]).sort((a, b) => want[b] - want[a]);
-  return sorted[0];
-}
-
-/** ユーザーのスタメンに居なくなった選手がいたら、その枠に合う控えで埋める */
-export function fixUserLineup(state: GameState) {
-  const team = state.teams.find((t) => t.id === state.userTeamId)!;
-  const squad = squadOf(state, team.id);
-  const ids = new Set(squad.map((p) => p.id));
-  const slots = FORMATIONS[team.formation];
-  const used = new Set<string>();
-  const lineup = slots.map((_, i) => {
-    const id = team.lineup[i];
-    if (id && ids.has(id) && !used.has(id)) {
-      used.add(id);
-      return id;
-    }
-    return '';
-  });
-  slots.forEach((slot, i) => {
-    if (lineup[i]) return;
-    const best = squad
-      .filter((p) => !used.has(p.id))
-      .sort((a, b) => ratingAt(b, slot.pos) - ratingAt(a, slot.pos))[0];
-    if (best) {
-      used.add(best.id);
-      lineup[i] = best.id;
-    }
-  });
-  team.lineup = lineup.filter(Boolean);
-}
-
-/** 人数が最低ラインを割ったら、ユースから若手を昇格させる */
+/** 人数が最低ラインを割ったらユースから昇格 */
 function promoteYouth(state: GameState): string[] {
   const names: string[] = [];
   let squad = squadOf(state, state.userTeamId);
-  while (squad.length < MIN_SQUAD_SIZE) {
-    const p = generatePlayer({ position: neededPosition(squad), level: 46 + randInt(0, 6), age: randInt(17, 18), teamId: state.userTeamId });
+  const user = teamById(state, state.userTeamId);
+  while (squad.length < 18) {
+    const p = generatePlayer({ position: neededPosition(squad), level: 52 + randInt(0, 8), age: randInt(17, 18), teamId: state.userTeamId, custom: user.original });
     p.contractYears = 3;
     p.salary = fairSalary(p);
-    const usedNums = new Set(squad.map((x) => x.number));
-    while (usedNums.has(p.number)) p.number = randInt(2, 99);
+    const used = new Set(squad.map((x) => x.number));
+    while (used.has(p.number)) p.number = randInt(2, 99);
     state.players[p.id] = p;
     names.push(p.name);
     squad = squadOf(state, state.userTeamId);
   }
   return names;
+}
+
+export function userPayroll(state: GameState): { total: number; cap: number } {
+  const t = teamById(state, state.userTeamId);
+  return { total: payroll(squadOf(state, t.id)), cap: wageCap(t) };
 }

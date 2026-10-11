@@ -1,5 +1,5 @@
 // オフラインでも起動できるようにする簡易サービスワーカー
-const CACHE = 'myclub-v1';
+const CACHE = 'masterleague-v2';
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest', './icon.svg'])));
   self.skipWaiting();

@@ -1,63 +1,58 @@
 import { describe, expect, it } from 'vitest';
-import { newGame } from '../data';
-import { overall } from '../rating';
-import { parseCsv, exportRosterCsv, importRosterCsv } from '../roster';
-import { endSeason, isSeasonOver, playRound, squadOf, standings, totalRounds } from '../season';
-import { buyPlayer, sellPlayer, transferFee } from '../transfer';
+import { clLeagueTable, plTable } from '../competitions';
+import { squadOf } from '../lineup';
+import { endSeason, isSeasonOver, newGame, playDay, prepareDay, teamById } from '../season';
+import { overall } from '../stats';
 
-describe('シーズン進行', () => {
-  it('3シーズン回しても破綻しない', () => {
-    const s = newGame('テスト', 't1');
-    let goals = 0;
-    let matches = 0;
-    for (let season = 0; season < 3; season++) {
-      expect(totalRounds(s)).toBe(14);
-      while (!isSeasonOver(s)) playRound(s);
-      for (const f of s.fixtures) {
-        goals += f.result!.home + f.result!.away;
-        matches++;
+describe('マスターリーグ進行', () => {
+  it('2シーズン（PL38節＋CL）を回しても破綻しない', { timeout: 120000 }, () => {
+    const s = newGame('テスト', 'ars');
+    expect(s.teams.filter((t) => t.league === 'PL')).toHaveLength(20);
+    expect(s.clTeams).toHaveLength(36);
+    expect(s.fixtures.filter((f) => f.comp === 'PL')).toHaveLength(380);
+    expect(s.fixtures.filter((f) => f.comp === 'CL')).toHaveLength(144);
+    for (let season = 0; season < 2; season++) {
+      let goals = 0;
+      let games = 0;
+      while (!isSeasonOver(s)) {
+        prepareDay(s);
+        playDay(s);
       }
-      const table = standings(s);
-      expect(table.reduce((a, r) => a + r.played, 0)).toBe(14 * 8);
+      for (const f of s.fixtures.filter((x) => x.comp === 'PL')) {
+        goals += f.result!.home + f.result!.away;
+        games++;
+      }
+      const final = s.ties.find((t) => t.stage === 'F');
+      expect(final?.winner).toBeTruthy();
+      const tbl = plTable(s);
+      console.log(
+        `S${s.season} 平均得点 ${(goals / games).toFixed(2)} 優勝 ${teamById(s, tbl[0].teamId).name}(${tbl[0].points}) 最下位 ${teamById(s, tbl[19].teamId).name}(${tbl[19].points})`,
+        'CL優勝', teamById(s, final!.winner!).name, 'CL1位', teamById(s, clLeagueTable(s)[0].teamId).name,
+        '資金', s.money.toFixed(1),
+        '上位:', tbl.slice(0, 6).map((r) => teamById(s, r.teamId).short + r.points).join(' '),
+      );
+      expect(goals / games).toBeGreaterThan(1.8);
+      expect(goals / games).toBeLessThan(3.8);
       endSeason(s);
       for (const t of s.teams) {
-        expect(new Set(t.lineup).size).toBe(11);
-        expect(t.lineup.every((id) => s.players[id]?.teamId === t.id)).toBe(true);
-        if (t.id !== s.userTeamId) expect(squadOf(s, t.id).length).toBeGreaterThanOrEqual(22);
+        expect(new Set(t.lineup.filter(Boolean)).size).toBe(11);
+        expect(squadOf(s, t.id).length).toBeGreaterThanOrEqual(18);
       }
     }
-    const avg = goals / matches;
-    console.log('1試合平均得点', avg.toFixed(2), '最終ポイント', s.points);
-    expect(avg).toBeGreaterThan(1.5);
-    expect(avg).toBeLessThan(4.5);
   });
 
-  it('獲得と放出でポイントが動く', () => {
-    const s = newGame('テスト', 't1');
-    const target = Object.values(s.players)
-      .filter((p) => !p.teamId)
-      .sort((a, b) => transferFee(a) - transferFee(b))[0];
-    const before = s.points;
-    const fee = transferFee(target);
-    expect(buyPlayer(s, target.id).ok).toBe(true);
-    expect(s.points).toBe(before - fee);
-    expect(s.players[target.id].teamId).toBe('t1');
-    const weakest = squadOf(s, 't1').sort((a, b) => overall(a) - overall(b))[0];
-    expect(sellPlayer(s, weakest.id).ok).toBe(true);
-    expect(s.players[weakest.id].teamId).toBeNull();
-    const team = s.teams.find((t) => t.id === 't1')!;
-    expect(team.lineup.includes(weakest.id)).toBe(false);
+  it('実在選手の総合値が狙いどおり', () => {
+    const s = newGame('テスト', 'ars');
+    const haaland = Object.values(s.players).find((p) => p.nameEn === 'Erling Haaland')!;
+    expect(Math.abs(overall(haaland) - 91)).toBeLessThanOrEqual(1);
+    const ids = new Set(Object.keys(s.players));
+    expect(ids.size).toBe(Object.keys(s.players).length);
   });
-});
 
-describe('名簿CSV', () => {
-  it('書き出し→名前変更→読み込み', () => {
-    const s = newGame('テスト', 't1');
-    const rows = parseCsv(exportRosterCsv(s));
-    const id = rows[1][0];
-    rows[1][2] = 'ヤマダ, "タロウ"';
-    const csv = rows.map((r) => r.map((c) => (/[",\n]/.test(c) ? `"${c.replace(/"/g, '""')}"` : c)).join(',')).join('\n');
-    expect(importRosterCsv(s, csv)).toBe(rows.length - 1);
-    expect(s.players[id].name).toBe('ヤマダ, "タロウ"');
+  it('オリジナルチームで開始できる', () => {
+    const s = newGame('テスト', '', { name: 'FCテスト', short: 'FCT', color: '#123456', color2: '#ffffff', replaces: 'hul' });
+    expect(s.userTeamId).toBe('orig');
+    expect(s.teams.some((t) => t.id === 'hul')).toBe(false);
+    expect(squadOf(s, 'orig').every((p) => p.custom)).toBe(true);
   });
 });

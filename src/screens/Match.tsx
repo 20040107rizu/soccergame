@@ -1,101 +1,84 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Crest } from '../components/ui';
-import { simulateMatch, type MatchEvent, type MatchResult } from '../game/match';
-import { playRound, userFixture } from '../game/season';
+import { useEffect, useRef, useState } from 'react';
+import { LineupBoard } from '../components/LineupBoard';
+import { Crest, PosTag, Seg, Sheet } from '../components/ui';
+import { createMatch, MAX_SUBS, setFormation, setTactic, stepMinute, substitute, swapSlots, type LiveMatch, type MatchEvent, type SideKey } from '../game/engine';
+import { FORMATION_LIST, FORMATIONS } from '../game/positions';
+import { playDay, teamById, userFixture } from '../game/season';
+import type { Formation, Tactic } from '../game/types';
 import { useGame } from '../store';
+import { TACTIC_OPTIONS } from './Squad';
 
 const SPEEDS = [
-  { label: '×1', ms: 450 },
-  { label: '×2', ms: 200 },
-  { label: '×4', ms: 80 },
+  { label: '×1', ms: 420 },
+  { label: '×2', ms: 190 },
+  { label: '×4', ms: 70 },
 ];
 
 export function Match({ onExit }: { onExit: () => void }) {
-  const { state, update, toast } = useGame();
-  const fx = userFixture(state);
-  // 試合結果は開始時に一度だけ計算し、時間に合わせて見せていく
-  const result = useMemo<MatchResult | null>(() => (fx ? simulateMatch(state, fx.home, fx.away) : null), []); // eslint-disable-line react-hooks/exhaustive-deps
-  const [minute, setMinute] = useState(0);
+  const { state, update, toast, openPlayer } = useGame();
+  const fx = userFixture(state)!;
+  const mRef = useRef<LiveMatch>(createMatch(state, fx.id));
+  const m = mRef.current;
+  const [, setTick] = useState(0);
+  const rerender = () => setTick((x) => x + 1);
   const [speed, setSpeed] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [done, setDone] = useState(false);
+  const [manage, setManage] = useState(false);
   const [ball, setBall] = useState({ x: 50, y: 50 });
   const [flash, setFlash] = useState<MatchEvent | null>(null);
-  const logRef = useRef<HTMLDivElement>(null);
-
-  const finished = minute >= 91;
+  const [done, setDone] = useState(false);
+  const userKey: SideKey = m.home.teamId === state.userTeamId ? 'home' : 'away';
+  const home = teamById(state, m.home.teamId);
+  const away = teamById(state, m.away.teamId);
 
   useEffect(() => {
-    if (finished || paused || !result) return;
+    if (m.finished || paused || manage || flash) return;
     const t = setTimeout(() => {
-      const next = minute + 1;
-      setMinute(next);
-      const evs = result.events.filter((e) => e.minute === next && e.side);
-      const key = evs.find((e) => e.type === 'goal') ?? evs[0];
+      const evs = stepMinute(state, m);
+      const key = evs.find((e) => e.type === 'goal') ?? evs.find((e) => e.side && e.shotY !== undefined);
       if (key) {
         const toRight = key.side === 'home';
-        const y = key.shotX ?? 50;
         if (key.type === 'goal') {
           setBall({ x: toRight ? 98 : 2, y: 50 });
           setFlash(key);
-          setTimeout(() => setFlash(null), Math.max(900, SPEEDS[speed].ms * 4));
-        } else {
-          setBall({ x: toRight ? 86 : 14, y });
-        }
+          setTimeout(() => setFlash(null), 1300);
+        } else setBall({ x: toRight ? 86 : 14, y: key.shotY ?? 50 });
       } else {
         setBall((b) => ({ x: clampN(b.x + (Math.random() - 0.5) * 30, 15, 85), y: clampN(b.y + (Math.random() - 0.5) * 30, 10, 90) }));
       }
-    }, flash ? SPEEDS[speed].ms * 3 : SPEEDS[speed].ms);
+      if (m.attention) setManage(true);
+      rerender();
+    }, SPEEDS[speed].ms);
     return () => clearTimeout(t);
-  }, [minute, paused, speed, finished, result, flash]);
-
-  useEffect(() => {
-    logRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [minute]);
-
-  if (!fx || !result) {
-    return (
-      <div className="screen">
-        <p>今節の試合はありません。</p>
-        <button className="btn" onClick={onExit}>
-          戻る
-        </button>
-      </div>
-    );
-  }
-
-  const home = state.teams.find((t) => t.id === fx.home)!;
-  const away = state.teams.find((t) => t.id === fx.away)!;
-  const visible = finished ? result.events : result.events.filter((e) => e.minute <= minute && e.type !== 'full');
-  const score = {
-    home: visible.filter((e) => e.type === 'goal' && e.side === 'home').length,
-    away: visible.filter((e) => e.type === 'goal' && e.side === 'away').length,
-  };
+  });
 
   const commit = () => {
     if (done) return;
     setDone(true);
-    const { income } = update((d) => playRound(d, result));
-    toast(`試合収入 +${income}P`);
+    const rep = update((d) => playDay(d, m));
+    if (rep.userResult) toast(`試合終了 賞金 +€${rep.userResult.prize}M`);
     onExit();
   };
+
+  const side = m[userKey];
+  const visible = [...m.events].reverse();
 
   return (
     <div className="match">
       <div className="scoreboard">
         <div className="sb-team">
-          <Crest team={home} size={34} />
+          <Crest team={home} size={32} />
           <span>{home.short}</span>
         </div>
         <div className="sb-score">
           <b>
-            {score.home} - {score.away}
+            {m.score.home} - {m.score.away}
           </b>
-          <small>{finished ? '試合終了' : minute <= 45 ? `前半 ${minute}'` : `後半 ${minute}'`}</small>
+          <small>{m.finished ? '試合終了' : m.minute <= 45 ? `前半 ${m.minute}'` : `後半 ${m.minute}'`}</small>
         </div>
-        <div className="sb-team">
-          <Crest team={away} size={34} />
+        <div className="sb-team right">
           <span>{away.short}</span>
+          <Crest team={away} size={32} />
         </div>
       </div>
 
@@ -129,17 +112,17 @@ export function Match({ onExit }: { onExit: () => void }) {
             {s.label}
           </button>
         ))}
-        <button className="chip" onClick={() => setPaused((p) => !p)} disabled={finished}>
-          {paused ? '▶ 再開' : '❚❚ 一時停止'}
+        <button className="chip" onClick={() => setPaused((p) => !p)} disabled={m.finished}>
+          {paused ? '▶ 再開' : '❚❚'}
         </button>
-        <button className="chip" onClick={() => setMinute(91)} disabled={finished}>
-          結果へ ⏭
+        <button className="chip accent" onClick={() => setManage(true)} disabled={m.finished}>
+          采配（交代 {side.subsUsed}/{MAX_SUBS}）
         </button>
       </div>
 
-      <div className="commentary" ref={logRef}>
-        {[...visible].reverse().map((e, i) => (
-          <div key={i} className={`cm cm-${e.type} ${e.side ? 'cm-' + e.side : ''}`}>
+      <div className="commentary">
+        {visible.map((e, i) => (
+          <div key={i} className={`cm cm-${e.type}`}>
             <span className="cm-min">{e.minute}'</span>
             {e.side && <span className="cm-dot" style={{ background: e.side === 'home' ? home.color : away.color }} />}
             <span>{e.text}</span>
@@ -147,13 +130,118 @@ export function Match({ onExit }: { onExit: () => void }) {
         ))}
       </div>
 
-      {finished && (
+      {m.finished && (
         <div className="match-footer">
+          <Ratings m={m} userKey={userKey} onDetail={openPlayer} />
           <button className="btn primary big" onClick={commit} disabled={done}>
             結果を確定して戻る
           </button>
         </div>
       )}
+
+      {manage && !m.finished && (
+        <Sheet
+          title={`采配 ${m.minute}'（交代 残り${MAX_SUBS - side.subsUsed}）`}
+          onClose={() => {
+            m.attention = undefined;
+            setManage(false);
+          }}
+          full
+        >
+          {m.attention && <div className="warn-box">{m.attention}</div>}
+          <Seg
+            scroll
+            value={side.formation}
+            options={FORMATION_LIST.map((f) => ({ v: f, label: f }))}
+            onChange={(f: Formation) => {
+              setFormation(m, userKey, f);
+              rerender();
+            }}
+          />
+          <div className="row gap">
+            <span className="muted small">作戦</span>
+            <Seg
+              small
+              value={side.tactic}
+              options={TACTIC_OPTIONS}
+              onChange={(v: Tactic) => {
+                setTactic(m, userKey, v);
+                rerender();
+              }}
+            />
+          </div>
+          <p className="hint">ピッチ上の選手同士をタップでポジション入れ替え（交代枠は使いません）。ピッチの選手 → ベンチの選手で交代。</p>
+          <LineupBoard
+            team={teamById(state, side.teamId)}
+            formation={side.formation}
+            lineup={side.lineup}
+            bench={side.bench}
+            players={state.players}
+            energy={side.energy}
+            injured={side.injured}
+            benchLabel="交代要員"
+            onMove={(a, b) => {
+              if (a.kind === 'pitch' && b.kind === 'pitch') swapSlots(m, userKey, a.i, b.i);
+              else {
+                const pitch = a.kind === 'pitch' ? a : b.kind === 'pitch' ? b : null;
+                const bench = a.kind === 'bench' ? a : b.kind === 'bench' ? b : null;
+                if (pitch && bench) {
+                  const outId = side.lineup[pitch.i];
+                  if (!outId) return toast('退場者の枠には入れられません');
+                  const isGkSlot = FORMATIONS[side.formation][pitch.i].pos === 'GK';
+                  if (isGkSlot && state.players[bench.id].position !== 'GK' && !confirm('GK の枠に GK 以外の選手を入れますか？')) return;
+                  if (!substitute(state, m, userKey, outId, bench.id)) toast('これ以上交代できません');
+                }
+              }
+              rerender();
+            }}
+            onDetail={openPlayer}
+          />
+          <button
+            className="btn primary big"
+            onClick={() => {
+              m.attention = undefined;
+              setManage(false);
+              setPaused(false);
+            }}
+          >
+            試合再開 ▶
+          </button>
+        </Sheet>
+      )}
+    </div>
+  );
+}
+
+function Ratings({ m, userKey, onDetail }: { m: LiveMatch; userKey: SideKey; onDetail: (id: string) => void }) {
+  const { state } = useGame();
+  const side = m[userKey];
+  const ids = side.usedPlayers;
+  const scorers = (id: string) => m.events.filter((e) => e.type === 'goal' && e.playerId === id).length;
+  const assists = (id: string) => m.events.filter((e) => e.type === 'goal' && e.assistId === id).length;
+  const best = [...ids].sort((a, b) => (m.ratings[b] ?? 6) - (m.ratings[a] ?? 6))[0];
+  return (
+    <div className="ratings">
+      <h4>選手評価</h4>
+      <div className="ratings-grid">
+        {ids.map((id) => {
+          const p = state.players[id];
+          if (!p) return null;
+          const r = m.ratings[id] ?? 6;
+          return (
+            <button key={id} className="rating-row" onClick={() => onDetail(id)}>
+              <PosTag pos={p.position} />
+              <span className="grow left">
+                {p.name}
+                {id === best && <span className="mom">MOM</span>}
+                {scorers(id) > 0 && ` ⚽${scorers(id) > 1 ? '×' + scorers(id) : ''}`}
+                {assists(id) > 0 && ` 🅰${assists(id) > 1 ? '×' + assists(id) : ''}`}
+              </span>
+              <b className={r >= 7 ? 'pos-num' : r < 6 ? 'neg' : ''}>{r.toFixed(1)}</b>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

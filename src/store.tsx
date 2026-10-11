@@ -2,15 +2,19 @@ import { createContext, useCallback, useContext, useRef, useState, type ReactNod
 import { saveGame, type Slot } from './game/save';
 import type { GameState } from './game/types';
 
-interface Ctx {
+export interface UiActions {
+  openPlayer: (id: string) => void;
+  openNegotiation: (id: string) => void;
+  editPlayer: (id: string | 'new') => void;
+  toast: (msg: string) => void;
+  quit: () => void;
+}
+
+interface Ctx extends UiActions {
   state: GameState;
   slot: Slot;
   /** 状態を複製して変更し、自動セーブする */
   update: <R>(fn: (draft: GameState) => R) => R;
-  openPlayer: (id: string) => void;
-  editPlayer: (id: string | 'new', teamId?: string | null) => void;
-  toast: (msg: string) => void;
-  quit: () => void;
 }
 
 const GameCtx = createContext<Ctx | null>(null);
@@ -21,20 +25,11 @@ export function useGame(): Ctx {
   return c;
 }
 
-export function GameProvider(props: {
-  initial: GameState;
-  slot: Slot;
-  children: ReactNode;
-  openPlayer: (id: string) => void;
-  editPlayer: (id: string | 'new', teamId?: string | null) => void;
-  toast: (msg: string) => void;
-  quit: () => void;
-  onChange?: (s: GameState) => void;
-}) {
+export function GameProvider(props: { initial: GameState; slot: Slot; actions: UiActions; children: ReactNode }) {
   const [state, setState] = useState(props.initial);
   // 連続で update されても最新の状態を元にする
   const latest = useRef(state);
-  const { slot, onChange } = props;
+  const { slot } = props;
 
   const update = useCallback(
     <R,>(fn: (draft: GameState) => R): R => {
@@ -46,18 +41,12 @@ export function GameProvider(props: {
         saveGame(slot, draft);
       } catch (e) {
         console.error(e);
+        props.actions.toast('セーブに失敗しました（端末の容量を確認してください）');
       }
-      onChange?.(draft);
       return r;
     },
-    [slot, onChange],
+    [slot, props.actions],
   );
 
-  return (
-    <GameCtx.Provider
-      value={{ state, slot, update, openPlayer: props.openPlayer, editPlayer: props.editPlayer, toast: props.toast, quit: props.quit }}
-    >
-      {props.children}
-    </GameCtx.Provider>
-  );
+  return <GameCtx.Provider value={{ state, slot, update, ...props.actions }}>{props.children}</GameCtx.Provider>;
 }
