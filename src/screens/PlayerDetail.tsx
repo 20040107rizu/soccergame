@@ -8,6 +8,7 @@ import { overall, SKILLS, STAT_GROUPS, STAT_LABEL, STYLES } from '../game/stats'
 import { AppearanceEditor } from './AppearanceEditor';
 import { LegendPanel } from './LegendPanel';
 import { LEGEND_LABEL } from '../game/legend';
+import { TRAITS, type TraitId } from '../game/events';
 import { releaseCost, releasePlayer, renewContract, renewDemand, seekBuyer } from '../game/transfer';
 import { useGame } from '../store';
 
@@ -40,6 +41,7 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
           </div>
           <div className="pd-sub">{team ? team.name : 'フリー'}</div>
           {p.legend && <span className="legend-badge">🌟 レジェンド・{LEGEND_LABEL[p.legend.kind]}</span>}
+          <PlayerBadges id={p.id} />
         </div>
         <button
           className={'star-btn' + ((state.watchlist ?? []).includes(p.id) ? ' on' : '')}
@@ -135,6 +137,22 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
             )}
           </div>
           {skillOpen && <p className="skill-desc">{SKILLS.find((x) => x.id === skillOpen)?.desc}</p>}
+          {mine && (
+            <>
+              <h4>隠し特性</h4>
+              {p.knownTraits?.length ? (
+                <div className="skills">
+                  {p.knownTraits.map((t) => (
+                    <span key={t} className="skill trait" title={TRAITS[t as TraitId]?.desc}>
+                      {TRAITS[t as TraitId]?.label} <small>{TRAITS[t as TraitId]?.desc}</small>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="muted small">まだ見つかっていない…（試合で発揮されると判明します）</p>
+              )}
+            </>
+          )}
           <button className="btn small ghost" onClick={() => setFace(true)}>
             顔（見た目）を編集
           </button>
@@ -263,5 +281,32 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
         )}
       </div>
     </Sheet>
+  );
+}
+
+/** 覚醒・ユース出身・師弟・古巣・約束などのバッジ */
+function PlayerBadges({ id }: { id: string }) {
+  const { state } = useGame();
+  const p = state.players[id];
+  const mentor = p.mentorId ? state.players[p.mentorId] : undefined;
+  const pupils = Object.values(state.players).filter((x) => x.mentorId === p.id && x.teamId === p.teamId);
+  const ex = p.exTeamId ? state.teams.find((t) => t.id === p.exTeamId) : undefined;
+  const items = [
+    p.awakened && '⚡ 覚醒',
+    p.academy && '🎓 ユース出身',
+    p.gem?.revealed && `💎 ${p.gem.origin}出身`,
+    mentor && `🤝 師匠：${mentor.name}`,
+    pupils.length > 0 && `🤝 弟子：${pupils.map((x) => x.name).join('、')}`,
+    ex && `古巣：${ex.name}`,
+    p.promise && `📝 約束：残り${p.promise.left}試合で先発あと${Math.max(0, p.promise.need - p.promise.got)}回`,
+    p.listed && '📋 移籍リスト',
+  ].filter(Boolean) as string[];
+  if (!items.length) return null;
+  return (
+    <div className="pd-badges">
+      {items.map((t) => (
+        <span key={t}>{t}</span>
+      ))}
+    </div>
   );
 }

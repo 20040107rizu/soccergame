@@ -2,7 +2,8 @@ import { CL_2026, EU_SEEDS, emptyStats, generateOriginalSquad, generatePlayer, P
 import { CL_STAGE_PRIZE, fairSalary, fmtMoney as fmtYen, leaguePrize, marketValue, MATCH_PRIZE, payroll, round2, wageCap } from './economy';
 import { advanceCL, buildCalendar, clLeagueFixtures, plFixtures, plTable, resolveTie, stageComplete, STAGE_LABEL, windowStatus } from './competitions';
 import { createMatch, sideRoles, simulateToEnd, sidePower, type LiveMatch } from './engine';
-import { legendGrowth, legendTick } from './legend';
+import { legendGrowth, legendTick, spawnHeir } from './legend';
+import { afterUserMatch, dailyEvents, heirsDue, jobOfferAtSeasonEnd, listedPlayersTick, onRetire, planHeirs, promoteAcademy, seasonEndAchievements } from './events';
 import { mailBestEleven, mailCompetition, mailContractAdvice, mailGrowth, mailInjury, mailPlayerFeelings, mailRedCard, mailScoutAdvice, mailTacticAdvice, mailWindow, sendMail, tryAptitudeGain, tryNewSkill } from './mail';
 import { applyFormation, autoLineup, available, repairLineup, setAutoLineup, squadOf, updateSpirit } from './lineup';
 import { FORMATION_LIST, FORMATIONS, rolesOf } from './positions';
@@ -226,6 +227,8 @@ export function playDay(state: GameState, userMatch?: LiveMatch): DayReport {
   aiTransferActivity(state);
   periodicMails(state, day, wasOpen);
   legendTick(state);
+  dailyEvents(state, day);
+  listedPlayersTick(state);
 
   state.day++;
   state.updatedAt = Date.now();
@@ -373,6 +376,8 @@ function applyMatch(state: GameState, f: Fixture, m: LiveMatch) {
       p.injury = randInt(1, 3) + randInt(0, 4 - p.traits.injuryRes) * 2;
       if (mine) mailInjury(state, p);
     }
+    // 隠しシステム（覚醒・師弟・隠し特性・因縁・約束・実績）
+    if (mine) afterUserMatch(state, f, m, key, bumpStats);
     // チームスピリット（試合で使ったスタメンを基準に）
     updateSpirit(state, team);
   }
@@ -457,7 +462,7 @@ export function aiFillSquads(state: GameState) {
     while (squad.length < min) {
       const need = neededPosition(squad);
       const free = Object.values(state.players)
-        .filter((p) => !p.teamId && !p.legend && p.position === need && available(p))
+        .filter((p) => !p.teamId && !p.legend && !p.gem && p.position === need && available(p))
         .sort((a, b) => overall(b) - overall(a));
       const level = Math.min(80, 50 + t.rep * 0.25);
       const sign = free.find((p) => overall(p) <= level + 6) ?? generatePlayer({ position: need, level, teamId: null, age: randInt(18, 21) });
@@ -521,6 +526,13 @@ export function endSeason(state: GameState): SeasonSummary {
     t.rep = Math.round(clamp(t.rep + (10.5 - (i + 1)) * 0.15, 40, 99));
   });
 
+  // 隠しシステム：実績・2世の予定・監督オファー（成績が確定した時点で）
+  const userRow = tbl.find((r) => r.teamId === state.userTeamId);
+  seasonEndAchievements(state, rank, userRow?.loss ?? 99, userCl);
+  planHeirs(state, rank);
+  const repOrder = state.teams.filter((t) => t.league === 'PL').sort((a, b) => b.rep - a.rep);
+  jobOfferAtSeasonEnd(state, rank, repOrder.findIndex((t) => t.id === state.userTeamId) + 1, userCl);
+
   const summary: SeasonSummary = { rank, champion, clWinner, userCl, prize, retired: [], left: [], promoted: [], grown: [], repChange: user.rep - oldRep };
 
   for (const p of Object.values(state.players)) {
@@ -544,6 +556,7 @@ export function endSeason(state: GameState): SeasonSummary {
     p.suspension = 0;
 
     if (p.age >= 34 && rand() < 0.2 + (p.age - 34) * 0.18) {
+      onRetire(state, p);
       if (p.teamId === state.userTeamId) summary.retired.push(p.name);
       delete state.players[p.id];
       continue;
@@ -572,7 +585,7 @@ export function endSeason(state: GameState): SeasonSummary {
     const p = generatePlayer({ position: pick(FA_POSITIONS), level: young ? 55 + randInt(0, 12) : 60 + randInt(0, 14), age: young ? randInt(17, 19) : randInt(23, 31), teamId: null });
     state.players[p.id] = p;
   }
-  summary.promoted = promoteYouth(state);
+  summary.promoted = [...promoteAcademy(state), ...promoteYouth(state)];
   aiFillSquads(state);
 
   state.history.push({ season: state.season, rank, champion, clWinner, userCl });
@@ -589,6 +602,9 @@ export function endSeason(state: GameState): SeasonSummary {
   setupFixtures(state);
   for (const t of state.teams) if (t.id !== state.userTeamId) setAutoLineup(state, t);
   repairLineup(state, user);
+  // 伝説の再来：数年前に大活躍したレジェンドの「2世」
+  const heir = heirsDue(state);
+  if (heir) spawnHeir(state, heir);
   const inCl = state.clTeams.includes(user.id);
   if (inCl) state.money = round2(state.money + CL_STAGE_PRIZE.start);
   state.news.unshift({
@@ -622,6 +638,7 @@ function promoteYouth(state: GameState): string[] {
   while (squad.length < 18) {
     const p = generatePlayer({ position: neededPosition(squad), level: 52 + randInt(0, 8), age: randInt(17, 18), teamId: state.userTeamId, custom: user.original });
     p.contractYears = 3;
+    p.academy = true;
     p.salary = fairSalary(p);
     const used = new Set(squad.map((x) => x.number));
     while (used.has(p.number)) p.number = randInt(2, 99);

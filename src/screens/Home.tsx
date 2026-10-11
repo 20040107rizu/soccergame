@@ -7,6 +7,7 @@ import { fmtMoney } from '../game/economy';
 import { createMatch, sidePower } from '../game/engine';
 import { endSeason, isSeasonOver, playDay, prepareDay, teamById, today, userFixture, userPayroll, type SeasonSummary } from '../game/season';
 import { useGame } from '../store';
+import { isDerby, isRival } from '../game/events';
 
 export function Home({ onPreMatch }: { onPreMatch: () => void }) {
   const { state, update, toast } = useGame();
@@ -184,6 +185,11 @@ function NextMatch({ fixtureId, label, onPlay }: { fixtureId: string; label: str
           {leg}
         </small>
       </div>
+      {(() => {
+        const opp = f.home === state.userTeamId ? away : home;
+        const tags = [isRival(state, opp.id) && '🔥 因縁の相手', isDerby(home.id, away.id) && '⚔️ ダービー'].filter(Boolean);
+        return tags.length ? <div className="match-tags">{tags.map((t) => <span key={String(t)} className="chip hot">{t}</span>)}</div> : null;
+      })()}
       <div className="versus">
         <div className="vs-team">
           <Crest team={home} size={48} />

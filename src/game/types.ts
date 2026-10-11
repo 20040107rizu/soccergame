@@ -104,12 +104,75 @@ export interface Player {
   real?: boolean;
   /** レジェンド（極稀に現れるレア選手） */
   legend?: LegendInfo;
+  /** 直前に所属していたクラブ（恩返し弾用） */
+  exTeamId?: string;
+  /** 現クラブに加入したシーズン */
+  joinedSeason?: number;
+  /** 判明した隠し特性 */
+  knownTraits?: string[];
+  /** 覚醒の予兆メールを送った */
+  awakenHint?: boolean;
+  /** 覚醒済み */
+  awakened?: boolean;
+  /** 師匠（ベテラン）の選手 ID */
+  mentorId?: string;
+  /** 自前のユース出身 */
+  academy?: boolean;
+  /** 自クラブでの出場数・得点（殿堂用） */
+  clubApps?: number;
+  clubGoals?: number;
+  /** 自クラブ在籍中の最高総合値 */
+  peakOvr?: number;
+  /** 出場機会の約束 */
+  promise?: { left: number; need: number; got: number };
+  /** 移籍リスト入り（市場が開いたら売却先を探す） */
+  listed?: boolean;
+  /** 無名の掘り出し物 */
+  gem?: { origin: string; tier: GemTier; revealed?: boolean };
+}
+
+export type GemTier = 'jackpot' | 'normal' | 'bust';
+
+export interface GemOffer {
+  playerId: string;
+  fee: number;
+  salary: number;
+  /** スカウトの推定総合値 */
+  estLow: number;
+  estHigh: number;
+  expires: number;
+}
+
+export interface DemandEvent {
+  playerId: string;
+  kind: 'playtime' | 'raise';
+  expires: number;
+}
+
+export interface JobOffer {
+  teamIds: string[];
+  expires: number;
+}
+
+export interface HallEntry {
+  name: string;
+  position: Position;
+  nationality: string;
+  apps: number;
+  goals: number;
+  peak: number;
+  season: number;
+  note: string;
 }
 
 export type LegendKind = 'prodigy' | 'monster';
 
 export interface LegendInfo {
   kind: LegendKind;
+  /** 元になったレジェンド */
+  seedId?: string;
+  /** 〇〇2世 */
+  heir?: boolean;
   /** 入団済み */
   signed?: boolean;
   /** 最後に成長メールを送った総合値 */
@@ -253,6 +316,8 @@ export interface Mail {
   important?: boolean;
   /** レジェンド選手の極秘情報 */
   legend?: boolean;
+  /** メール内で選択する操作 */
+  action?: 'gem' | 'demand' | 'job';
 }
 
 export interface GameState {
@@ -279,5 +344,16 @@ export interface GameState {
   watchlist: string[];
   flags?: Record<string, boolean>;
   legendOffer?: LegendOffer;
+  gemOffer?: GemOffer;
+  demand?: DemandEvent;
+  jobOffer?: JobOffer;
+  /** 対戦成績の因縁（連敗数・因縁の相手） */
+  rivals?: Record<string, { streak: number; rival: boolean }>;
+  achievements?: Record<string, { season: number }>;
+  hallOfFame?: HallEntry[];
+  /** 師弟関係の進み具合（ベテランID|若手ID → 一緒に先発した試合数） */
+  mentorProgress?: Record<string, number>;
+  /** 〇〇2世の予定 */
+  heirs?: { seedId: string; season: number; done?: boolean }[];
   history: { season: number; rank: number; champion: string; clWinner?: string; userCl?: string }[];
 }

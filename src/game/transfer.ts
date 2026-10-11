@@ -198,7 +198,9 @@ export function completeSigning(state: GameState, playerId: string, salary: numb
   const from = p.teamId ? teamById(state, p.teamId) : null;
   state.money = round2(state.money - fee);
   if (from) from.budget = round2(from.budget + fee);
+  p.exTeamId = p.teamId ?? p.exTeamId;
   p.teamId = state.userTeamId;
+  p.joinedSeason = state.season;
   p.contractYears = years;
   p.salary = round2(salary);
   const used = new Set(squadOf(state, state.userTeamId).filter((x) => x.id !== p.id).map((x) => x.number));
@@ -235,8 +237,13 @@ export function acceptOffer(state: GameState, offerId: string): Result {
   const buyer = teamById(state, o.fromTeam);
   state.money = round2(state.money + o.fee);
   buyer.budget = round2(buyer.budget - o.fee);
+  p.exTeamId = state.userTeamId;
   p.teamId = buyer.id;
+  p.joinedSeason = state.season;
   p.contractYears = Math.max(2, p.contractYears);
+  delete p.mentorId;
+  delete p.promise;
+  delete p.listed;
   state.offers = state.offers.filter((x) => x.playerId !== p.id);
   state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'transfer', text: `【放出】${p.name}を${buyer.name}へ ${fmtMoney(o.fee)} で売却` });
   repairLineup(state, teamById(state, state.userTeamId));
@@ -323,7 +330,10 @@ export function releasePlayer(state: GameState, playerId: string): Result {
   const cost = releaseCost(p);
   if (cost > state.money) return { ok: false, message: '違約金を払う資金が足りません' };
   state.money = round2(state.money - cost);
+  p.exTeamId = state.userTeamId;
   p.teamId = null;
+  delete p.promise;
+  delete p.listed;
   p.contractYears = 0;
   state.offers = state.offers.filter((x) => x.playerId !== p.id);
   state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'transfer', text: `【契約解除】${p.name}との契約を解除（違約金 ${fmtMoney(cost)}）` });

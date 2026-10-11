@@ -7,6 +7,7 @@ import { autoSkills, generateStats, overall, SKILLS } from './stats';
 import { MAX_SQUAD, type Result } from './transfer';
 import type { Appearance, GameState, LegendKind, Player, Position, StatKey } from './types';
 import { NEIGHBORS } from './positions';
+import { unlock } from './events';
 
 /**
  * レジェンド選手：極稀に代理人から極秘情報が届く、レア中のレア選手。
@@ -116,7 +117,7 @@ function makeLegend(seed: LegendSeed, kind: LegendKind): Player {
     season: { apps: 0, goals: 0, assists: 0, clApps: 0, clGoals: 0 },
     career: { apps: 0, goals: 0, assists: 0, clApps: 0, clGoals: 0 },
     appearance: look,
-    legend: { kind },
+    legend: { kind, seedId: seed.id },
   };
   p.legend!.mailedOvr = overall(p);
   return p;
@@ -151,8 +152,29 @@ export function spawnLegend(state: GameState, kind?: LegendKind): Player | null 
   if (!pool.length) return null;
   const seed = pick(pool);
   state.flags[`legend-${seed.id}`] = true;
-  const k: LegendKind = kind ?? (rand() < 0.6 ? 'prodigy' : 'monster');
+  return offerLegend(state, seed, kind ?? (rand() < 0.6 ? 'prodigy' : 'monster'));
+}
+
+/** レジェンドの名を継ぐ「〇〇2世」の情報を届ける */
+export function spawnHeir(state: GameState, seedId: string): Player | null {
+  const seed = LEGENDS.find((l) => l.id === seedId);
+  if (!seed || state.legendOffer) return null;
+  return offerLegend(state, seed, 'prodigy', true);
+}
+
+export function legendName(seedId: string): string {
+  return LEGENDS.find((l) => l.id === seedId)?.name ?? '';
+}
+
+function offerLegend(state: GameState, seed: LegendSeed, k: LegendKind, heir = false): Player {
   const p = makeLegend(seed, k);
+  if (heir) {
+    p.name = `${seed.name}2世`;
+    p.nameEn = `${seed.en} II`;
+    p.age = 16;
+    p.potential = 99;
+    p.legend!.heir = true;
+  }
   state.players[p.id] = p;
 
   const user = teamById(state, state.userTeamId);
@@ -160,7 +182,8 @@ export function spawnLegend(state: GameState, kind?: LegendKind): Player | null 
   const fee = round2(Math.max(prodigy ? 10 : 40, state.money * (prodigy ? 0.25 + rand() * 0.2 : 0.55 + rand() * 0.25)));
   const salary = round2(Math.max(fairSalary(p) * (prodigy ? 3 : 1.6), prodigy ? 2 : 12));
   const years = prodigy ? randInt(3, 5) : randInt(2, 3);
-  const chance = clamp((prodigy ? 0.3 : 0.18) + (user.rep - 75) * 0.004, 0.08, 0.4);
+  // 2世は父の活躍を見てきたので、少しだけ来てくれやすい
+  const chance = clamp((prodigy ? 0.3 : 0.18) + (heir ? 0.15 : 0) + (user.rep - 75) * 0.004, 0.08, 0.5);
   const conditions = [
     `移籍金（契約金）${fmtMoney(fee)} を一括で支払うこと`,
     `年俸 ${fmtMoney(salary)}・${years}年契約（年俸総額の上限とは別枠）`,
@@ -170,15 +193,16 @@ export function spawnLegend(state: GameState, kind?: LegendKind): Player | null 
   state.legendOffer = { playerId: p.id, kind: k, fee, salary, years, chance, conditions, expires: state.day + 4 };
 
   const ovr = overall(p);
+  const cond = `【条件】\n${conditions.map((c) => '・' + c).join('\n')}\n\n条件を承諾しても、入団してくれるかは本人次第です（可能性は${chanceLabel(chance)}）。\n回答期限は4日以内です。`;
   sendMail(state, {
     from: 'agent',
     sender: '謎の代理人',
-    subject: prodigy ? `【極秘】急成長が期待される逸材「${p.name}」` : `【極秘】規格外の選手「${p.name}」`,
-    body: prodigy
-      ? `監督、ここだけの話です。\n\n${p.nationality}に${p.age}歳の${p.name}という少年がいます。今の総合値は${ovr}と目立ちませんが、試合を重ねれば信じられない速さで成長するはずです。私はこれほどの才能を見たことがありません。\n\n本人はどこのクラブにも所属しておらず、条件次第で話を聞くと言っています。ただし、条件は厳しいですよ。\n\n` +
-        `【条件】\n${conditions.map((c) => '・' + c).join('\n')}\n\n条件を承諾しても、入団してくれるかは本人次第です（可能性は${chanceLabel(chance)}）。\n回答期限は${4}日以内です。`
-      : `監督、とんでもない選手の情報です。\n\n${p.name}（${p.age}歳・${p.position}）。総合値${ovr}、まさに規格外です。いまはどこにも所属しておらず、新天地を探しています。\n\n各国のビッグクラブも狙っていますが、条件を飲めば貴クラブにも可能性があります。\n\n` +
-        `【条件】\n${conditions.map((c) => '・' + c).join('\n')}\n\n条件を承諾しても、入団してくれるかは本人次第です（可能性は${chanceLabel(chance)}）。\n回答期限は${4}日以内です。`,
+    subject: heir ? `【極秘】「${p.name}」と呼ばれる少年` : prodigy ? `【極秘】急成長が期待される逸材「${p.name}」` : `【極秘】規格外の選手「${p.name}」`,
+    body: heir
+      ? `監督、覚えていますか。かつて貴クラブで伝説を残した${seed.name}を。\n\nその再来と呼ばれる${p.age}歳の少年がいます。地元では「${p.name}」と呼ばれ、プレーはまさに生き写しです。今の総合値は${ovr}ですが、才能は父譲り…いや、それ以上かもしれません。\n\n本人は「${user.name}でプレーしたい」と話しています。\n\n${cond}`
+      : prodigy
+        ? `監督、ここだけの話です。\n\n${p.nationality}に${p.age}歳の${p.name}という少年がいます。今の総合値は${ovr}と目立ちませんが、試合を重ねれば信じられない速さで成長するはずです。私はこれほどの才能を見たことがありません。\n\n本人はどこのクラブにも所属しておらず、条件次第で話を聞くと言っています。ただし、条件は厳しいですよ。\n\n${cond}`
+        : `監督、とんでもない選手の情報です。\n\n${p.name}（${p.age}歳・${p.position}）。総合値${ovr}、まさに規格外です。いまはどこにも所属しておらず、新天地を探しています。\n\n各国のビッグクラブも狙っていますが、条件を飲めば貴クラブにも可能性があります。\n\n${cond}`,
     playerId: p.id,
     important: true,
     legend: true,
@@ -227,6 +251,8 @@ export function acceptLegend(state: GameState): Result & { joined?: boolean } {
   p.contractYears = o.years;
   p.loyalty = 80;
   p.legend!.signed = true;
+  p.joinedSeason = state.season;
+  unlock(state, p.legend!.heir ? 'secondGen' : 'legend');
   state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'transfer', text: `【電撃加入】${p.name}が入団！（移籍金 ${fmtMoney(o.fee)}）` });
   sendMail(state, {
     from: 'agent',

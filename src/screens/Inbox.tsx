@@ -8,6 +8,7 @@ import type { Mail } from '../game/types';
 import { useGame } from '../store';
 import { OfferNegotiation } from './OfferNegotiation';
 import { LegendPanel } from './LegendPanel';
+import { EventPanel } from './EventPanels';
 
 const FROM_ICON: Record<string, string> = {
   club: '🏢',
@@ -75,7 +76,7 @@ function MailView({ mail, onClose }: { mail: Mail; onClose: () => void }) {
         <h3>{mail.subject}</h3>
         <p className="mail-body">{mail.body}</p>
 
-        {p && (
+        {p && !(p.gem && !p.gem.revealed) && (
           <PlayerRow
             p={p}
             team={p.teamId ? teamById(state, p.teamId) : undefined}
@@ -104,6 +105,7 @@ function MailView({ mail, onClose }: { mail: Mail; onClose: () => void }) {
           </div>
         )}
 
+        {mail.action && <EventPanel mail={mail} onDone={onClose} />}
         {mail.legend && mail.playerId && <LegendPanel playerId={mail.playerId} onDone={onClose} />}
         {mail.offerId &&
           (offer ? (

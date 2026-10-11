@@ -3,6 +3,7 @@ import { clamp, pick, rand, weighted } from './rng';
 import { ratingAt, styleActive } from './stats';
 import type { Formation, FormationLabel, GameState, Player, Position, Tactic } from './types';
 import { available } from './lineup';
+import { hiddenTrait, matchBonuses } from './events';
 
 /**
  * 1 分ずつ進む試合エンジン。途中で交代・作戦・フォーメーションを変更できる。
@@ -42,6 +43,8 @@ export interface SideState {
   injured: string[];
   usedPlayers: string[];
   enteredAt: Record<string, number>;
+  /** 隠し特性・恩返しなどによる選手ごとの能力補正 */
+  bonus?: Record<string, number>;
 }
 
 export interface LiveMatch {
@@ -107,6 +110,8 @@ export function createMatch(state: GameState, fixtureId: string): LiveMatch {
     ratings: {},
   };
   for (const id of [...m.home.lineup, ...m.away.lineup]) m.ratings[id] = 6;
+  m.home.bonus = matchBonuses(state, f, home, away);
+  m.away.bonus = matchBonuses(state, f, away, home);
   return m;
 }
 
@@ -136,7 +141,8 @@ export function onPitch(state: GameState, side: SideState): OnPitch[] {
     if (!p || !roles[i]) return;
     // プレースタイルがそのポジションで有効ならわずかに能力が上がる（無効なら「無印」）
     const style = styleActive(p.style, roles[i]) ? 1.01 : 1;
-    list.push({ p, pos: roles[i], eff: effRating(p, roles[i], side.energy[id] ?? 100, side.injured.includes(id)) * style });
+    const bonus = side.bonus?.[id] ?? 1;
+    list.push({ p, pos: roles[i], eff: effRating(p, roles[i], side.energy[id] ?? 100, side.injured.includes(id)) * style * bonus });
   });
   return list;
 }
@@ -287,7 +293,9 @@ function shotEvent(state: GameState, m: LiveMatch, atkKey: SideKey, defKey: Side
     const s = o.p.stats;
     const key = type === 'header' ? (s.heading + s.jump) / 2 : type === 'long' ? (s.kickingPower + s.finishing) / 2 : (s.finishing + s.offense) / 2;
     const sub = o.p.skills.includes('superSub') && (m[atkKey].enteredAt[o.p.id] ?? 0) >= 45 ? 1.35 : 1;
-    return SHOT_W[o.pos] * Math.pow(key / 70, 3) * sub * (o.eff / 70) * (o.p.legend ? 1.3 : 1);
+    const clutch = m.minute >= 75 && hiddenTrait(o.p) === 'clutch' ? 1.8 : 1;
+    const revenge = o.p.exTeamId === m[defKey].teamId ? 1.4 : 1;
+    return SHOT_W[o.pos] * Math.pow(key / 70, 3) * sub * (o.eff / 70) * (o.p.legend ? 1.3 : 1) * clutch * revenge;
   });
   const shooter = shooterO.p;
   const others = attackers.filter((o) => o.p.id !== shooter.id);
@@ -332,7 +340,7 @@ function shotEvent(state: GameState, m: LiveMatch, atkKey: SideKey, defKey: Side
     if (sk('acrobaticShot') || sk('phenomFinish')) quality += 1.5;
     if (sk('controlLoop') || sk('heelTrick') || sk('snapStrike')) quality += 1;
   }
-  quality += will + legendQ;
+  quality += will + legendQ + (m.minute >= 75 && hiddenTrait(shooter) === 'clutch' ? 3 : 0);
   if (dsk('blocker')) quality -= 1.5;
   if (dsk('manMarking') || dsk('interception')) quality -= 1;
   if (dsk('sliding') || dsk('powerTackle') || dsk('longReach') || dsk('shadowHunt')) quality -= 0.5;
@@ -356,7 +364,8 @@ function shotEvent(state: GameState, m: LiveMatch, atkKey: SideKey, defKey: Side
   const x = rand();
   if (x < goalP) {
     m.score[atkKey]++;
-    const text = pick(GOAL_TEXT)(name) + (assister && !penalty ? `（アシスト：${last(assister)}）` : '');
+    const revenge = shooter.exTeamId === m[defKey].teamId ? ' 古巣への恩返し弾！' : '';
+    const text = pick(GOAL_TEXT)(name) + (assister && !penalty ? `（アシスト：${last(assister)}）` : '') + revenge;
     m.events.push({ minute: m.minute, type: 'goal', side: atkKey, playerId: shooter.id, assistId: penalty ? undefined : assister?.id, text, shotY, penalty });
     bump(m, shooter.id, 1);
     if (assister && !penalty) bump(m, assister.id, 0.6);

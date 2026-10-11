@@ -33,7 +33,7 @@ export function Transfer() {
         ? squadOf(state, state.userTeamId)
         : tab === 'watch'
           ? (state.watchlist ?? []).map((id) => state.players[id]).filter(Boolean)
-          : Object.values(state.players).filter((p) => p.teamId !== state.userTeamId && !(p.legend && !p.teamId));
+          : Object.values(state.players).filter((p) => p.teamId !== state.userTeamId && !((p.legend || p.gem) && !p.teamId));
     if (tab === 'search') {
       if (league === 'free') ps = ps.filter((p) => !p.teamId);
       else if (league !== 'all') ps = ps.filter((p) => p.teamId && teams[p.teamId]?.league === league);

@@ -7,6 +7,7 @@ import { exportJson } from '../game/save';
 import { teamById, userPayroll } from '../game/season';
 import { MAX_SQUAD } from '../game/transfer';
 import { useGame } from '../store';
+import { Records } from './Records';
 
 export function Club() {
   const { state, update, editPlayer, openPlayer, toast, quit, slot } = useGame();
@@ -29,6 +30,8 @@ export function Club() {
           </div>
         </div>
       </div>
+
+      <Records />
 
       {team.original ? (
         <>
