@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { SODE_NAME, SODE_PLAYERS, type SodeSeed } from '../data/sodegaura';
-import { isTopSode, makeSodePlayer, sodeStats } from '../game/sodegaura';
-import { overall, STAT_LABEL, STYLES } from '../game/stats';
+import { isTopSode, sodeFullOverall, sodeStats } from '../game/sodegaura';
+import { STAT_LABEL, STYLES } from '../game/stats';
 import type { StatKey } from '../game/types';
 
 /** 期待度の色：青 → 緑 → 赤 → 金 → 虹（強い選手ほど上がる） */
@@ -60,7 +60,6 @@ export function SodeReveal({ pick, onDone }: { pick: number; onDone: () => void 
     const seed = SODE_PLAYERS[pick];
     const ti = tierOf(seed.efo);
     const rainbow = TIERS[ti].color === 'rainbow';
-    const player = makeSodePlayer(seed);
 
     const cards = SODE_PLAYERS.map((p, i) => {
       const c = document.createElement('div');
@@ -229,7 +228,7 @@ export function SodeReveal({ pick, onDone }: { pick: number; onDone: () => void 
       if (rainbow) front.classList.add('rainbow');
       front.innerHTML = `
         <div class="sr-ftop"><div class="sr-pos ${posCls(seed.pos)}">${seed.pos}</div></div>
-        <div class="sr-ovr-wrap"><div class="sr-ovr-label">OVERALL</div><div class="sr-ovr">--</div></div>
+        <div class="sr-ovr-wrap"><div class="sr-ovr-label">POTENTIAL</div><div class="sr-ovr">--</div></div>
         <div class="sr-name">${seed.name}</div>
         <div class="sr-style">${STYLES[seed.style]?.label ?? ''}</div>
         <div class="sr-bars">${topStats(seed)
@@ -239,7 +238,7 @@ export function SodeReveal({ pick, onDone }: { pick: number; onDone: () => void 
       hero.classList.add('flip');
       sparks();
       await wait(700);
-      await rollNumber(front.querySelector('.sr-ovr') as HTMLElement, overall(player));
+      await rollNumber(front.querySelector('.sr-ovr') as HTMLElement, sodeFullOverall(seed));
       await wait(250);
       front.querySelector('.sr-name')!.classList.add('in');
       await wait(420);

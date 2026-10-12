@@ -177,8 +177,18 @@ describe('ひみつのチーム戦', () => {
     expect(r.ok && r.joined).toBe(true);
     const p = Object.values(s.players).find((x) => x.name === seed.name && x.teamId === 'ars')!;
     expect(p.age).toBe(17);
-    expect(p.potential).toBeGreaterThan(overall(p));
+    expect(overall(p)).toBeLessThanOrEqual(70);
+    expect(p.potential).toBe(sc.sodeFullOverall(seed));
     expect(s.sodeChallenge).toBeUndefined();
+    // 試合を重ねると本来の能力まで伸び、それ以上にはならない
+    let games = 0;
+    while (overall(p) < p.potential && games < 300) {
+      sc.sodeGrowth(p, 6.5);
+      games++;
+    }
+    console.log('sode growth games', seed.name, games, overall(p), p.potential);
+    expect(overall(p)).toBe(p.potential);
+    expect(games).toBeGreaterThan(10);
   });
 
   it('負けたら交渉権はない', async () => {

@@ -313,6 +313,8 @@ function SodePickPanel() {
         ⚡ {seed.name}（{seed.pos}） <small>回答期限 あと{Math.max(0, c.expires - state.day)}日</small>
       </div>
       <p className="small">
+        交渉に応じてくれれば加入します（今はまだ荒削り。試合を重ねるほど本来の力に近づきます）。
+        <br />
         移籍金 <b>{fmtMoney(fee)}</b> · 交渉のチャンスは1回だけ。
       </p>
       <div className="row gap">

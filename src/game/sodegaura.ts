@@ -6,6 +6,7 @@ import { sendMail } from './mail';
 import { clamp, rand, randInt, uid } from './rng';
 import { teamById } from './season';
 import { overall, STAT_KEYS } from './stats';
+import type { StatKey } from './types';
 import { MAX_SQUAD, type Result } from './transfer';
 import type { GameState, Player, Stats } from './types';
 
@@ -144,8 +145,16 @@ export function sodeTerms(state: GameState): { fee: number; chance: number } {
   };
 }
 
-/** 選ばれた選手を、ゲームの選手として作る */
-export function makeSodePlayer(s: SodeSeed): Player {
+/** 加入時の総合値の目安（育てると本来の能力まで伸びる） */
+const YOUNG_OVR = 68;
+
+/** 本来の能力（写真どおり）での総合値 */
+export function sodeFullOverall(s: SodeSeed): number {
+  return overall(makeSodePlayer(s, true));
+}
+
+/** 選ばれた選手を、ゲームの選手として作る（full=false なら荒削りな状態） */
+export function makeSodePlayer(s: SodeSeed, full = false): Player {
   const i = SODE_PLAYERS.indexOf(s);
   const p: Player = {
     id: uid('sd'),
@@ -176,7 +185,27 @@ export function makeSodePlayer(s: SodeSeed): Player {
     career: { apps: 0, goals: 0, assists: 0, clApps: 0, clGoals: 0 },
     appearance: look(i < 0 ? 0 : i),
   };
-  p.potential = Math.min(107, overall(p) + randInt(4, 8));
+  if (full) {
+    p.potential = overall(p);
+    return p;
+  }
+  // 荒削り：本来の能力の形を保ったまま、全体を下げる
+  const target = { ...p.stats };
+  const isGk = s.pos === 'GK';
+  const lower = (d: number) => {
+    for (const k of STAT_KEYS) {
+      const relevant = isGk ? true : !k.startsWith('gk');
+      p.stats[k] = relevant ? Math.max(40, target[k] - d) : target[k];
+    }
+  };
+  let d = 0;
+  lower(d);
+  while (overall(p) > YOUNG_OVR && d < 60) lower(++d);
+  // スキルは少しだけ（スーパーサブは必ず残す）。育つと本来のスキルを覚えていく
+  p.skills = [...new Set([...s.skills.slice(0, 2), ...(s.skills.includes('superSub') ? ['superSub'] : [])])];
+  p.potential = overall({ ...p, stats: target });
+  p.growth = 'late';
+  p.sode = { name: s.name, mailedOvr: overall(p) };
   return p;
 }
 
@@ -208,11 +237,42 @@ export function negotiateSodePick(state: GameState): Result & { joined?: boolean
     from: 'agent',
     sender: s.name,
     subject: `⚡ ${p.name}が入団！`,
-    body: `よろしくお願いします！ このクラブで、もっと上を目指します。\n\n${SODE_NAME}の${p.name}が加入しました（総合値 ${overall(p)}）。`,
+    body: `よろしくお願いします！ このクラブで、もっと上を目指します。\n\n${SODE_NAME}の${p.name}が加入しました（総合値 ${overall(p)}）。今はまだ荒削りですが、試合で経験を積めば、本来の力を発揮していくはずです。`,
     playerId: p.id,
     important: true,
     sode: true,
   });
   repairLineup(state, teamById(state, state.userTeamId));
   return { ok: true, joined: true, message: `${p.name}が入団！` };
+}
+
+/** 試合ごと：本来の能力に向かって、とても速く成長する */
+export function sodeGrowth(p: Player, rating: number): { from: number; to: number } | null {
+  if (!p.sode) return null;
+  const seed = SODE_PLAYERS.find((x) => x.name === p.sode!.name);
+  if (!seed) return null;
+  const target = sodeStats(seed);
+  const before = overall(p);
+  const gaps = (Object.keys(target) as StatKey[]).filter((k) => p.stats[k] < target[k]);
+  if (!gaps.length) return null;
+  const n = randInt(3, 6) + (rating >= 7 ? 3 : 0);
+  for (let i = 0; i < n; i++) {
+    const open = gaps.filter((k) => p.stats[k] < target[k]);
+    if (!open.length) break;
+    // 差が大きい能力ほど伸びやすい
+    open.sort((a, b) => target[b] - p.stats[b] - (target[a] - p.stats[a]));
+    const k = open[Math.min(open.length - 1, randInt(0, 2))];
+    p.stats[k] = Math.min(target[k], p.stats[k] + randInt(1, 2));
+  }
+  if (p.skills.length < seed.skills.length && rand() < 0.1) {
+    const add = seed.skills.find((x) => !p.skills.includes(x));
+    if (add) p.skills.push(add);
+  }
+  const after = overall(p);
+  const last = p.sode.mailedOvr ?? before;
+  if (after >= last + 3) {
+    p.sode.mailedOvr = after;
+    return { from: last, to: after };
+  }
+  return null;
 }

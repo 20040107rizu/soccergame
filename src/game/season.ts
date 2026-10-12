@@ -4,7 +4,7 @@ import { advanceCL, buildCalendar, clLeagueFixtures, plFixtures, plTable, resolv
 import { createMatch, sideRoles, simulateToEnd, sidePower, type LiveMatch } from './engine';
 import { legendGrowth, legendTick, spawnHeir } from './legend';
 import { legendChallengeTick } from './legendChallenge';
-import { sodeChallengeTick } from './sodegaura';
+import { sodeChallengeTick, sodeGrowth } from './sodegaura';
 import { afterUserMatch, dailyEvents, heirsDue, jobOfferAtSeasonEnd, listedPlayersTick, onRetire, planHeirs, promoteAcademy, seasonEndAchievements } from './events';
 import { mailBestEleven, mailCompetition, mailContractAdvice, mailGrowth, mailInjury, mailPlayerFeelings, mailRedCard, mailScoutAdvice, mailTacticAdvice, mailWindow, sendMail, tryAptitudeGain, tryNewSkill } from './mail';
 import { applyFormation, autoLineup, available, repairLineup, setAutoLineup, squadOf, updateSpirit } from './lineup';
@@ -354,8 +354,11 @@ function applyMatch(state: GameState, f: Fixture, m: LiveMatch) {
         // レジェンドは試合を重ねるほどとんでもない速さで成長する
         const g = legendGrowth(p, r, bumpStats);
         if (g && mine) mailGrowth(state, p, g.from, g.to, true);
+      } else if (p.sode) {
+        const g = sodeGrowth(p, r);
+        if (g && mine) mailGrowth(state, p, g.from, g.to, true);
       } else if (p.age <= 25 && before < p.potential && rand() < (r >= 7 ? 0.3 : 0.12)) bumpStats(p, 1);
-      if (mine && !p.legend) {
+      if (mine && !p.legend && !p.sode) {
         // 急成長・新スキル・適性拡大
         if (p.age <= 23 && r >= 7.5 && before < p.potential && rand() < 0.06) {
           for (let i = 0; i < 6; i++) bumpStats(p, 1);
