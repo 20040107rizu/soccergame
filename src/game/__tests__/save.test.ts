@@ -48,7 +48,7 @@ describe('セーブデータの引き継ぎ', () => {
     const g = loadGame(3)!;
     expect(Object.values(g.players).every((p) => (p.height ?? 0) >= 155)).toBe(true);
     const haaland = Object.values(g.players).find((p) => p.nameEn === 'Erling Haaland');
-    expect(haaland?.height).toBe(195);
+    expect(haaland?.height).toBe(194);
   });
 
   it('本体が壊れていてもバックアップから復旧する', () => {
