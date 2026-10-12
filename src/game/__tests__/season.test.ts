@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { clLeagueTable, plTable } from '../competitions';
 import { squadOf } from '../lineup';
-import { endSeason, isSeasonOver, newGame, playDay, prepareDay, teamById } from '../season';
+import { endSeason, isSeasonOver, newGame, playDay, prepareDay, teamById, updateCondition } from '../season';
 import { overall } from '../stats';
 
 describe('マスターリーグ進行', () => {
@@ -54,5 +54,25 @@ describe('マスターリーグ進行', () => {
     expect(s.userTeamId).toBe('orig');
     expect(s.teams.some((t) => t.id === 'hul')).toBe(false);
     expect(squadOf(s, 'orig').every((p) => p.custom)).toBe(true);
+  });
+
+  it('調子は毎試合変わり、絶不調が長く続かない。安定度が高いほど好調が多い', () => {
+    const s = newGame('テスト', 'ars');
+    const p = Object.values(s.players)[0];
+    const avg = (form: number) => {
+      p.traits.form = form;
+      let sum = 0;
+      let streak = 0;
+      let worst = 0;
+      for (let i = 0; i < 3000; i++) {
+        updateCondition(p);
+        sum += p.condition;
+        streak = p.condition === 1 ? streak + 1 : 0;
+        worst = Math.max(worst, streak);
+      }
+      expect(worst).toBeLessThan(8);
+      return sum / 3000;
+    };
+    expect(avg(8)).toBeGreaterThan(avg(1));
   });
 });

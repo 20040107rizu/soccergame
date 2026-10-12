@@ -399,12 +399,21 @@ function applyMatch(state: GameState, f: Fixture, m: LiveMatch) {
   }
 }
 
-/** 調子（コンディション）の変化。安定度が高いほど変わりにくい */
+/** 調子（コンディション）の変化。毎試合ごとに決め直す。安定度が高いほど好調が出やすく、絶不調が出にくい */
 export function updateCondition(p: Player) {
-  const changeP = 0.55 - p.traits.form * 0.05;
-  if (rand() > changeP) return;
-  const toward = p.condition < 3 ? 0.62 : p.condition > 3 ? 0.38 : 0.5;
-  const c = clamp(p.condition + (rand() < toward ? 1 : -1), 1, 5);
+  const t = clamp((p.traits.form - 1) / 7, 0, 1);
+  const low = [12, 22, 32, 22, 12];
+  const high = [2, 10, 38, 32, 18];
+  const w = low.map((x, i) => x + (high[i] - x) * t);
+  let r = rand() * w.reduce((a, b) => a + b, 0);
+  let c = 1;
+  for (let i = 0; i < 5; i++) {
+    r -= w[i];
+    if (r < 0) {
+      c = i + 1;
+      break;
+    }
+  }
   p.condition = c as Condition;
 }
 
