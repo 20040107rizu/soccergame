@@ -513,9 +513,9 @@ function neededPosition(squad: Player[]): Position {
 /* ---------------- シーズン終了 ---------------- */
 
 const CURVE = {
-  early: { growUntil: 23, declineFrom: 28 },
-  normal: { growUntil: 26, declineFrom: 30 },
-  late: { growUntil: 29, declineFrom: 32 },
+  early: { growUntil: 23, declineFrom: 34 },
+  normal: { growUntil: 26, declineFrom: 35 },
+  late: { growUntil: 29, declineFrom: 36 },
 };
 
 export interface SeasonSummary {
@@ -582,7 +582,7 @@ export function endSeason(state: GameState): SeasonSummary {
     p.injury = 0;
     p.suspension = 0;
 
-    if (p.age >= 34 && rand() < 0.2 + (p.age - 34) * 0.18) {
+    if (p.age >= 37 && rand() < 0.2 + (p.age - 37) * 0.18) {
       onRetire(state, p);
       if (p.teamId === state.userTeamId) summary.retired.push(p.name);
       delete state.players[p.id];
@@ -596,7 +596,7 @@ export function endSeason(state: GameState): SeasonSummary {
           summary.left.push(p.name);
           p.teamId = null;
           p.contractYears = 0;
-        } else if (p.age >= 33 && rand() < 0.5) {
+        } else if (p.age >= 36 && rand() < 0.5) {
           p.teamId = null;
         } else {
           p.contractYears = randInt(1, 3);
