@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addXp, dexBadges, earnedTitles, managerLevel, managerPerks, managerTitle, registerDex } from '../collection';
+import { addXp, backfillXp, dexBadges, earnedTitles, managerLevel, managerPerks, managerTitle, MAX_LEVEL, registerDex, xpForLevel } from '../collection';
 import { makeLegend, LEGENDS } from '../legend';
 import { newGame } from '../season';
 
@@ -24,13 +24,33 @@ describe('図鑑・監督レベル', () => {
     const s = newGame('テスト', 'ars');
     expect(managerLevel(s)).toBe(1);
     expect(managerTitle(s)).toBe('新米監督');
-    addXp(s, 10 * 19 ** 2);
+    addXp(s, xpForLevel(20));
     expect(managerLevel(s)).toBe(20);
     expect(earnedTitles(s)).toContain('名将');
     expect(managerPerks(s).interest).toBeGreaterThan(0);
     expect(s.mails[0].subject).toContain('監督レベル 20');
     s.manager!.title = '戦術家';
     expect(managerTitle(s)).toBe('戦術家');
+    // 上限は 999
+    addXp(s, xpForLevel(MAX_LEVEL) * 2);
+    expect(managerLevel(s)).toBe(999);
+    expect(earnedTitles(s)).toContain('フットボールそのもの');
+  });
+
+  it('監督レベルの実装前から遊んでいたセーブは、これまでの記録からレベルが決まる', () => {
+    const s = newGame('テスト', 'ars');
+    delete s.manager;
+    s.history = [
+      { season: 1, rank: 1, champion: 'ars', userCl: '優勝' },
+      { season: 2, rank: 3, champion: 'mci', userCl: '準決勝' },
+      { season: 3, rank: 2, champion: 'liv', userCl: 'ラウンド16' },
+    ];
+    s.achievements = { firstWin: { season: 1 }, champion: { season: 1 }, clWinner: { season: 1 } };
+    backfillXp(s);
+    expect(managerLevel(s)).toBeGreaterThanOrEqual(15);
+    const lv = managerLevel(s);
+    backfillXp(s); // 二重には足さない
+    expect(managerLevel(s)).toBe(lv);
   });
 });
 

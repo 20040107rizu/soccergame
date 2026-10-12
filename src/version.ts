@@ -3,9 +3,14 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.16.0';
+export const APP_VERSION = '0.16.1';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.16.1',
+    date: '2026-10-12',
+    items: ['監督レベルを、これまでの記録（過去の順位・タイトル・実績・今シーズンの成績）から計算するように。前から遊んでいる人もレベルが反映されます', '監督レベルの上限を999に。称号も増えました'],
+  },
   {
     version: '0.16.0',
     date: '2026-10-12',

@@ -99,6 +99,17 @@ describe('セーブデータの引き継ぎ', () => {
     expect(g.userTeamId).toBe('new');
   });
 
+  it('監督レベル実装前（v0.13）のセーブを読むと、過去の記録からレベルが計算される', () => {
+    const s = newGame('テスト', 'liv');
+    delete s.manager;
+    s.history = Array.from({ length: 10 }, (_, i) => ({ season: i + 1, rank: 2, champion: 'mci', userCl: '準々決勝' }));
+    store.set('masterleague.save.3', JSON.stringify(s));
+    const g = loadGame(3)!;
+    expect(g.manager?.backfilled).toBe(true);
+    expect(g.manager!.xp).toBeGreaterThan(5000);
+    expect(g.mails[0].subject).toContain('監督レベル');
+  });
+
   it('本体が壊れていてもバックアップから復旧する', () => {
     const s = newGame('テスト', 'liv');
     saveGame(1, s);

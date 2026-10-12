@@ -89,11 +89,23 @@ export function dexBadges(state: GameState): DexCat[] {
 
 /* ======================= 監督レベルと称号 ======================= */
 
-export const MAX_LEVEL = 50;
+export const MAX_LEVEL = 999;
+
+/** レベル L に必要な累計経験値（序盤はすぐ上がり、999 ははるか先） */
+export function xpForLevel(l: number): number {
+  return Math.round(15 * Math.pow(Math.max(0, l - 1), 1.5));
+}
 
 export function managerLevel(state: GameState): number {
   const xp = state.manager?.xp ?? 0;
-  return Math.min(MAX_LEVEL, 1 + Math.floor(Math.sqrt(xp / 10)));
+  let lo = 1;
+  let hi = MAX_LEVEL;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (xpForLevel(mid) <= xp) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo;
 }
 
 /** 次のレベルまでの経験値 [今, 必要] */
@@ -101,9 +113,8 @@ export function levelProgress(state: GameState): [number, number] {
   const lv = managerLevel(state);
   if (lv >= MAX_LEVEL) return [1, 1];
   const xp = state.manager?.xp ?? 0;
-  const base = 10 * (lv - 1) ** 2;
-  const next = 10 * lv ** 2;
-  return [xp - base, next - base];
+  const base = xpForLevel(lv);
+  return [xp - base, xpForLevel(lv + 1) - base];
 }
 
 const LEVEL_TITLES: [number, string][] = [
@@ -116,6 +127,14 @@ const LEVEL_TITLES: [number, string][] = [
   [30, '闘将'],
   [40, '世界的名将'],
   [50, '生ける伝説'],
+  [75, '球界の重鎮'],
+  [100, '百戦錬磨'],
+  [150, '不世出の名将'],
+  [200, 'サッカーの神に愛されし者'],
+  [300, '時代を創る者'],
+  [500, '永遠の名将'],
+  [777, '奇跡の指揮官'],
+  [999, 'フットボールそのもの'],
 ];
 
 /** 実績で手に入る特別な称号 */
@@ -151,9 +170,9 @@ export function managerPerks(state: GameState): { interest: number; special: num
   const lv = managerLevel(state);
   return {
     // 選手が「この監督の下でやりたい」と思いやすい
-    interest: lv >= 30 ? 10 : lv >= 20 ? 6 : lv >= 10 ? 3 : 0,
+    interest: lv >= 200 ? 14 : lv >= 30 ? 10 : lv >= 20 ? 6 : lv >= 10 ? 3 : 0,
     // レジェンドなど特別な交渉が少しだけ成立しやすい
-    special: lv >= 40 ? 0.04 : lv >= 25 ? 0.02 : 0,
+    special: lv >= 100 ? 0.06 : lv >= 40 ? 0.04 : lv >= 25 ? 0.02 : 0,
     // スカウトの見立てが正確になる
     scout: lv >= 15,
   };
@@ -166,6 +185,8 @@ export const PERK_TEXT: [number, string][] = [
   [25, '特別な選手との交渉が少し成立しやすい'],
   [30, '選手がとても移籍に乗り気になりやすい'],
   [40, '特別な選手との交渉がさらに成立しやすい'],
+  [100, '特別な選手との交渉がもっと成立しやすい'],
+  [200, '選手がこぞってこの監督の下でプレーしたがる'],
 ];
 
 /** 経験値を足す（レベルが上がればメール） */
@@ -190,4 +211,45 @@ export function addXp(state: GameState, n: number) {
 export function matchXp(state: GameState, gf: number, ga: number, comp: 'PL' | 'CL') {
   const base = gf > ga ? 10 : gf === ga ? 4 : 1;
   addXp(state, comp === 'CL' ? base + 2 : base);
+}
+
+/**
+ * 監督レベルの実装前から遊んでいたセーブのために、これまでの記録（過去の順位・CL の成績・
+ * 今シーズンの試合結果・実績）から経験値を計算する。一度だけ行う。
+ */
+export function backfillXp(state: GameState) {
+  if (state.manager?.backfilled) return;
+  let xp = 0;
+  const clXp: Record<string, number> = { 優勝: 250, 決勝: 120, 準決勝: 80, 準々決勝: 50, ラウンド16: 30 };
+  const clGames: Record<string, [number, number]> = { 優勝: [11, 3], 決勝: [10, 3], 準決勝: [9, 3], 準々決勝: [8, 3], ラウンド16: [7, 3] };
+  for (const h of state.history ?? []) {
+    // 過去のシーズン：順位から試合結果をおおまかに見積もる
+    const wins = Math.max(4, Math.round(28 - 1.15 * (h.rank - 1)));
+    const draws = 7;
+    const losses = Math.max(0, 38 - wins - draws);
+    xp += wins * 10 + draws * 4 + losses;
+    const [cw, cd] = clGames[h.userCl ?? ''] ?? (h.userCl && h.userCl !== '出場なし' ? [3, 2] : [0, 0]);
+    xp += cw * 12 + cd * 6;
+    xp += Math.max(0, 21 - h.rank) * 6 + (h.rank === 1 ? 200 : 0) + (clXp[h.userCl ?? ''] ?? 0);
+  }
+  // 今シーズンの実際の試合結果
+  for (const f of state.fixtures ?? []) {
+    if (!f.result || (f.home !== state.userTeamId && f.away !== state.userTeamId)) continue;
+    const gf = f.home === state.userTeamId ? f.result.home : f.result.away;
+    const ga = f.home === state.userTeamId ? f.result.away : f.result.home;
+    const base = gf > ga ? 10 : gf === ga ? 4 : 1;
+    xp += f.comp === 'CL' ? base + 2 : base;
+  }
+  // 実績
+  for (const id of Object.keys(state.achievements ?? {})) xp += id.startsWith('dex') ? 30 : 45;
+  const before = state.manager?.xp ?? 0;
+  state.manager = { ...(state.manager ?? { xp: 0 }), xp: Math.max(before, xp), backfilled: true };
+  if (xp > before && managerLevel(state) > 1) {
+    sendMail(state, {
+      from: 'board',
+      sender: 'クラブ会長',
+      subject: `📈 これまでの実績から、監督レベルは ${managerLevel(state)}「${managerTitle(state)}」です`,
+      body: `監督レベルの仕組みができる前の戦いぶり（過去の順位・タイトル・実績・今シーズンの成績）から、監督としての経験を計算しました。\n\n現在：レベル ${managerLevel(state)}「${managerTitle(state)}」\n\nクラブ画面で、これまでに手に入れた称号から表示するものを選べます。`,
+    });
+  }
 }

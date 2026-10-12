@@ -391,7 +391,7 @@ export interface GameState {
   /** クラブの施設（古いセーブには無い） */
   facilities?: { training?: number; scout?: number; academy?: number; building?: { kind: 'training' | 'scout' | 'academy'; done: number } };
   /** 監督の経験値と表示する称号 */
-  manager?: { xp: number; title?: string };
+  manager?: { xp: number; title?: string; backfilled?: boolean };
   /** 殿堂の歴代ベストイレブン（殿堂の名前＋シーズン） */
   hofXI?: (string | null)[];
   /** 師弟関係の進み具合（ベテランID|若手ID → 一緒に先発した試合数） */

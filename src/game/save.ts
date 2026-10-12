@@ -1,5 +1,6 @@
 import type { GameState } from './types';
 import { ensureHeight } from './height';
+import { backfillXp } from './collection';
 
 /**
  * セーブデータ。スロット制で端末内（localStorage）に保存。
@@ -101,6 +102,8 @@ function migrate(s: GameState): GameState {
   }
   // v0.8：身長を追加（実在選手は調べた値、それ以外はポジションに合わせて設定）
   for (const p of Object.values(s.players)) ensureHeight(p);
+  // v0.17：監督レベルの実装前のセーブは、これまでの記録から経験値を計算する
+  backfillXp(s);
   // ここから下に、将来のバージョンごとの変換を追加する
   // if (s.version < 4) { ... }
   s.version = SAVE_VERSION;
