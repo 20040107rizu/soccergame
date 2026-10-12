@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { squadOf } from '../lineup';
 import { newGame } from '../season';
-import { askingPrice, completeSigning, offerToClub, offerToPlayer, PLAYER_TRIES, playerInterest, salaryDemand, wageRoomFor } from '../transfer';
+import { renewContract, renewDemand, askingPrice, completeSigning, offerToClub, offerToPlayer, PLAYER_TRIES, playerInterest, salaryDemand, wageRoomFor } from '../transfer';
 
 describe('移籍交渉', () => {
   it('クラブ合意 → 選手合意で移籍が成立する', () => {
@@ -54,5 +54,16 @@ describe('移籍交渉', () => {
     expect(w.enough).toBe(false);
     expect(w.room).toBe(0);
     expect(offerToPlayer(s, target.id, 1, 3).message).toContain('空き枠');
+  });
+
+  it('希望年俸ぴったり（表示と同じ金額）で契約延長できる', () => {
+    const s = newGame('テスト', 'mci');
+    const p = squadOf(s, 'mci').sort((a, b) => b.stats.finishing - a.stats.finishing)[0];
+    p.salary = 2; // 安い年俸のまま大活躍した選手
+    const demand = renewDemand(p);
+    expect(demand).toBeGreaterThan(p.salary * 2.5 + 0.5);
+    for (const t of s.teams) if (t.id === 'mci') t.rep = 99;
+    expect(renewContract(s, p.id, Math.ceil(demand * 20) / 20, 5).ok).toBe(true);
+    expect(p.contractYears).toBe(5);
   });
 });

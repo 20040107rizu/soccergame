@@ -272,7 +272,7 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
                 <p className="hint">希望年俸の目安：{fmtMoney(renewDemand(p))}</p>
                 <label className="field">
                   <span>年俸 {fmtMoney(renew.salary)}</span>
-                  <input type="range" min={Math.max(0.1, p.salary * 0.7)} max={p.salary * 2.5 + 0.5} step={0.05} value={renew.salary} onChange={(e) => setRenew({ ...renew, salary: Number(e.target.value) })} />
+                  <input type="range" min={Math.max(0.1, Math.min(p.salary, renewDemand(p)) * 0.7)} max={Math.max(p.salary * 2.5 + 0.5, renewDemand(p) * 1.6)} step={0.05} value={renew.salary} onChange={(e) => setRenew({ ...renew, salary: Number(e.target.value) })} />
                 </label>
                 <Seg value={String(renew.years)} options={[1, 2, 3, 4, 5].map((y) => ({ v: String(y), label: `${y}年` }))} onChange={(v) => setRenew({ ...renew, years: Number(v) })} small />
                 <div className="row gap">
@@ -292,7 +292,7 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
                 </div>
               </div>
             ) : (
-              <button className="btn" onClick={() => setRenew({ salary: Math.round(renewDemand(p) * 20) / 20, years: Math.min(5, p.contractYears + 2) })}>
+              <button className="btn" onClick={() => setRenew({ salary: Math.ceil(renewDemand(p) * 20) / 20, years: Math.min(5, p.contractYears + 2) })}>
                 契約延長の交渉
               </button>
             )}

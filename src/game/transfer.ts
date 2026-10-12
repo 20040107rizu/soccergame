@@ -375,7 +375,8 @@ export function renewContract(state: GameState, playerId: string, salary: number
   const { total, cap } = payrollInfo(state);
   if (total - p.salary + salary > cap) return { ok: false, message: `年俸総額の上限（${fmtMoney(cap)}）を超えてしまいます` };
   const demand = renewDemand(p);
-  if (salary < demand) return { ok: false, message: `${p.name}「年俸${fmtMoney(demand)}は欲しい」` };
+  // 表示の丸めで同じ金額に見える分は許す
+  if (salary < demand - 0.05) return { ok: false, message: `${p.name}「年俸${fmtMoney(demand)}は欲しい」` };
   p.salary = round2(salary);
   p.contractYears = years;
   return { ok: true, message: `${p.name}と${years}年契約を結びました` };
