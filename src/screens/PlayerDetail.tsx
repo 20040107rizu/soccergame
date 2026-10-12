@@ -37,7 +37,7 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
           <div className="pd-name">{p.name}</div>
           {p.nameEn && <div className="pd-en">{p.nameEn}</div>}
           <div className="pd-sub">
-            <PosTag pos={p.position} /> {p.age}歳 · {p.nationality} · {p.foot === 'R' ? '右足' : '左足'} · #{p.number}
+            <PosTag pos={p.position} /> {p.age}歳 · {p.height ? `${p.height}cm · ` : ''}{p.nationality} · {p.foot === 'R' ? '右足' : '左足'} · #{p.number}
           </div>
           <div className="pd-sub">{team ? team.name : 'フリー'}</div>
           {p.legend && <span className="legend-badge">🌟 レジェンド・{LEGEND_LABEL[p.legend.kind]}</span>}

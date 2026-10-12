@@ -135,6 +135,16 @@ export function PlayerEditor({ id, onClose }: { id: string | 'new'; onClose: () 
               </select>
             </label>
             <label className="field">
+              <span>身長</span>
+              <select value={p.height ?? 180} onChange={(e) => set('height', Number(e.target.value))}>
+                {Array.from({ length: 56 }, (_, i) => 155 + i).map((h) => (
+                  <option key={h} value={h}>
+                    {h}cm
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
               <span>背番号</span>
               <select value={p.number} onChange={(e) => set('number', Number(e.target.value))}>
                 {Array.from({ length: 99 }, (_, i) => i + 1).map((n) => (

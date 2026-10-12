@@ -3,9 +3,18 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.7.0';
+export const APP_VERSION = '0.8.0';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.8.0',
+    date: '2026-10-12',
+    items: [
+      '全選手に身長を追加（実在選手は実際の身長。選手詳細に表示）',
+      '身長が試合に影響：背が高い選手はヘディングで狙われやすく、決まりやすい。相手のCB・GKが高いと空中戦は不利に',
+      'オリジナルチームの選手は身長もエディットできます',
+    ],
+  },
   {
     version: '0.7.0',
     date: '2026-10-12',

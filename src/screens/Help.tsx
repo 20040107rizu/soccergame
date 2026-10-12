@@ -130,6 +130,12 @@ export function Help({ onClose }: { onClose: () => void }) {
             </div>
           </section>
           <section>
+            <h3>身長</h3>
+            <div className="help-item">
+              <p>身長は空中戦に影響します。背が高い選手ほどヘディングシュートの場面で狙われやすく、決まりやすくなります。相手のセンターバックやゴールキーパーの背が高いと、ヘディングは決まりにくくなります。</p>
+            </div>
+          </section>
+          <section>
             <h3>チームスピリット</h3>
             <div className="help-item">
               <p>

@@ -1,4 +1,5 @@
 import type { GameState } from './types';
+import { ensureHeight } from './height';
 
 /**
  * セーブデータ。スロット制で端末内（localStorage）に保存。
@@ -98,6 +99,8 @@ function migrate(s: GameState): GameState {
   for (const t of s.teams) {
     t.spirit = t.spirit ?? 75;
   }
+  // v0.8：身長を追加（実在選手は調べた値、それ以外はポジションに合わせて設定）
+  for (const p of Object.values(s.players)) ensureHeight(p);
   // ここから下に、将来のバージョンごとの変換を追加する
   // if (s.version < 4) { ... }
   s.version = SAVE_VERSION;

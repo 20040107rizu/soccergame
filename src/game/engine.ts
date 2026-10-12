@@ -4,6 +4,7 @@ import { ratingAt, styleActive } from './stats';
 import type { Formation, FormationLabel, GameState, Player, Position, Tactic } from './types';
 import { available } from './lineup';
 import { hiddenTrait, matchBonuses } from './events';
+import { aerialFactor } from './height';
 
 /**
  * 1 分ずつ進む試合エンジン。途中で交代・作戦・フォーメーションを変更できる。
@@ -291,7 +292,8 @@ function shotEvent(state: GameState, m: LiveMatch, atkKey: SideKey, defKey: Side
 
   const shooterO = weighted(attackers, (o) => {
     const s = o.p.stats;
-    const key = type === 'header' ? (s.heading + s.jump) / 2 : type === 'long' ? (s.kickingPower + s.finishing) / 2 : (s.finishing + s.offense) / 2;
+    // ヘディングは背が高い選手ほど狙われやすい
+    const key = type === 'header' ? ((s.heading + s.jump) / 2) * aerialFactor(o.p) : type === 'long' ? (s.kickingPower + s.finishing) / 2 : (s.finishing + s.offense) / 2;
     const sub = o.p.skills.includes('superSub') && (m[atkKey].enteredAt[o.p.id] ?? 0) >= 45 ? 1.35 : 1;
     const clutch = m.minute >= 75 && hiddenTrait(o.p) === 'clutch' ? 1.8 : 1;
     const revenge = o.p.exTeamId === m[defKey].teamId ? 1.4 : 1;
@@ -329,6 +331,10 @@ function shotEvent(state: GameState, m: LiveMatch, atkKey: SideKey, defKey: Side
     if (sk('header')) quality += 3;
     if (sk('bulletHeader')) quality += 2;
     if (dsk('aerial') || dsk('aerialFort')) quality -= 2;
+    // 身長：自分が高いほど有利、相手の CB と GK が高いほど不利
+    const cbs = defenders.filter((o) => o.pos === 'CB');
+    const cbH = cbs.length ? cbs.reduce((a, o) => a + (o.p.height ?? 183), 0) / cbs.length : 180;
+    quality += ((shooter.height ?? 180) - 180) * 0.3 - (cbH - 184) * 0.25 - ((gk?.height ?? 188) - 188) * 0.15;
   } else if (type === 'long') {
     quality = (s.kickingPower * 0.4 + s.finishing * 0.3 + s.curl * 0.3) * effMul - 8;
     if (sk('middleShot')) quality += 4;

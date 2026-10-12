@@ -41,6 +41,16 @@ describe('セーブデータの引き継ぎ', () => {
     expect(Object.keys(g.players).length).toBe(Object.keys(s.players).length);
   });
 
+  it('身長のない v0.7 のセーブを読み込むと、全選手に身長が入る', () => {
+    const s = newGame('テスト', 'mci');
+    for (const p of Object.values(s.players)) delete p.height;
+    store.set('masterleague.save.3', JSON.stringify(s));
+    const g = loadGame(3)!;
+    expect(Object.values(g.players).every((p) => (p.height ?? 0) >= 155)).toBe(true);
+    const haaland = Object.values(g.players).find((p) => p.nameEn === 'Erling Haaland');
+    expect(haaland?.height).toBe(195);
+  });
+
   it('本体が壊れていてもバックアップから復旧する', () => {
     const s = newGame('テスト', 'liv');
     saveGame(1, s);

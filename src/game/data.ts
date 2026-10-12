@@ -10,6 +10,7 @@ import { autoSkills, defaultStyle, generateStats, overallFor, seededRandom, STYL
 import { FORMATIONS } from './positions';
 import type { Appearance, Aptitudes, Condition, GrowthType, Player, Position, Team } from './types';
 import { POSITIONS } from './types';
+import { randomHeight, realHeight } from './height';
 
 export const PL_SEEDS: ClubSeed[] = [...PL1, ...PL2];
 export const EU_SEEDS: ClubSeed[] = [...EU1, ...EU2];
@@ -58,6 +59,7 @@ export function playerFromSeed(line: string, teamId: string): Player {
     nameEn,
     nationality: nat,
     age: a,
+    height: realHeight(nameEn, teamId) ?? randomHeight(position, seededRandom(nameEn + ':height')),
     position,
     aptitudes,
     foot: foot === 'L' ? 'L' : 'R',
@@ -135,6 +137,7 @@ export function generatePlayer(opts: { position: Position; level: number; age?: 
     nameEn: '',
     nationality: pick(NATIONS),
     age,
+    height: randomHeight(opts.position),
     position: opts.position,
     aptitudes,
     foot: rand() < 0.75 ? 'R' : 'L',

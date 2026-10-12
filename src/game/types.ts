@@ -95,6 +95,8 @@ export interface Player {
   career: SeasonStats;
   /** オリジナルチーム用に作成された選手（エディット可能） */
   custom?: boolean;
+  /** 身長（cm） */
+  height?: number;
   appearance: Appearance;
   /** 今季の評価点の合計（ベストイレブン用） */
   ratingSum?: number;
