@@ -432,7 +432,7 @@ function injuryEvents(state: GameState, m: LiveMatch) {
     for (const id of side.lineup) {
       const p = state.players[id];
       if (!p || side.injured.includes(id)) continue;
-      if (rand() < 0.000055 * (4 - p.traits.injuryRes)) {
+      if (rand() < 0.000022 * (4 - p.traits.injuryRes)) {
         side.injured.push(id);
         m.events.push({ minute: m.minute, type: 'injury', side: key, playerId: id, text: `${last(p)}が負傷…プレー続行は難しそうだ。` });
         if (side.teamId === state.userTeamId) m.attention = `${p.name}が負傷しました。交代させましょう`;
