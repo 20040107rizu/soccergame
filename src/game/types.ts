@@ -108,6 +108,9 @@ export interface Player {
   legend?: LegendInfo;
   /** ひみつのチーム出身（試合を重ねるほど本来の能力に近づく） */
   sode?: { name: string; mailedOvr?: number; extra?: number };
+  /** サポーターが付けた愛称と、そのための活躍ポイント */
+  nickname?: string;
+  fanPoints?: number;
   /** 謎の代理人から獲得した選手 */
   mystery?: { tier: 'jackpot' | 'normal' | 'bust'; revealed?: boolean };
   /** 直前に所属していたクラブ（恩返し弾用） */
@@ -374,6 +377,8 @@ export interface GameState {
   hallOfFame?: HallEntry[];
   /** 選手図鑑（古いセーブには無い） */
   dex?: Record<string, import('./collection').DexEntry>;
+  /** クラブの施設（古いセーブには無い） */
+  facilities?: { training?: number; scout?: number; academy?: number; building?: { kind: 'training' | 'scout' | 'academy'; done: number } };
   /** 監督の経験値と表示する称号 */
   manager?: { xp: number; title?: string };
   /** 殿堂の歴代ベストイレブン（殿堂の名前＋シーズン） */

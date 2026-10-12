@@ -3,9 +3,17 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.14.0';
+export const APP_VERSION = '0.15.0';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.15.0',
+    date: '2026-10-12',
+    items: [
+      '🏗 クラブの施設を追加：練習場・スカウト網・ユースアカデミーを移籍資金で強化できます（クラブ画面）',
+      '📣 サポーターの愛称を追加：ホームで活躍を続けた選手に愛称が付き、ホームの試合で少し力を発揮します',
+    ],
+  },
   {
     version: '0.14.0',
     date: '2026-10-12',

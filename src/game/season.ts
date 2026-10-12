@@ -5,6 +5,7 @@ import { createMatch, sideRoles, simulateToEnd, sidePower, type LiveMatch } from
 import { legendGrowth, legendTick, spawnHeir } from './legend';
 import { legendChallengeTick } from './legendChallenge';
 import { sodeChallengeTick, sodeGrowth } from './sodegaura';
+import { facilityTick, trainingBoost } from './club';
 import { afterUserMatch, dailyEvents, heirsDue, jobOfferAtSeasonEnd, listedPlayersTick, onRetire, planHeirs, promoteAcademy, seasonEndAchievements } from './events';
 import { mailBestEleven, mailCompetition, mailContractAdvice, mailGrowth, mailInjury, mailPlayerFeelings, mailRedCard, mailScoutAdvice, mailTacticAdvice, mailWindow, sendMail, tryAptitudeGain, tryNewSkill } from './mail';
 import { applyFormation, autoLineup, available, repairLineup, setAutoLineup, squadOf, updateSpirit } from './lineup';
@@ -231,6 +232,7 @@ export function playDay(state: GameState, userMatch?: LiveMatch): DayReport {
   legendTick(state);
   legendChallengeTick(state, day);
   sodeChallengeTick(state, day);
+  facilityTick(state);
   dailyEvents(state, day);
   listedPlayersTick(state);
 
@@ -357,10 +359,10 @@ function applyMatch(state: GameState, f: Fixture, m: LiveMatch) {
       } else if (p.sode) {
         const g = sodeGrowth(p, r);
         if (g && mine) mailGrowth(state, p, g.from, g.to, true);
-      } else if (p.age <= 25 && before < p.potential && rand() < (r >= 7 ? 0.3 : 0.12)) bumpStats(p, 1);
+      } else if (p.age <= 25 && before < p.potential && rand() < (r >= 7 ? 0.3 : 0.12) * (mine ? trainingBoost(state) : 1)) bumpStats(p, 1);
       if (mine && !p.legend && !p.sode) {
         // 急成長・新スキル・適性拡大
-        if (p.age <= 23 && r >= 7.5 && before < p.potential && rand() < 0.06) {
+        if (p.age <= 23 && r >= 7.5 && before < p.potential && rand() < 0.06 * trainingBoost(state)) {
           for (let i = 0; i < 6; i++) bumpStats(p, 1);
           mailGrowth(state, p, before, overall(p), true);
         } else if (overall(p) > before) {

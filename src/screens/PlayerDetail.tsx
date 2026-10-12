@@ -35,6 +35,7 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
         <PlayerIcon p={p} team={team} size={72} />
         <div className="grow">
           <div className="pd-name">{p.name}</div>
+          {p.nickname && <div className="pd-nick">📣「{p.nickname}」</div>}
           {p.nameEn && <div className="pd-en">{p.nameEn}</div>}
           <div className="pd-sub">
             <PosTag pos={p.position} /> {p.age}歳 · {p.height ? `${p.height}cm · ` : ''}{p.nationality} · {p.foot === 'R' ? '右足' : '左足'} · #{p.number}

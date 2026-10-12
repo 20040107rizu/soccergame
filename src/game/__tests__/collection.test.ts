@@ -33,3 +33,27 @@ describe('図鑑・監督レベル', () => {
     expect(managerTitle(s)).toBe('戦術家');
   });
 });
+
+describe('施設・愛称', async () => {
+  const club = await import('../club');
+  it('施設は資金を使って工事し、工期が過ぎると完成する', () => {
+    const s = newGame('テスト', 'ars');
+    s.money = 100;
+    expect(club.startUpgrade(s, 'training').ok).toBe(true);
+    expect(s.money).toBe(85);
+    expect(club.startUpgrade(s, 'scout').ok).toBe(false); // 工事は1つずつ
+    s.day += 3;
+    club.facilityTick(s);
+    expect(club.facilityLevel(s, 'training')).toBe(1);
+    expect(club.trainingBoost(s)).toBeGreaterThan(1);
+    expect(s.mails[0].subject).toContain('練習場');
+  });
+
+  it('ホームで活躍を続けると愛称が付く', () => {
+    const s = newGame('テスト', 'ars');
+    const p = Object.values(s.players).find((x) => x.teamId === 'ars' && x.position === 'CF')!;
+    for (let i = 0; i < 5; i++) club.fanTick(s, [p.id], { [p.id]: 8 }, [p.id], false);
+    expect(p.nickname).toBeTruthy();
+    expect(s.mails[0].subject).toContain(p.nickname!);
+  });
+});

@@ -1,3 +1,4 @@
+import { academyBoost, fanTick, scoutBoost } from './club';
 import { addXp, managerPerks, matchXp, registerDex } from './collection';
 import { generatePlayer } from './data';
 import { fairSalary, fmtMoney, round2, wageCap, payroll } from './economy';
@@ -129,6 +130,7 @@ export function matchBonuses(state: GameState, f: Fixture, team: Team, opp: Team
     if (t === 'derby' && derby) k *= 1.07;
     if (t === 'bloomer' && p.joinedSeason === state.season && p.exTeamId) k *= 1.03;
     if (p.exTeamId === opp.id) k *= 1.04; // 古巣相手に燃える
+    if (p.nickname && f.home === team.id && f.stage !== 'F') k *= 1.03; // 愛称を呼ぶホームの声援
     if (k !== 1) out[p.id] = k;
   }
   return out;
@@ -204,6 +206,9 @@ export function afterUserMatch(state: GameState, f: Fixture, m: LiveMatch, key: 
       sendMail(state, { from: 'agent', sender: `${p.name}の代理人`, subject: `【不満】${p.name}「約束が違う」`, body: `出場機会を約束していただいたはずですが、守られませんでした。\n${p.name}は大変失望しており、調子も落ちています。チームの雰囲気にも影響が出ているようです。`, playerId: p.id, important: true });
     }
   }
+
+  // サポーターの愛称（ホームの試合）
+  if (key === 'home' && !m.neutral) fanTick(state, side.usedPlayers, m.ratings, goals.map((g) => g.playerId!).filter(Boolean), ga === 0);
 
   // 図鑑・監督の経験値
   for (const a of registerDex(state)) unlock(state, a);
@@ -634,11 +639,12 @@ export function promoteAcademy(state: GameState): string[] {
   for (let i = 0; i < n; i++) {
     if (squadOf(state, team.id).length >= MAX_SQUAD) break;
     const pos: Position = pick(POSITIONS);
-    const p = generatePlayer({ position: pos, level: golden ? randInt(60, 66) : randInt(50, 58), age: 17, teamId: team.id, custom: team.original });
+    const ab = academyBoost(state);
+    const p = generatePlayer({ position: pos, level: (golden ? randInt(60, 66) : randInt(50, 58)) + Math.round(ab * 1.5), age: 17, teamId: team.id, custom: team.original });
     p.academy = true;
     p.joinedSeason = state.season + 1;
     p.contractYears = 3;
-    p.potential = golden ? randInt(84, 94) : Math.max(p.potential, randInt(65, 82));
+    p.potential = Math.min(99, (golden ? randInt(84, 94) : Math.max(p.potential, randInt(65, 82))) + ab * 2);
     p.growth = golden ? pick(['normal', 'late'] as const) : p.growth;
     p.salary = fairSalary(p);
     p.loyalty = 90;
@@ -700,7 +706,7 @@ export function dailyEvents(state: GameState, day: { type: string; round: number
       delete state.players[p.id];
     }
     delete state.gemOffer;
-  } else if (!g && rand() < GEM_RATE) spawnGem(state);
+  } else if (!g && rand() < GEM_RATE * scoutBoost(state)) spawnGem(state);
 
   // わがまま
   const d = state.demand;

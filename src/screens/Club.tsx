@@ -8,6 +8,7 @@ import { MAX_SQUAD } from '../game/transfer';
 import { useGame } from '../store';
 import { Records } from './Records';
 import { ManagerCard } from './ManagerCard';
+import { Facilities } from './Facilities';
 import { Feedback } from './Feedback';
 import { APP_VERSION } from '../version';
 
@@ -57,6 +58,8 @@ export function Club() {
       </div>
 
       <ManagerCard />
+
+      <Facilities />
 
       <button className="btn feedback-btn" onClick={() => setFb(true)}>
         📝 感想・不具合を送る

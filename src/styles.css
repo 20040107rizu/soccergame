@@ -2887,3 +2887,44 @@ button.friend-row {
   color: var(--accent);
   font-weight: 700;
 }
+
+/* ===== 施設・愛称 ===== */
+.fac-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.fac-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.fac-row .grow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fac-lv {
+  color: var(--accent);
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+.fac-row .btn.small {
+  min-width: 78px;
+  line-height: 1.2;
+}
+.fac-building {
+  background: #3a2a00;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.pd-nick {
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 13px;
+}
