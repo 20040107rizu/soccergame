@@ -398,5 +398,5 @@ export interface GameState {
   mentorProgress?: Record<string, number>;
   /** 〇〇2世の予定 */
   heirs?: { seedId: string; season: number; done?: boolean }[];
-  history: { season: number; rank: number; champion: string; clWinner?: string; userCl?: string }[];
+  history: { season: number; rank: number; champion: string; clWinner?: string; userCl?: string; club?: string }[];
 }

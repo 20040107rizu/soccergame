@@ -2948,3 +2948,66 @@ button.friend-row {
   flex-wrap: wrap;
   gap: 6px;
 }
+
+/* ===== フレンドの監督の実績 ===== */
+.career {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+.career-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.career-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.career-kpis div {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+}
+.career-kpis small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.career-kpis b {
+  font-size: 18px;
+}
+.career-hist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.career-row {
+  display: grid;
+  grid-template-columns: 40px 70px 1fr auto;
+  gap: 6px;
+  align-items: center;
+  background: var(--card);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+.career-row.gold {
+  border: 1px solid #ffd34d;
+}
+.career-fac {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+.career-head.card {
+  flex-direction: row;
+  text-align: left;
+}
+.career-row.hof-row {
+  grid-template-columns: auto 1fr auto;
+}

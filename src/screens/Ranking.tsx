@@ -10,6 +10,9 @@ import type { Player, Team } from '../game/types';
 import { useGame } from '../store';
 import { TACTIC_OPTIONS } from './Squad';
 import { fetchRanking, playerId, rankingEnabled, type RankingRow } from '../game/ranking';
+import { ACHIEVEMENTS } from '../game/events';
+import { FACILITIES } from '../game/club';
+import type { TeamSnapshot } from '../game/friendly';
 
 type Sort = 'titles' | 'points' | 'money' | 'achievements';
 
@@ -84,6 +87,7 @@ function FriendTeam({ row, mine, onClose }: { row: RankingRow; mine: boolean; on
   const { state } = useGame();
   const snap = parseSnapshot(row.team);
   const [detail, setDetail] = useState<string | null>(null);
+  const [view, setView] = useState<'plan' | 'career'>('plan');
   const built = useMemo(() => (snap ? snapshotTeam(snap, teamById(state, state.userTeamId), row.nickname) : null), [row.team]);
   if (!snap || !built) {
     return (
@@ -100,6 +104,19 @@ function FriendTeam({ row, mine, onClose }: { row: RankingRow; mine: boolean; on
   const p = detail ? players[detail] : null;
   return (
     <Sheet title={`${row.nickname}のチーム`} onClose={onClose} full>
+      <Seg
+        small
+        value={view}
+        onChange={setView}
+        options={[
+          { v: 'plan', label: '⚽ ゲームプラン' },
+          { v: 'career', label: '📈 監督の実績' },
+        ]}
+      />
+      {view === 'career' ? (
+        <Career row={row} snap={snap} />
+      ) : (
+      <>
       <div className="friend-plan card">
         <div className="row gap">
           <Crest team={team} size={40} />
@@ -151,6 +168,8 @@ function FriendTeam({ row, mine, onClose }: { row: RankingRow; mine: boolean; on
         </button>
       )}
       <p className="hint">親善試合は練習試合です。結果や成長・ケガはセーブに影響しません。</p>
+      </>
+      )}
       {p && <FriendPlayer p={p} team={team} onClose={() => setDetail(null)} />}
     </Sheet>
   );
@@ -221,6 +240,128 @@ function FriendTitle({ team }: { team?: string }) {
   return (
     <div className="small friend-title">
       Lv.{snap.mgr.lv}「{snap.mgr.title}」
+    </div>
+  );
+}
+
+/** フレンドの監督としての実績 */
+function Career({ row, snap }: { row: RankingRow; snap: TeamSnapshot }) {
+  const { state } = useGame();
+  const [allHist, setAllHist] = useState(false);
+  const pr = snap.prof;
+  if (!pr) return <p className="hint">この人の実績はまだ届いていません（相手が最新版で試合を進めると見られるようになります）。</p>;
+  const mine = state.achievements ?? {};
+  const got = new Set(pr.ach);
+  const shown = ACHIEVEMENTS.filter((a) => got.has(a.id) && (!a.hidden || mine[a.id]));
+  const secret = ACHIEVEMENTS.filter((a) => got.has(a.id) && a.hidden && !mine[a.id]).length;
+  const best = pr.hist.length ? Math.min(...pr.hist.map((h) => h[1])) : null;
+  return (
+    <div className="career">
+      <div className="card career-head">
+        <div className="mgr-lv">Lv.{pr.lv}</div>
+        <div className="grow">
+          <b>{row.nickname}監督</b>
+          <div className="friend-title">「{pr.title}」</div>
+          <small className="muted">
+            {row.club} · シーズン{row.season}
+          </small>
+        </div>
+      </div>
+      <div className="career-kpis">
+        <div>
+          <small>指揮</small>
+          <b>{pr.seasons}季</b>
+        </div>
+        <div>
+          <small>リーグ優勝</small>
+          <b>{row.titles}</b>
+        </div>
+        <div>
+          <small>CL優勝</small>
+          <b>{row.clTitles}</b>
+        </div>
+        <div>
+          <small>最高順位</small>
+          <b>{best ? `${best}位` : '-'}</b>
+        </div>
+        <div>
+          <small>実績</small>
+          <b>{pr.ach.length}</b>
+        </div>
+        <div>
+          <small>図鑑</small>
+          <b>{pr.dex}人</b>
+        </div>
+      </div>
+      {pr.best && (
+        <p className="small">
+          歴代最高の選手：<b>{pr.best[0]}</b>（総合値 {pr.best[1]}）
+        </p>
+      )}
+
+      <h3 className="section-title">シーズンごとの成績</h3>
+      {pr.hist.length === 0 ? (
+        <p className="hint">まだシーズンを終えていません。</p>
+      ) : (
+        <div className="career-hist">
+          {[...pr.hist].reverse().slice(0, allHist ? undefined : 10).map(([season, rank, cl, club]) => (
+            <div key={season} className={'career-row' + (rank === 1 ? ' gold' : '')}>
+              <span>S{season}</span>
+              <b>{rank === 1 ? '🏆 優勝' : `${rank}位`}</b>
+              <span className="muted">{cl && cl !== '出場なし' ? `CL ${cl === '優勝' ? '🏆優勝' : cl}` : ''}</span>
+              <small className="muted">{club}</small>
+            </div>
+          ))}
+          {!allHist && pr.hist.length > 10 && (
+            <button className="btn ghost small" onClick={() => setAllHist(true)}>
+              すべてのシーズンを見る（{pr.hist.length}）
+            </button>
+          )}
+        </div>
+      )}
+
+      <h3 className="section-title">実績（{pr.ach.length}）</h3>
+      <div className="ach-grid">
+        {shown.map((a) => (
+          <div key={a.id} className="ach on">
+            <b>{a.label}</b>
+            <small>{a.desc}</small>
+          </div>
+        ))}
+        {secret > 0 && (
+          <div className="ach">
+            <b>？？？ ×{secret}</b>
+            <small>あなたがまだ解除していない隠し実績</small>
+          </div>
+        )}
+      </div>
+
+      {pr.hof.length > 0 && (
+        <>
+          <h3 className="section-title">殿堂</h3>
+          <div className="list">
+            {pr.hof.map(([name, pos, peak, apps]) => (
+              <div key={name} className="career-row hof-row">
+                <span className="chip">{pos}</span>
+                <b>{name}</b>
+                <small className="muted">
+                  最高 {peak} · {apps}試合
+                </small>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <h3 className="section-title">クラブの施設</h3>
+      <div className="career-fac">
+        {FACILITIES.map((f, i) => (
+          <div key={f.id}>
+            {f.icon} {f.label} <b>Lv.{pr.fac[i]}</b>
+          </div>
+        ))}
+      </div>
+      {pr.miracles > 0 && <p className="small">✨ 大逆転勝利 {pr.miracles}回</p>}
     </div>
   );
 }

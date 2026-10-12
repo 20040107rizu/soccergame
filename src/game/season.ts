@@ -611,7 +611,7 @@ export function endSeason(state: GameState): SeasonSummary {
   summary.promoted = [...promoteAcademy(state), ...promoteYouth(state)];
   aiFillSquads(state);
 
-  state.history.push({ season: state.season, rank, champion, clWinner, userCl });
+  state.history.push({ season: state.season, rank, champion, clWinner, userCl, club: teamById(state, state.userTeamId).name });
 
   // 来季の CL 出場：PL 上位 5 クラブ＋欧州クラブ
   const plTop = tbl.slice(0, 5).map((r) => r.teamId);

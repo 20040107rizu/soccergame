@@ -110,6 +110,15 @@ describe('セーブデータの引き継ぎ', () => {
     expect(g.mails[0].subject).toContain('監督レベル');
   });
 
+  it('シーズン履歴にクラブ名がない古いセーブも読める', () => {
+    const s = newGame('テスト', 'mun');
+    s.history = [{ season: 1, rank: 4, champion: 'mci', userCl: '出場なし' }];
+    store.set('masterleague.save.3', JSON.stringify(s));
+    const g = loadGame(3)!;
+    expect(g.history[0].club).toBeUndefined();
+    expect(g.history[0].rank).toBe(4);
+  });
+
   it('本体が壊れていてもバックアップから復旧する', () => {
     const s = newGame('テスト', 'liv');
     saveGame(1, s);

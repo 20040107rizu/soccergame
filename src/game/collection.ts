@@ -253,3 +253,42 @@ export function backfillXp(state: GameState) {
     });
   }
 }
+
+/* ======================= フレンドに見せる監督の実績 ======================= */
+
+export interface ManagerProfile {
+  lv: number;
+  title: string;
+  /** 指揮したシーズン数 */
+  seasons: number;
+  /** 実績の id（隠し実績は見る人も持っている時だけ名前を出す） */
+  ach: string[];
+  /** 過去のシーズン [シーズン, 順位, CL の成績, クラブ] */
+  hist: [number, number, string, string][];
+  /** 殿堂 [名前, ポジション, 最高総合値, 出場] */
+  hof: [string, string, number, number][];
+  dex: number;
+  fac: [number, number, number];
+  miracles: number;
+  /** 歴代最高の選手 [名前, 総合値] */
+  best?: [string, number];
+}
+
+export function managerProfile(state: GameState): ManagerProfile {
+  const best = Object.values(state.dex ?? {}).sort((a, b) => b.peak - a.peak)[0];
+  return {
+    lv: managerLevel(state),
+    title: managerTitle(state),
+    seasons: (state.history ?? []).length + 1,
+    ach: Object.keys(state.achievements ?? {}),
+    hist: (state.history ?? []).slice(-30).map((h) => [h.season, h.rank, h.userCl ?? '', h.club ?? ''] as [number, number, string, string]),
+    hof: [...(state.hallOfFame ?? [])]
+      .sort((a, b) => b.peak - a.peak)
+      .slice(0, 8)
+      .map((e) => [e.name, e.position, e.peak, e.apps] as [string, string, number, number]),
+    dex: Object.keys(state.dex ?? {}).length,
+    fac: [state.facilities?.training ?? 0, state.facilities?.scout ?? 0, state.facilities?.academy ?? 0],
+    miracles: (state.miracles ?? []).length,
+    best: best ? [best.name, best.peak] : undefined,
+  };
+}
