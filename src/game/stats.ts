@@ -100,6 +100,15 @@ export const OVR_WEIGHTS: Record<Position, Partial<Record<StatKey, number>>> = {
   CF: { finishing: 4, offense: 3, physical: 1, heading: 1, kickingPower: 1, speed: 1, ballControl: 1, acceleration: 1 },
 };
 
+/** 総合値の最大（全能力値 99 の時） */
+export const OVR_MAX = 109;
+/** これを超えたところから総合値が伸びやすくなる */
+const OVR_KNEE = 88;
+
+/**
+ * 総合値：そのポジションに関係する能力値の加重平均。
+ * 平均が 88 を超えると伸びが大きくなり、全て 99 で 109 になる（88 以下はそのまま）。
+ */
 export function overallFor(stats: Stats, pos: Position): number {
   const w = OVR_WEIGHTS[pos];
   let sum = 0;
@@ -109,7 +118,14 @@ export function overallFor(stats: Stats, pos: Position): number {
     sum += (stats[key] ?? 50) * w[key]!;
     total += w[key]!;
   }
-  return Math.round(sum / total);
+  const avg = sum / total;
+  const over = Math.max(0, avg - OVR_KNEE);
+  return Math.round(avg + ((OVR_MAX - 99) * over * over) / ((99 - OVR_KNEE) * (99 - OVR_KNEE)));
+}
+
+/** その能力値が、このポジションの総合値に影響するか */
+export function affectsOverall(pos: Position, key: StatKey): boolean {
+  return OVR_WEIGHTS[pos][key] !== undefined;
 }
 
 export function overall(p: Player): number {

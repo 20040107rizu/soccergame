@@ -13,7 +13,7 @@ export function AppearanceEditor({ id, onClose }: { id: string; onClose: () => v
   const team = p.teamId ? teamById(state, p.teamId) : undefined;
   return (
     <Sheet title="顔の編集" onClose={onClose}>
-      <div className="center">
+      <div className="face-preview">
         <Avatar a={a} color={team?.color ?? '#475569'} color2={team?.color2 ?? '#fff'} number={p.number} size={120} />
         <p className="pd-name">{p.name}</p>
       </div>

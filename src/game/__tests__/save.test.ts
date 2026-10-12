@@ -32,6 +32,15 @@ describe('セーブデータの引き継ぎ', () => {
     expect(g.userTeamId).toBe('ars');
   });
 
+  it('v0.6 のセーブも v0.7（総合値109対応）で読み込める', () => {
+    const s = newGame('テスト', 'mci');
+    s.version = 3;
+    store.set('masterleague.save.2', JSON.stringify(s));
+    const g = loadGame(2)!;
+    expect(g.userTeamId).toBe('mci');
+    expect(Object.keys(g.players).length).toBe(Object.keys(s.players).length);
+  });
+
   it('本体が壊れていてもバックアップから復旧する', () => {
     const s = newGame('テスト', 'liv');
     saveGame(1, s);

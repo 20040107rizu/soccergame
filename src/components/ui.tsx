@@ -7,6 +7,7 @@ import { Avatar } from './Avatar';
 
 /** 能力値の色（eFootball 風の段階表示） */
 export function statColor(v: number): string {
+  if (v >= 100) return 'var(--s100)';
   if (v >= 90) return 'var(--s90)';
   if (v >= 80) return 'var(--s80)';
   if (v >= 70) return 'var(--s70)';

@@ -104,7 +104,7 @@ function makeLegend(seed: LegendSeed, kind: LegendKind): Player {
     traits: { weakFootUse: randInt(3, 4), weakFootAcc: randInt(3, 4), form: 8, injuryRes: 3 },
     skills,
     style: seed.style,
-    potential: randInt(97, 99),
+    potential: prodigy ? randInt(99, 105) : randInt(103, 107),
     growth: 'late',
     teamId: null,
     contractYears: 0,
@@ -172,7 +172,7 @@ function offerLegend(state: GameState, seed: LegendSeed, k: LegendKind, heir = f
     p.name = `${seed.name}2世`;
     p.nameEn = `${seed.en} II`;
     p.age = 16;
-    p.potential = 99;
+    p.potential = 106;
     p.legend!.heir = true;
   }
   state.players[p.id] = p;

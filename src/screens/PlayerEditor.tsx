@@ -6,7 +6,7 @@ import { generatePlayer } from '../game/data';
 import { fairSalary } from '../game/economy';
 import { repairLineup, squadOf } from '../game/lineup';
 import { teamById } from '../game/season';
-import { GK_KEYS, overallFor, SKILL_CAT_LABEL, SKILLS, STAT_GROUPS, STAT_KEYS, STAT_LABEL, STYLES, type SkillCat } from '../game/stats';
+import { affectsOverall, GK_KEYS, OVR_MAX, overallFor, SKILL_CAT_LABEL, SKILLS, STAT_GROUPS, STAT_KEYS, STAT_LABEL, STYLES, type SkillCat } from '../game/stats';
 import { AppearanceFields } from './AppearanceEditor';
 import { MIN_SQUAD } from '../game/transfer';
 import { POSITIONS, type GrowthType, type Player, type Position, type StatKey } from '../game/types';
@@ -94,7 +94,7 @@ export function PlayerEditor({ id, onClose }: { id: string | 'new'; onClose: () 
 
   return (
     <Sheet title={isNew ? '選手作成' : '選手エディット'} onClose={onClose} full>
-      <div className="editor-preview">
+      <div className="editor-preview face-preview">
         <Avatar a={p.appearance ?? { skin: 1, hairStyle: 1, hairColor: 0 }} color={team.color} color2={team.color2} number={p.number} size={84} />
         <div className="grow">
           <div className="pd-name">{p.name || '（名前未入力）'}</div>
@@ -126,11 +126,23 @@ export function PlayerEditor({ id, onClose }: { id: string | 'new'; onClose: () 
             </label>
             <label className="field">
               <span>年齢</span>
-              <input type="number" min={15} max={42} value={p.age} onChange={(e) => set('age', clampInt(e.target.value, 15, 42))} />
+              <select value={p.age} onChange={(e) => set('age', Number(e.target.value))}>
+                {Array.from({ length: 28 }, (_, i) => 15 + i).map((a) => (
+                  <option key={a} value={a}>
+                    {a}歳
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="field">
               <span>背番号</span>
-              <input type="number" min={1} max={99} value={p.number} onChange={(e) => set('number', clampInt(e.target.value, 1, 99))} />
+              <select value={p.number} onChange={(e) => set('number', Number(e.target.value))}>
+                {Array.from({ length: 99 }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="field">
               <span>利き足</span>
@@ -167,11 +179,16 @@ export function PlayerEditor({ id, onClose }: { id: string | 'new'; onClose: () 
                 <option value="late">晩成</option>
               </select>
             </label>
-            <label className="field">
-              <span>伸びしろ（到達総合値）{p.potential}</span>
-              <input type="range" min={45} max={99} value={p.potential} onChange={(e) => set('potential', Number(e.target.value))} />
-            </label>
           </div>
+          <label className="field">
+            <span>
+              成長の上限（伸びしろ）：総合値 <b>{ovr}</b> → 最大 <b>{Math.max(p.potential, ovr)}</b>
+            </span>
+            <input type="range" min={ovr} max={OVR_MAX} value={Math.max(p.potential, ovr)} onChange={(e) => set('potential', Number(e.target.value))} />
+            <small className="muted">
+              試合に出て成長していった時に、総合値がどこまで伸びるかの上限です。伸びる速さは年齢と成長タイプで決まります（早熟：〜23歳頃まで / 標準：〜26歳頃まで / 晩成：〜29歳頃まで伸び、その後は少しずつ衰えます）。
+            </small>
+          </label>
           <div className="field">
             <span>ポジション適性（タップで 適性 → 可 → なし）</span>
             <Heatmap aptitudes={p.aptitudes} main={p.position} player={p} onTap={cycleApt} />
@@ -211,12 +228,18 @@ export function PlayerEditor({ id, onClose }: { id: string | 'new'; onClose: () 
               <b>{mass > 0 ? `+${mass}` : mass}</b>
             </div>
           </div>
+          <p className="hint">
+            ★ の能力が {p.position} の総合値に反映されます（全ての能力が 99 で総合値 {OVR_MAX}）。
+          </p>
           {STAT_GROUPS.filter((g) => g.label !== 'GK' || p.position === 'GK').map((g) => (
             <div key={g.label}>
               <h4>{g.label}</h4>
               {g.keys.map((k) => (
-                <div key={k} className="slider-row">
-                  <span>{STAT_LABEL[k]}</span>
+                <div key={k} className={'slider-row' + (affectsOverall(p.position, k) ? ' affects' : '')}>
+                  <span>
+                    {affectsOverall(p.position, k) && <i className="ovr-mark">★</i>}
+                    {STAT_LABEL[k]}
+                  </span>
                   <button className="icon-btn" onClick={() => setStat(k, p.stats[k] - 1)}>
                     −
                   </button>
@@ -288,9 +311,4 @@ function Level({ label, value, max, onChange }: { label: string; value: number; 
       <b>{value}</b>
     </div>
   );
-}
-
-function clampInt(v: string, min: number, max: number) {
-  const n = parseInt(v, 10);
-  return Number.isNaN(n) ? min : Math.max(min, Math.min(max, n));
 }

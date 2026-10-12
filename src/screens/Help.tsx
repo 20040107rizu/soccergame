@@ -123,6 +123,13 @@ export function Help({ onClose }: { onClose: () => void }) {
       {tab === 'other' && (
         <div className="help">
           <section>
+            <h3>総合値と伸びしろ</h3>
+            <div className="help-item">
+              <p>総合値は、そのポジションに関係する能力値（エディットで ★ が付いた能力）から計算されます。関係する能力が上がるほど総合値も上がり、全ての能力値が 99 になると最大の 109 になります。</p>
+              <p>伸びしろ（成長の上限）は、選手が試合や練習で成長した時に総合値がどこまで伸びるかの上限です。伸びる速さは年齢と成長タイプで決まり、若いほど早く伸びます。ピークを過ぎると少しずつ衰えます。</p>
+            </div>
+          </section>
+          <section>
             <h3>チームスピリット</h3>
             <div className="help-item">
               <p>
