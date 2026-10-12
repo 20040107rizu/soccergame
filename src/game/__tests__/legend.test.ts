@@ -104,3 +104,17 @@ describe('親善試合', () => {
     expect(JSON.stringify(mine)).toBe(before);
   });
 });
+
+describe('メッシ・クリスティアーノ世代のレジェンド', () => {
+  it('追加したレジェンドも選手として作れる', async () => {
+    const { LEGENDS, makeLegend } = await import('../legend');
+    for (const id of ['messi', 'cr7', 'neymar', 'modric', 'buffon', 'ramos']) {
+      const seed = LEGENDS.find((l) => l.id === id)!;
+      expect(seed).toBeTruthy();
+      const p = makeLegend(seed, 'monster');
+      expect(p.name).toBe(seed.name);
+      expect(p.height).toBe(seed.height);
+    }
+    expect(new Set(LEGENDS.map((l) => l.id)).size).toBe(LEGENDS.length);
+  });
+});
