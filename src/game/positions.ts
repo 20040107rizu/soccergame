@@ -108,18 +108,18 @@ export const NEIGHBORS: Record<Position, Position[]> = {
 /** ポジション適性による能力の補正 */
 /**
  * 基本ポジション以外で起用した時の総合値の下がり幅。
- * 適性ありでも基本ポジションより約10下がり、適性が下がるほどさらに下がる。
+ * 適性ありなら少しだけ（3）、可なら 8、適性がなければ大きく下がる。
  */
 export function aptitudePenalty(level: number | undefined, pos: Position, main: Position): number {
   switch (level) {
     case 3:
       return 0;
     case 2:
-      return 10;
+      return 3;
     case 1:
-      return 15;
+      return 8;
     default:
-      return NEIGHBORS[main].includes(pos) ? 20 : 25;
+      return NEIGHBORS[main].includes(pos) ? 12 : 18;
   }
 }
 

@@ -145,9 +145,14 @@ export function overall(p: Player): number {
 
 /** 指定ポジションでプレーした時の能力（適性込み） */
 export function ratingAt(p: Player, pos: Position): number {
-  const base = overallFor(p.stats, pos);
-  const lv = pos === p.position ? 3 : p.aptitudes[pos];
-  return Math.max(1, Math.round(base * crossGkMultiplier(pos, p.position) - (crossGkMultiplier(pos, p.position) < 1 ? 0 : aptitudePenalty(lv, pos, p.position))));
+  if (pos === p.position) return overallFor(p.stats, pos);
+  const cross = crossGkMultiplier(pos, p.position);
+  if (cross < 1) return Math.max(1, Math.round(overallFor(p.stats, pos) * cross));
+  const here = overallFor(p.stats, pos);
+  const lv = p.aptitudes[pos];
+  // 適性・可のポジションは基本ポジションの総合値から少しだけ下がる（そのポジションの計算の方が高ければそちら）
+  if (lv === 2 || lv === 1) return Math.max(1, Math.max(here, overall(p)) - aptitudePenalty(lv, pos, p.position));
+  return Math.max(1, here - aptitudePenalty(lv, pos, p.position));
 }
 
 /* ---------------- プレースタイル ---------------- */
