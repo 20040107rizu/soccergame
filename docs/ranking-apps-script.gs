@@ -1,20 +1,19 @@
 /**
  * マスターリーグ フレンドランキング用 Google Apps Script
- * スプレッドシートの「拡張機能 → Apps Script」に貼り付けて、ウェブアプリとしてデプロイする。
- * ゲームから届いた状況を「ranking」シートに1プレイヤー（端末×スロット）1行で保存し、一覧を返す。
+ * ウェブアプリとしてデプロイする（実行ユーザー：自分 / アクセス：全員）。
+ * ゲームから届いた状況をスプレッドシートの最初のシートに1プレイヤー（端末×スロット）1行で保存し、一覧を返す。
  */
-const SHEET = 'ranking';
 const HEAD = ['playerId', 'slot', 'nickname', 'club', 'season', 'progress', 'plRank', 'played', 'win', 'draw', 'loss', 'points', 'gf', 'ga', 'money', 'spirit', 'topPlayer', 'achievements', 'clResult', 'titles', 'clTitles', 'version', 'updatedAt'];
 const NUMS = ['slot', 'season', 'plRank', 'played', 'win', 'draw', 'loss', 'points', 'gf', 'ga', 'money', 'spirit', 'achievements', 'titles', 'clTitles'];
 
+// 記録先のスプレッドシート（「マスターリーグ ランキング」）
+const SPREADSHEET_ID = '1EgfWehzady0eZ_CZG_DYgE_DlheAY88x2gv0_57RcNw';
+
 function sheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sh = ss.getSheetByName(SHEET);
-  if (!sh) {
-    sh = ss.insertSheet(SHEET);
-    sh.appendRow(HEAD);
-    sh.setFrozenRows(1);
-  }
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  // 最初のシートに1プレイヤー1行で記録する（1行目は見出し）
+  const sh = ss.getSheets()[0];
+  if (sh.getLastRow() === 0) sh.appendRow(HEAD);
   return sh;
 }
 
