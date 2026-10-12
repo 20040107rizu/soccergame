@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { LineupBoard } from '../components/LineupBoard';
 import { PrematchOpponent } from './Opponent';
+import { HalftimePlan } from './HalftimePlan';
 import { Crest, Seg, SpiritGauge } from '../components/ui';
 import { applyFormation, available, moveInTeam, moveSlot, repairLineup, setAutoLineup, spiritPreview, squadOf } from '../game/lineup';
 import { FORMATION_LIST } from '../game/positions';
@@ -104,6 +105,8 @@ export function Squad(props: { mode?: 'squad' | 'prematch'; onKickoff?: () => vo
         onSlotMove={(i, x, y) => update((d) => moveSlot(teamById(d, d.userTeamId), i, x, y))}
         onDetail={openPlayer}
       />
+
+      <HalftimePlan />
 
       {scout && <PrematchOpponent state={state} onClose={() => setScout(false)} />}
 

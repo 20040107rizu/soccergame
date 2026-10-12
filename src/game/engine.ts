@@ -555,10 +555,28 @@ function bestSubFor(state: GameState, m: LiveMatch, key: SideKey, outId: string)
   if (cand) substitute(state, m, key, outId, cand.id);
 }
 
+/** ハーフタイムの交代予約を実行する（出られない選手の予約は飛ばす） */
+export function applyHalftimePlan(state: GameState, m: LiveMatch, key: SideKey): number {
+  const team = state.teams.find((t) => t.id === m[key].teamId);
+  let done = 0;
+  for (const s of team?.halftimeSubs ?? []) {
+    const side = m[key];
+    if (!side.lineup.includes(s.out) || !side.bench.includes(s.in) || side.sentOff.includes(s.in)) continue;
+    const idx = side.lineup.indexOf(s.out);
+    const isGkSlot = sideRoles(side)[idx] === 'GK';
+    if (isGkSlot !== (state.players[s.in]?.position === 'GK')) continue;
+    if (substitute(state, m, key, s.out, s.in)) done++;
+  }
+  return done;
+}
+
 /** 試合を最後まで自動で進める */
 export function simulateToEnd(state: GameState, m: LiveMatch) {
   while (!m.finished) {
-    if (m.halfTime) startSecondHalf(m);
+    if (m.halfTime) {
+      for (const key of ['home', 'away'] as SideKey[]) if (m[key].teamId === state.userTeamId) applyHalftimePlan(state, m, key);
+      startSecondHalf(m);
+    }
     stepMinute(state, m);
     // ユーザー側の負傷も自動で対応（観戦しない試合など）
     if (m.attention) {

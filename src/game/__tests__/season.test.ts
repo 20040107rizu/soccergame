@@ -3,6 +3,7 @@ import { clLeagueTable, plTable } from '../competitions';
 import { squadOf } from '../lineup';
 import { endSeason, isSeasonOver, newGame, playDay, prepareDay, teamById, updateCondition } from '../season';
 import { overall } from '../stats';
+import { createMatch, simulateToEnd } from '../engine';
 
 describe('マスターリーグ進行', () => {
   it('2シーズン（PL38節＋CL）を回しても破綻しない', { timeout: 120000 }, () => {
@@ -74,5 +75,24 @@ describe('マスターリーグ進行', () => {
       return sum / 3000;
     };
     expect(avg(8)).toBeGreaterThan(avg(1));
+  });
+
+  it('結果のみの試合で、ハーフタイムの交代予約が実行される', () => {
+    const s = newGame('テスト', 'ars');
+    const t = teamById(s, 'ars');
+    const out = t.lineup[10];
+    const inn = t.bench.find((id) => s.players[id].position !== 'GK')!;
+    t.halftimeSubs = [{ out, in: inn }, { out: 'いない選手', in: t.bench[0] }];
+    prepareDay(s);
+    const f = s.fixtures.find((x) => x.day === s.day && (x.home === 'ars' || x.away === 'ars'))!;
+    const m = createMatch(s, f.id);
+    simulateToEnd(s, m);
+    const key = m.home.teamId === 'ars' ? 'home' : 'away';
+    // 前半にケガで交代した場合などは予約が飛ばされるので確認しない
+    if (m.events.some((e) => e.type === 'sub' && e.side === key && e.minute < 45)) return;
+    const sub = m.events.find((e) => e.type === 'sub' && e.side === key && e.minute === 45);
+    expect(sub?.playerId).toBe(inn);
+    expect(sub?.outId).toBe(out);
+    expect(m.events.filter((e) => e.type === 'sub' && e.side === key && e.minute === 45).length).toBe(1);
   });
 });

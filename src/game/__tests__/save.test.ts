@@ -61,6 +61,15 @@ describe('セーブデータの引き継ぎ', () => {
     expect(g.demand?.tries).toBeUndefined();
   });
 
+  it('交代予約の項目がない v0.12.8 のセーブも読める', () => {
+    const s = newGame('テスト', 'che');
+    for (const t of s.teams) delete t.halftimeSubs;
+    store.set('masterleague.save.3', JSON.stringify(s));
+    const g = loadGame(3)!;
+    expect(g.teams.find((t) => t.id === 'che')?.halftimeSubs).toBeUndefined();
+    expect(g.userTeamId).toBe('che');
+  });
+
   it('本体が壊れていてもバックアップから復旧する', () => {
     const s = newGame('テスト', 'liv');
     saveGame(1, s);

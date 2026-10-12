@@ -236,6 +236,8 @@ export interface Team {
   /** CPU クラブの移籍資金（百万ユーロ） */
   budget: number;
   original?: boolean;
+  /** 結果のみで試合を進める時に、ハーフタイムで行う交代の予約（古いセーブには無い） */
+  halftimeSubs?: { out: string; in: string }[];
 }
 
 export type Competition = 'PL' | 'CL';

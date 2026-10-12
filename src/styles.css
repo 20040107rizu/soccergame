@@ -2489,3 +2489,39 @@ button.friend-row {
   color: var(--muted);
   text-decoration: underline;
 }
+
+.ht-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ht-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  color: var(--text);
+}
+.ht-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+.ht-row select {
+  min-width: 0;
+  width: 100%;
+  font-size: 13px;
+  padding: 8px 6px;
+}
+.ht-row.bad select {
+  border-color: var(--red);
+}
+.ht-arrow {
+  color: var(--accent);
+  font-weight: 800;
+}
+.ht-warn {
+  grid-column: 1 / -1;
+}
