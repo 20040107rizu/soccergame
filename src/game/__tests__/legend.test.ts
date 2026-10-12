@@ -87,3 +87,20 @@ describe('フレンドランキング', () => {
     expect(typeof r.money).toBe('number');
   });
 });
+
+describe('親善試合', () => {
+  it('フレンドのチームと試合ができ、自分のセーブは変わらない', async () => {
+    const { teamSnapshot, friendlyMatch, parseSnapshot } = await import('../friendly');
+    const { simulateToEnd } = await import('../engine');
+    const friendState = newGame('フレンド', 'liv');
+    const snap = parseSnapshot(JSON.stringify(teamSnapshot(friendState)))!;
+    expect(snap.players.length).toBeGreaterThanOrEqual(11);
+    expect(JSON.stringify(snap).length).toBeLessThan(40000);
+    const mine = newGame('自分', 'ars');
+    const before = JSON.stringify(mine);
+    const { state, match } = friendlyMatch(mine, snap, 'フレンド');
+    simulateToEnd(state, match);
+    expect(match.finished).toBe(true);
+    expect(JSON.stringify(mine)).toBe(before);
+  });
+});

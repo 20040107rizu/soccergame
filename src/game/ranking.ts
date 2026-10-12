@@ -5,6 +5,7 @@ import { teamById, today } from './season';
 import { overall } from './stats';
 import type { GameState } from './types';
 import { APP_VERSION } from '../version';
+import { teamSnapshot } from './friendly';
 
 /** ランキングに送るプレー状況（個人情報は含めない） */
 export interface RankingRow {
@@ -31,6 +32,8 @@ export interface RankingRow {
   clTitles: number;
   version: string;
   updatedAt?: string;
+  /** チームのスナップショット（JSON 文字列。親善試合用） */
+  team?: string;
 }
 
 const ID_KEY = 'masterleague.playerId';
@@ -83,6 +86,7 @@ export function rankingSummary(state: GameState, slot: number): RankingRow {
     titles,
     clTitles,
     version: APP_VERSION,
+    team: JSON.stringify(teamSnapshot(state)),
   };
 }
 

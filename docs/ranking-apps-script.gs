@@ -3,7 +3,7 @@
  * ウェブアプリとしてデプロイする（実行ユーザー：自分 / アクセス：全員）。
  * ゲームから届いた状況をスプレッドシートの最初のシートに1プレイヤー（端末×スロット）1行で保存し、一覧を返す。
  */
-const HEAD = ['playerId', 'slot', 'nickname', 'club', 'season', 'progress', 'plRank', 'played', 'win', 'draw', 'loss', 'points', 'gf', 'ga', 'money', 'spirit', 'topPlayer', 'achievements', 'clResult', 'titles', 'clTitles', 'version', 'updatedAt'];
+const HEAD = ['playerId', 'slot', 'nickname', 'club', 'season', 'progress', 'plRank', 'played', 'win', 'draw', 'loss', 'points', 'gf', 'ga', 'money', 'spirit', 'topPlayer', 'achievements', 'clResult', 'titles', 'clTitles', 'version', 'updatedAt', 'team'];
 const NUMS = ['slot', 'season', 'plRank', 'played', 'win', 'draw', 'loss', 'points', 'gf', 'ga', 'money', 'spirit', 'achievements', 'titles', 'clTitles'];
 
 // 記録先のスプレッドシート（「マスターリーグ ランキング」）
@@ -13,7 +13,8 @@ function sheet_() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   // 最初のシートに1プレイヤー1行で記録する（1行目は見出し）
   const sh = ss.getSheets()[0];
-  if (sh.getLastRow() === 0) sh.appendRow(HEAD);
+  // 見出しは常に最新にそろえる（列を足しても前のデータはそのまま）
+  sh.getRange(1, 1, 1, HEAD.length).setValues([HEAD]);
   return sh;
 }
 
@@ -21,6 +22,8 @@ function clean_(d) {
   return HEAD.map(function (h) {
     if (h === 'updatedAt') return new Date();
     const v = d[h];
+    // チーム情報（親善試合用の JSON）は長いので別扱い
+    if (h === 'team') return String(v == null ? '' : v).slice(0, 40000);
     if (NUMS.indexOf(h) >= 0) {
       const n = Number(v);
       return isFinite(n) ? Math.max(-1e6, Math.min(1e7, Math.round(n))) : 0;

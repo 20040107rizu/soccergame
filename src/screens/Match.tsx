@@ -5,7 +5,7 @@ import { createMatch, MAX_SUBS, moveSideSlot, setFormation, setTactic, sideRoles
 import { fmtMoney } from '../game/economy';
 import { FORMATION_LIST } from '../game/positions';
 import { playDay, teamById, userFixture } from '../game/season';
-import type { Formation, Tactic } from '../game/types';
+import type { Formation, GameState, Tactic } from '../game/types';
 import { useGame } from '../store';
 import { TACTIC_OPTIONS } from './Squad';
 
@@ -15,10 +15,11 @@ const SPEEDS = [
   { label: '×4', ms: 70 },
 ];
 
-export function Match({ onExit }: { onExit: () => void }) {
-  const { state, update, toast, openPlayer } = useGame();
-  const fx = userFixture(state)!;
-  const mRef = useRef<LiveMatch>(createMatch(state, fx.id));
+/** friendly：フレンドとの親善試合（一時的な状態で行い、セーブには書き込まない） */
+export function Match({ onExit, friendly }: { onExit: () => void; friendly?: { state: GameState; match: LiveMatch } }) {
+  const { state: storeState, update, toast, openPlayer } = useGame();
+  const state = friendly?.state ?? storeState;
+  const mRef = useRef<LiveMatch>(friendly ? friendly.match : createMatch(state, userFixture(state)!.id));
   const m = mRef.current;
   const [, setTick] = useState(0);
   const rerender = () => setTick((x) => x + 1);
@@ -57,6 +58,13 @@ export function Match({ onExit }: { onExit: () => void }) {
   const commit = () => {
     if (done) return;
     setDone(true);
+    if (friendly) {
+      const my = m.score[userKey];
+      const opp = m.score[userKey === 'home' ? 'away' : 'home'];
+      toast(`親善試合 ${my}-${opp} ${my > opp ? '勝利！' : my === opp ? '引き分け' : '敗戦…'}`);
+      onExit();
+      return;
+    }
     const rep = update((d) => playDay(d, m));
     if (rep.userResult) toast(`試合終了 賞金 +${fmtMoney(rep.userResult.prize)}`);
     onExit();
@@ -163,7 +171,7 @@ export function Match({ onExit }: { onExit: () => void }) {
         <div className="match-footer">
           <Ratings m={m} userKey={userKey} onDetail={openPlayer} />
           <button className="btn primary big" onClick={commit} disabled={done}>
-            結果を確定して戻る
+            {friendly ? "親善試合を終える" : "結果を確定して戻る"}
           </button>
         </div>
       )}

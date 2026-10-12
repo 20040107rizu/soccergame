@@ -4,6 +4,8 @@ import type { Slot } from './game/save';
 import { unreadCount } from './game/mail';
 import { playDay, prepareDay, teamById, today } from './game/season';
 import type { GameState } from './game/types';
+import type { LiveMatch } from './game/engine';
+import { friendlyMatch, type TeamSnapshot } from './game/friendly';
 import { Club } from './screens/Club';
 import { Competitions } from './screens/Competitions';
 import { Help } from './screens/Help';
@@ -87,10 +89,22 @@ function Shell({ firstTab }: { firstTab: Tab }) {
   const [tab, setTab] = useState<Tab>(firstTab);
   const [screen, setScreen] = useState<'tabs' | 'prematch' | 'match'>('tabs');
   const [help, setHelp] = useState(false);
+  const [friendly, setFriendly] = useState<{ state: GameState; match: LiveMatch } | null>(null);
+
+  // ランキング画面から「親善試合」を始める
+  useEffect(() => {
+    const h = (e: Event) => {
+      const d = (e as CustomEvent<{ snap: TeamSnapshot; nickname: string }>).detail;
+      setFriendly(friendlyMatch(state, d.snap, d.nickname));
+    };
+    window.addEventListener('start-friendly', h);
+    return () => window.removeEventListener('start-friendly', h);
+  }, [state]);
   const unread = unreadCount(state);
   const team = teamById(state, state.userTeamId);
   const day = today(state);
 
+  if (friendly) return <Match key="friendly" friendly={friendly} onExit={() => setFriendly(null)} />;
   if (screen === 'match') return <Match onExit={() => setScreen('tabs')} />;
   if (screen === 'prematch') {
     return (

@@ -3,9 +3,14 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.9.1';
+export const APP_VERSION = '0.10.0';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.10.0',
+    date: '2026-10-12',
+    items: ['フレンドのチームと親善試合ができるように！「大会」→「フレンド」で相手をタップ（練習試合なのでセーブには影響しません）'],
+  },
   {
     version: '0.9.1',
     date: '2026-10-12',
