@@ -319,7 +319,7 @@ export interface Mail {
   /** レジェンド選手の極秘情報 */
   legend?: boolean;
   /** メール内で選択する操作 */
-  action?: 'gem' | 'demand' | 'job';
+  action?: 'gem' | 'demand' | 'job' | 'legendMatch' | 'legendPick';
 }
 
 export interface GameState {
@@ -346,6 +346,8 @@ export interface GameState {
   watchlist: string[];
   flags?: Record<string, boolean>;
   legendOffer?: LegendOffer;
+  /** レジェンドXI との対戦イベント */
+  legendChallenge?: { status: 'invited' | 'won'; expires: number };
   gemOffer?: GemOffer;
   demand?: DemandEvent;
   jobOffer?: JobOffer;

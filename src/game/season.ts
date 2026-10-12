@@ -3,6 +3,7 @@ import { CL_STAGE_PRIZE, fairSalary, fmtMoney as fmtYen, leaguePrize, marketValu
 import { advanceCL, buildCalendar, clLeagueFixtures, plFixtures, plTable, resolveTie, stageComplete, STAGE_LABEL, windowStatus } from './competitions';
 import { createMatch, sideRoles, simulateToEnd, sidePower, type LiveMatch } from './engine';
 import { legendGrowth, legendTick, spawnHeir } from './legend';
+import { legendChallengeTick } from './legendChallenge';
 import { afterUserMatch, dailyEvents, heirsDue, jobOfferAtSeasonEnd, listedPlayersTick, onRetire, planHeirs, promoteAcademy, seasonEndAchievements } from './events';
 import { mailBestEleven, mailCompetition, mailContractAdvice, mailGrowth, mailInjury, mailPlayerFeelings, mailRedCard, mailScoutAdvice, mailTacticAdvice, mailWindow, sendMail, tryAptitudeGain, tryNewSkill } from './mail';
 import { applyFormation, autoLineup, available, repairLineup, setAutoLineup, squadOf, updateSpirit } from './lineup';
@@ -227,6 +228,7 @@ export function playDay(state: GameState, userMatch?: LiveMatch): DayReport {
   aiTransferActivity(state);
   periodicMails(state, day, wasOpen);
   legendTick(state);
+  legendChallengeTick(state, day);
   dailyEvents(state, day);
   listedPlayersTick(state);
 

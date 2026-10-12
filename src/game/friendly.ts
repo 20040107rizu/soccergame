@@ -126,7 +126,7 @@ export function snapshotTeam(snap: TeamSnapshot, base: Team, nickname: string): 
   const team: Team = {
     ...base,
     id: FRIEND_TEAM_ID,
-    name: `${snap.name}（${nickname}）`,
+    name: nickname ? `${snap.name}（${nickname}）` : snap.name,
     en: '',
     short: snap.short,
     color: snap.color,

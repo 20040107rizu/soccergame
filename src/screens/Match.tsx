@@ -16,7 +16,7 @@ const SPEEDS = [
 ];
 
 /** friendly：フレンドとの親善試合（一時的な状態で行い、セーブには書き込まない） */
-export function Match({ onExit, friendly }: { onExit: () => void; friendly?: { state: GameState; match: LiveMatch } }) {
+export function Match({ onExit, friendly }: { onExit: () => void; friendly?: { state: GameState; match: LiveMatch; onEnd?: (gf: number, ga: number) => void } }) {
   const { state: storeState, update, toast, openPlayer } = useGame();
   const state = friendly?.state ?? storeState;
   const mRef = useRef<LiveMatch>(friendly ? friendly.match : createMatch(state, userFixture(state)!.id));
@@ -61,7 +61,8 @@ export function Match({ onExit, friendly }: { onExit: () => void; friendly?: { s
     if (friendly) {
       const my = m.score[userKey];
       const opp = m.score[userKey === 'home' ? 'away' : 'home'];
-      toast(`親善試合 ${my}-${opp} ${my > opp ? '勝利！' : my === opp ? '引き分け' : '敗戦…'}`);
+      if (friendly.onEnd) friendly.onEnd(my, opp);
+      else toast(`親善試合 ${my}-${opp} ${my > opp ? '勝利！' : my === opp ? '引き分け' : '敗戦…'}`);
       onExit();
       return;
     }

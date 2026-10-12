@@ -6,6 +6,7 @@ import { playDay, prepareDay, teamById, today } from './game/season';
 import type { GameState } from './game/types';
 import type { LiveMatch } from './game/engine';
 import { friendlyMatch, type TeamSnapshot } from './game/friendly';
+import { finishLegendChallenge } from './game/legendChallenge';
 import { Club } from './screens/Club';
 import { Competitions } from './screens/Competitions';
 import { Help } from './screens/Help';
@@ -89,13 +90,24 @@ function Shell({ firstTab }: { firstTab: Tab }) {
   const [tab, setTab] = useState<Tab>(firstTab);
   const [screen, setScreen] = useState<'tabs' | 'prematch' | 'match'>('tabs');
   const [help, setHelp] = useState(false);
-  const [friendly, setFriendly] = useState<{ state: GameState; match: LiveMatch } | null>(null);
+  const [friendly, setFriendly] = useState<{ state: GameState; match: LiveMatch; onEnd?: (gf: number, ga: number) => void } | null>(null);
 
-  // ランキング画面から「親善試合」を始める
+  // ランキング画面から「親善試合」、メールから「レジェンドXI戦」を始める
   useEffect(() => {
     const h = (e: Event) => {
-      const d = (e as CustomEvent<{ snap: TeamSnapshot; nickname: string }>).detail;
-      setFriendly(friendlyMatch(state, d.snap, d.nickname));
+      const d = (e as CustomEvent<{ snap: TeamSnapshot; nickname: string; challenge?: boolean }>).detail;
+      const fm = friendlyMatch(state, d.snap, d.nickname);
+      setFriendly(
+        d.challenge
+          ? {
+              ...fm,
+              onEnd: (gf, ga) => {
+                update((s) => finishLegendChallenge(s, gf, ga));
+                toast(gf > ga ? `🏆 レジェンドXIに勝利！（${gf}-${ga}）受信箱を確認しよう` : `レジェンドXIに敗れた…（${gf}-${ga}）`);
+              },
+            }
+          : fm,
+      );
     };
     window.addEventListener('start-friendly', h);
     return () => window.removeEventListener('start-friendly', h);

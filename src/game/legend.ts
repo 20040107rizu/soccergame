@@ -19,7 +19,7 @@ import { unlock } from './events';
 /** 1 試合日あたりの出現確率（1 シーズンでおよそ 2 割弱） */
 export const LEGEND_RATE = 0.004;
 
-interface LegendSeed {
+export interface LegendSeed {
   id: string;
   /** 現役時代の身長（cm） */
   height: number;
@@ -36,7 +36,7 @@ interface LegendSeed {
   look: [number, number, number, number];
 }
 
-const LEGENDS: LegendSeed[] = [
+export const LEGENDS: LegendSeed[] = [
   { id: 'pele', height: 173, name: 'ペレ', en: 'Pelé', pos: 'CF', nat: 'ブラジル', foot: 'R', style: 'BOX', sig: ['finishing', 'offense', 'ballControl', 'dribbling'], skills: ['acrobaticShot', 'header', 'phenomFinish', 'doubleTouch', 'gameChanging'], look: [4, 0, 0, 0] },
   { id: 'maradona', height: 165, name: 'ディエゴ・マラドーナ', en: 'Diego Maradona', pos: 'OMF', nat: 'アルゼンチン', foot: 'L', style: 'N10', sig: ['dribbling', 'ballControl', 'tightPossession', 'balance'], skills: ['doubleTouch', 'magneticFeet', 'gameChanging', 'visionary', 'momentumDribble'], look: [2, 4, 0, 0] },
   { id: 'cruyff', height: 178, name: 'ヨハン・クライフ', en: 'Johan Cruyff', pos: 'ST', nat: 'オランダ', foot: 'R', style: 'N10', sig: ['offense', 'dribbling', 'acceleration', 'lowPass'], skills: ['heelTrick', 'visionary', 'captaincy', 'edgeTurn'], look: [0, 3, 1, 0] },
@@ -81,7 +81,7 @@ export function legendMul(p: Player): number {
   return p.legend.kind === 'monster' ? 1.05 : 1.02;
 }
 
-function makeLegend(seed: LegendSeed, kind: LegendKind): Player {
+export function makeLegend(seed: LegendSeed, kind: LegendKind): Player {
   const prodigy = kind === 'prodigy';
   const age = prodigy ? randInt(17, 18) : randInt(24, 27);
   const stats = generateStats(seed.pos, prodigy ? 64 : 90, seed.style);

@@ -99,3 +99,34 @@ describe('隠しシステム', () => {
     expect(Object.keys(s.achievements ?? {}).length).toBeGreaterThan(0);
   }, 60000);
 });
+
+describe('レジェンドXI 戦', () => {
+  it('挑戦状 → 勝利 → 交渉成立で若き日のレジェンドが加入（総合値は低め）', async () => {
+    const { vi } = await import('vitest');
+    const lc = await import('../legendChallenge');
+    const s = newGame('テスト', 'ars');
+    s.money = 500;
+    lc.spawnLegendChallenge(s);
+    expect(s.mails[0].action).toBe('legendMatch');
+    const snap = lc.legendTeamSnapshot();
+    expect(snap.players.length).toBe(18);
+    lc.finishLegendChallenge(s, 2, 1);
+    expect(s.legendChallenge?.status).toBe('won');
+    const spy = vi.spyOn(Math, 'random').mockImplementationOnce(() => 0.01);
+    const r = lc.negotiateLegendPick(s, 'xavi');
+    spy.mockRestore();
+    expect(r.ok && r.joined).toBe(true);
+    const p = Object.values(s.players).find((x) => x.name === 'シャビ' && x.teamId === 'ars')!;
+    expect(overall(p)).toBeLessThan(80);
+    expect(p.potential).toBeGreaterThan(100);
+    expect(s.legendChallenge).toBeUndefined();
+  });
+
+  it('負けたら交渉権はない', async () => {
+    const lc = await import('../legendChallenge');
+    const s = newGame('テスト', 'ars');
+    lc.spawnLegendChallenge(s);
+    lc.finishLegendChallenge(s, 0, 3);
+    expect(s.legendChallenge).toBeUndefined();
+  });
+});

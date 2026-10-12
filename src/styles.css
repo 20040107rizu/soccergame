@@ -2432,3 +2432,23 @@ button.friend-row {
 .plan-grid b {
   font-size: 16px;
 }
+.legend-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.legend-pick {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 10px;
+  border: 1px solid #ffd34d55;
+  background: #00000033;
+  color: var(--text);
+}
+.legend-pick.on {
+  border-color: #ffd34d;
+  background: #ffd34d33;
+}

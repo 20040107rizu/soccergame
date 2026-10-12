@@ -52,6 +52,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'youth11', label: '生え抜き', desc: 'ユース出身の選手だけでスタメンを組んで勝利', hidden: true },
   { id: 'secondGen', label: '伝説の再来', desc: '〇〇2世を獲得', hidden: true },
   { id: 'revenge', label: '恩返し', desc: '古巣相手に元所属選手がゴール', hidden: true },
+  { id: 'legendSlayer', label: '伝説を超えた日', desc: 'レジェンドXIに勝利', hidden: true },
 ];
 
 export function unlock(state: GameState, id: string) {
