@@ -15,6 +15,7 @@ import {
   payrollInfo,
   playerInterest,
   salaryDemand,
+  wageRoomFor,
 } from '../game/transfer';
 import { useGame } from '../store';
 
@@ -35,6 +36,7 @@ export function Negotiation({ id, onClose }: { id: string; onClose: () => void }
   const check = canNegotiate(state, p);
   const step: 'club' | 'player' = !club || rec.agreedFee !== undefined ? 'player' : 'club';
   const { total, cap } = payrollInfo(state);
+  const wage = wageRoomFor(state, p);
 
   if (!check.ok) {
     return (
@@ -78,6 +80,14 @@ export function Negotiation({ id, onClose }: { id: string; onClose: () => void }
         </div>
       )}
 
+      {!rec.closed && !wage.enough && (
+        <div className="warn-box">
+          年俸の空き枠が足りません（年俸総額 {fmtMoney(total)} / 上限 {fmtMoney(cap)}・空き {fmtMoney(wage.room)}）。
+          <br />
+          今の空きでは、この選手の希望年俸に届きません。移籍画面で選手を売却・契約解除して枠を空けてから交渉しましょう。
+        </div>
+      )}
+
       {rec.closed ? (
         <div className="warn-box">交渉は打ち切られました。次の移籍期間に再挑戦できます。</div>
       ) : step === 'club' && club ? (
@@ -101,7 +111,7 @@ export function Negotiation({ id, onClose }: { id: string; onClose: () => void }
           <p className={'hint ' + (fee > state.money ? 'neg' : '')}>移籍資金：{fmtMoney(state.money)}</p>
           <button
             className="btn primary big"
-            disabled={fee > state.money}
+            disabled={fee > state.money || !wage.enough}
             onClick={() => {
               const r = update((d) => offerToClub(d, id, fee));
               setLog((l) => [...l, { who: 'me', text: `移籍金 ${fmtMoney(fee)} を提示` }, { who: 'club', text: r.message }]);
@@ -133,7 +143,7 @@ export function Negotiation({ id, onClose }: { id: string; onClose: () => void }
             </ul>
           </div>
           <p className="hint">
-            残り交渉回数 {Math.max(0, PLAYER_TRIES - rec.playerTries)} · 年俸総額 {fmtMoney(total)} / 上限 {fmtMoney(cap)}
+            残り交渉回数 {Math.max(0, PLAYER_TRIES - rec.playerTries)} · 年俸の空き枠 {fmtMoney(wage.room)}
           </p>
           <label className="field">
             <span>年俸（年額）</span>
@@ -152,8 +162,10 @@ export function Negotiation({ id, onClose }: { id: string; onClose: () => void }
             <span>契約年数</span>
             <Seg small value={String(years)} options={[1, 2, 3, 4, 5].map((y) => ({ v: String(y), label: `${y}年` }))} onChange={(v) => setYears(Number(v))} />
           </div>
+          {salary > wage.room && <p className="hint neg">提示額が年俸の空き枠（{fmtMoney(wage.room)}）を超えています</p>}
           <button
             className="btn primary big"
+            disabled={salary > wage.room}
             onClick={() => {
               const r = update((d) => offerToPlayer(d, id, salary, years));
               setLog((l) => [...l, { who: 'me', text: `年俸 ${fmtMoney(salary)}・${years}年契約を提示` }, { who: 'player', text: r.message }]);

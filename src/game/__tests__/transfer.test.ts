@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { squadOf } from '../lineup';
 import { newGame } from '../season';
-import { askingPrice, completeSigning, offerToClub, offerToPlayer, PLAYER_TRIES, playerInterest, salaryDemand } from '../transfer';
+import { askingPrice, completeSigning, offerToClub, offerToPlayer, PLAYER_TRIES, playerInterest, salaryDemand, wageRoomFor } from '../transfer';
 
 describe('移籍交渉', () => {
   it('クラブ合意 → 選手合意で移籍が成立する', () => {
@@ -43,5 +43,16 @@ describe('移籍交渉', () => {
     const r = offerToPlayer(s, target.id, demand * 0.8, 3);
     expect(r.result).toBe('counter');
     expect(offerToPlayer(s, target.id, r.counter!, 3).result).toBe('accept');
+  });
+
+  it('年俸の空き枠が足りない時は交渉前に分かる', () => {
+    const s = newGame('テスト', 'mci');
+    const target = Object.values(s.players).find((p) => p.teamId === 'ful' && p.position === 'CF')!;
+    expect(wageRoomFor(s, target).enough).toBe(true);
+    for (const p of squadOf(s, 'mci')) p.salary = 20;
+    const w = wageRoomFor(s, target);
+    expect(w.enough).toBe(false);
+    expect(w.room).toBe(0);
+    expect(offerToPlayer(s, target.id, 1, 3).message).toContain('空き枠');
   });
 });

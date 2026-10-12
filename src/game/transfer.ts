@@ -159,7 +159,8 @@ export function offerToPlayer(state: GameState, playerId: string, salary: number
   const rec = record(state, playerId);
   if (rec.closed) return { result: 'closed', message: `${p.name}の代理人は交渉を打ち切りました。` };
   const { total, cap } = payrollInfo(state);
-  if (total + salary > cap) return { result: 'reject', message: `年俸総額の上限（${fmtMoney(cap)}）を超えてしまいます。` };
+  if (total + salary > cap)
+    return { result: 'reject', message: `年俸の空き枠が足りません（空き ${fmtMoney(Math.max(0, cap - total))}）。年俸を下げるか、選手を放出して枠を空けてください。` };
   rec.playerTries++;
   const demand = salaryDemand(state, p);
   const wantYears = p.age >= 30 ? 2 : 1;
@@ -177,6 +178,13 @@ export function offerToPlayer(state: GameState, playerId: string, salary: number
   if (close) return { result: 'counter', counter: demand, message: `${p.name}「年俸${fmtMoney(demand)}なら即決するよ」${last}` };
   if (salary >= demand * 0.6) return { result: 'reject', message: `${p.name}「悪くはないけど、もう少し上げてほしい」` };
   return { result: 'reject', message: `${p.name}「その条件では考えられない」` };
+}
+
+/** 年俸の空き枠でこの選手と契約できる見込みがあるか */
+export function wageRoomFor(state: GameState, p: Player): { room: number; enough: boolean } {
+  const { total, cap } = payrollInfo(state);
+  const room = round2(Math.max(0, cap - total));
+  return { room, enough: room >= salaryDemand(state, p) * 0.97 };
 }
 
 export function payrollInfo(state: GameState): { total: number; cap: number } {
