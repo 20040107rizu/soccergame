@@ -8,6 +8,7 @@ import { playDay, teamById, userFixture } from '../game/season';
 import type { Formation, GameState, Tactic } from '../game/types';
 import { useGame } from '../store';
 import { TACTIC_OPTIONS } from './Squad';
+import { OpponentSheet } from './Opponent';
 
 const SPEEDS = [
   { label: '×1', ms: 420 },
@@ -30,6 +31,7 @@ export function Match({ onExit, friendly }: { onExit: () => void; friendly?: { s
   const [flash, setFlash] = useState<MatchEvent | null>(null);
   const [done, setDone] = useState(false);
   const [started, setStarted] = useState(false);
+  const [scout, setScout] = useState(false);
   const userKey: SideKey = m.home.teamId === state.userTeamId ? 'home' : 'away';
   const home = teamById(state, m.home.teamId);
   const away = teamById(state, m.away.teamId);
@@ -125,6 +127,9 @@ export function Match({ onExit, friendly }: { onExit: () => void; friendly?: { s
           <button className="btn ghost" onClick={() => setManage(true)}>
             キックオフ前に采配を確認
           </button>
+          <button className="btn ghost" onClick={() => setScout(true)}>
+            🔍 相手チームを見る
+          </button>
         </div>
       )}
       {m.halfTime && !manage && (
@@ -153,6 +158,9 @@ export function Match({ onExit, friendly }: { onExit: () => void; friendly?: { s
         <button className="chip" onClick={() => setPaused((p) => !p)} disabled={m.finished}>
           {paused ? '▶ 再開' : '❚❚'}
         </button>
+        <button className="chip" onClick={() => setScout(true)}>
+          🔍 相手
+        </button>
         <button className="chip accent" onClick={() => setManage(true)} disabled={m.finished}>
           采配（交代 {side.subsUsed}/{MAX_SUBS}）
         </button>
@@ -171,10 +179,23 @@ export function Match({ onExit, friendly }: { onExit: () => void; friendly?: { s
       {m.finished && (
         <div className="match-footer">
           <Ratings m={m} userKey={userKey} onDetail={openPlayer} />
+          <button className="btn ghost" onClick={() => setScout(true)}>
+            🔍 相手チームを見る
+          </button>
           <button className="btn primary big" onClick={commit} disabled={done}>
             {friendly ? "親善試合を終える" : "結果を確定して戻る"}
           </button>
         </div>
+      )}
+
+      {scout && (
+        <OpponentSheet
+          state={state}
+          side={m[userKey === 'home' ? 'away' : 'home']}
+          comp={friendly ? 'friendly' : m.comp}
+          phase={m.finished ? '試合終了時' : !started ? 'キックオフ前' : m.halfTime ? 'ハーフタイム' : `${m.minute}分時点`}
+          onClose={() => setScout(false)}
+        />
       )}
 
       {manage && !m.finished && (

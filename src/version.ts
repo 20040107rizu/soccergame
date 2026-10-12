@@ -3,9 +3,17 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.12.7';
+export const APP_VERSION = '0.12.8';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.12.8',
+    date: '2026-10-12',
+    items: [
+      '相手チームのゲームプラン（フォーメーション・作戦・スピリット）とスカッド（スタメン〜控え）を見られるように',
+      '試合前の画面の「🔍 相手」で予想スタメン、試合中・試合後は「🔍 相手」「相手チームを見る」から。レジェンドXIや親善試合の相手も見られます',
+    ],
+  },
   {
     version: '0.12.7',
     date: '2026-10-12',

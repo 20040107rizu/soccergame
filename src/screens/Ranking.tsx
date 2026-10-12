@@ -155,8 +155,8 @@ function FriendTeam({ row, mine, onClose }: { row: RankingRow; mine: boolean; on
   );
 }
 
-/** フレンドの選手の詳細（見るだけ） */
-function FriendPlayer({ p, team, onClose }: { p: Player; team: Team; onClose: () => void }) {
+/** フレンドや対戦相手の選手の詳細（見るだけ） */
+export function FriendPlayer({ p, team, onClose }: { p: Player; team: Team; onClose: () => void }) {
   const [skill, setSkill] = useState<string | null>(null);
   return (
     <Sheet title="選手詳細" onClose={onClose}>

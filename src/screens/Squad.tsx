@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { LineupBoard } from '../components/LineupBoard';
+import { PrematchOpponent } from './Opponent';
 import { Crest, Seg, SpiritGauge } from '../components/ui';
 import { applyFormation, available, moveInTeam, moveSlot, repairLineup, setAutoLineup, spiritPreview, squadOf } from '../game/lineup';
 import { FORMATION_LIST } from '../game/positions';
@@ -25,6 +27,7 @@ export function Squad(props: { mode?: 'squad' | 'prematch'; onKickoff?: () => vo
   const prematch = props.mode === 'prematch';
   const fx = prematch ? userFixture(state) : undefined;
   const opp = fx ? teamById(state, fx.home === team.id ? fx.away : fx.home) : undefined;
+  const [scout, setScout] = useState(false);
   const unavailable = team.lineup.filter((id) => state.players[id] && !available(state.players[id]));
 
   return (
@@ -40,6 +43,9 @@ export function Squad(props: { mode?: 'squad' | 'prematch'; onKickoff?: () => vo
               <Crest team={team} size={24} /> <b className="small">{team.name}</b> <span className="muted">vs</span> <Crest team={opp} size={24} /> <b className="small">{opp.name}</b>
             </div>
           </div>
+          <button className="btn small" onClick={() => setScout(true)}>
+            🔍 相手
+          </button>
         </div>
       ) : (
         <div className="row between">
@@ -98,6 +104,8 @@ export function Squad(props: { mode?: 'squad' | 'prematch'; onKickoff?: () => vo
         onSlotMove={(i, x, y) => update((d) => moveSlot(teamById(d, d.userTeamId), i, x, y))}
         onDetail={openPlayer}
       />
+
+      {scout && <PrematchOpponent state={state} onClose={() => setScout(false)} />}
 
       {prematch && (
         <div className="prematch-actions">
