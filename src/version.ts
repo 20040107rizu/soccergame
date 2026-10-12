@@ -3,9 +3,14 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.8.1';
+export const APP_VERSION = '0.8.2';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.8.2',
+    date: '2026-10-12',
+    items: ['実在選手1,095人のうち1,092人の身長を Web で1人ずつ確認して反映しました'],
+  },
   {
     version: '0.8.1',
     date: '2026-10-12',

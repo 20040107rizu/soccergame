@@ -1,7 +1,7 @@
 /**
  * 実在選手の身長（cm）。クラブ ID → 英語名 → 身長。
  * 2026年10月時点の Web 上の公開情報（Transfermarkt・クラブ公式・各リーグ公式・ESPN・Wikipedia など）を1人ずつ検索して設定。
- * Web で確認しきれなかった選手は推定値（ESTIMATED に記載）。順次 Web で確認して置き換える。
+ * 1,095人中1,092人を Web で確認済み。信頼できる情報が見つからなかった選手のみ推定値（ESTIMATED に記載）。
  */
 export const HEIGHTS: Record<string, Record<string, number>> = {
   ars: {
@@ -853,7 +853,7 @@ export const HEIGHTS: Record<string, Record<string, number>> = {
     "Tajon Buchanan": 183,
     "Ilias Akhomach": 175,
     "Nicolas Pépé": 183,
-    "Gerard Moreno": 174,
+    "Gerard Moreno": 180,
     "Ayoze Pérez": 178,
     "Georges Mikautadze": 176,
     "Tani Oluwaseyi": 187,
