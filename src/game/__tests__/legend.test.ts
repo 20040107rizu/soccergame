@@ -75,3 +75,15 @@ describe('ダビド・ビジャ', () => {
     expect(h.position).toBe('CF');
   });
 });
+
+describe('フレンドランキング', () => {
+  it('状況のまとめに個人情報以外の項目がそろう', async () => {
+    const { rankingSummary } = await import('../ranking');
+    const s = newGame('テスト監督', 'ars');
+    const r = rankingSummary(s, 1);
+    expect(r.nickname).toBe('テスト監督');
+    expect(r.club).toBe('アーセナル');
+    expect(r.season).toBe(1);
+    expect(typeof r.money).toBe('number');
+  });
+});

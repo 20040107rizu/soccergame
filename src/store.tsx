@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { saveGame, type Slot } from './game/save';
+import { sendRanking } from './game/ranking';
 import type { GameState } from './game/types';
 
 export interface UiActions {
@@ -47,6 +48,12 @@ export function GameProvider(props: { initial: GameState; slot: Slot; actions: U
     },
     [slot, props.actions],
   );
+
+  // フレンドランキングへ状況を送る（試合日が進んだ時・シーズンが変わった時）
+  useEffect(() => {
+    const t = setTimeout(() => sendRanking(latest.current, slot), 1500);
+    return () => clearTimeout(t);
+  }, [state.day, state.season, slot]);
 
   return <GameCtx.Provider value={{ state, slot, update, ...props.actions }}>{props.children}</GameCtx.Provider>;
 }

@@ -3,8 +3,9 @@ import { Crest, Seg } from '../components/ui';
 import { clLeagueTable, plTable, STAGE_LABEL, type TableRow } from '../game/competitions';
 import type { CLStage, Fixture, Team } from '../game/types';
 import { useGame } from '../store';
+import { Ranking } from './Ranking';
 
-type Comp = 'PL' | 'CL' | 'history';
+type Comp = 'PL' | 'CL' | 'history' | 'friends';
 
 export function seasonLabel(season: number): string {
   const y = 2025 + season;
@@ -30,9 +31,11 @@ export function Competitions() {
           { v: 'PL', label: 'プレミアリーグ' },
           { v: 'CL', label: 'チャンピオンズL' },
           { v: 'history', label: '歴代' },
+          { v: 'friends', label: 'フレンド' },
         ]}
       />
-      {comp !== 'history' && (
+      {comp === 'friends' && <Ranking />}
+      {comp !== 'history' && comp !== 'friends' && (
         <Seg
           small
           value={tab}
@@ -62,8 +65,8 @@ export function Competitions() {
           <p className="hint">1〜8位：ラウンド16へ / 9〜24位：プレーオフ / 25位以下：敗退</p>
         </>
       )}
-      {tab === 'fixtures' && comp !== 'history' && <Fixtures comp={comp} teams={teams} />}
-      {tab === 'scorers' && comp !== 'history' && <Scorers comp={comp} teams={teams} />}
+      {tab === 'fixtures' && (comp === 'PL' || comp === 'CL') && <Fixtures comp={comp} teams={teams} />}
+      {tab === 'scorers' && (comp === 'PL' || comp === 'CL') && <Scorers comp={comp} teams={teams} />}
       {comp === 'CL' && tab === 'ko' && <Knockout teams={teams} />}
       {comp === 'history' && (
         <div className="card">
