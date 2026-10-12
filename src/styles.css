@@ -3011,3 +3011,11 @@ button.friend-row {
 .career-row.hof-row {
   grid-template-columns: auto 1fr auto;
 }
+.camp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.camp-card .btn {
+  line-height: 1.25;
+}

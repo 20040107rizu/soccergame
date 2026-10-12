@@ -1,24 +1,28 @@
 import { fmtMoney, round2 } from './economy';
 import { squadOf } from './lineup';
 import { sendMail } from './mail';
-import { pick } from './rng';
+import { pick, randInt } from './rng';
+import { autoSkills, OVR_WEIGHTS, overall, SKILLS } from './stats';
 import type { Result } from './transfer';
-import type { GameState, Player } from './types';
+import type { GameState, Player, StatKey } from './types';
 
 /* ======================= クラブの施設 ======================= */
 
-export type FacilityKind = 'training' | 'scout' | 'academy';
+export type FacilityKind = 'training' | 'scout' | 'academy' | 'medical' | 'science' | 'analysis';
 
 export const FACILITIES: { id: FacilityKind; icon: string; label: string; effect: string }[] = [
   { id: 'training', icon: '🏋️', label: '練習場', effect: '選手の成長が速くなる' },
   { id: 'scout', icon: '🔭', label: 'スカウト網', effect: '掘り出し物の情報が届きやすくなる' },
   { id: 'academy', icon: '🎓', label: 'ユースアカデミー', effect: '昇格してくるユースの質が上がる' },
+  { id: 'medical', icon: '🏥', label: '医療センター', effect: 'ケガが早く治る' },
+  { id: 'science', icon: '🧪', label: 'スポーツ科学', effect: '選手の調子が安定し、好調が出やすくなる' },
+  { id: 'analysis', icon: '📊', label: '分析室', effect: '相手を分析して、試合で少し有利に戦える' },
 ];
 
-export const FACILITY_MAX = 5;
+export const FACILITY_MAX = 10;
 /** 強化の費用（百万ユーロ）と工期（日程）。index = 次のレベル - 1 */
-const COST = [15, 30, 50, 80, 120];
-const DAYS = [3, 5, 7, 9, 12];
+const COST = [15, 30, 50, 80, 120, 180, 260, 360, 480, 650];
+const DAYS = [3, 5, 7, 9, 12, 14, 16, 18, 20, 24];
 
 export function facilityLevel(state: GameState, k: FacilityKind): number {
   return state.facilities?.[k] ?? 0;
@@ -54,6 +58,163 @@ export function facilityTick(state: GameState) {
     subject: `${def.icon} ${def.label}がレベル${f[b.kind]}になりました`,
     body: `${def.label}の工事が完了しました。\n\n効果：${def.effect}`,
   });
+}
+
+/** 医療センター：ケガが1日余分に治る確率 */
+export function medicalBoost(state: GameState): number {
+  return facilityLevel(state, 'medical') * 0.07;
+}
+
+/** スポーツ科学：調子の安定度への上乗せ */
+export function scienceBoost(state: GameState): number {
+  return facilityLevel(state, 'science') * 0.35;
+}
+
+/** 分析室：自分のチームの試合での上乗せ */
+export function analysisBoost(state: GameState, teamId: string): number {
+  return teamId === state.userTeamId ? 1 + facilityLevel(state, 'analysis') * 0.004 : 1;
+}
+
+/* ======================= スタジアム ======================= */
+
+export const STADIUM_MAX = 10;
+const ST_COST = [80, 120, 170, 230, 300, 380, 480, 600, 750, 950];
+const ST_DAYS = [6, 8, 10, 12, 14, 16, 18, 20, 22, 25];
+
+export function stadiumLevel(state: GameState): number {
+  return state.stadium?.level ?? 0;
+}
+
+export function stadiumCapacity(state: GameState): number {
+  return 30000 + stadiumLevel(state) * 6000;
+}
+
+export function stadiumCost(state: GameState): { cost: number; days: number } | null {
+  const lv = stadiumLevel(state);
+  return lv >= STADIUM_MAX ? null : { cost: ST_COST[lv], days: ST_DAYS[lv] };
+}
+
+export function startStadium(state: GameState): Result {
+  const c = stadiumCost(state);
+  if (!c) return { ok: false, message: 'これ以上拡張できません' };
+  if (state.stadium?.building) return { ok: false, message: '拡張工事中です' };
+  if (state.money < c.cost) return { ok: false, message: `資金が足りません（必要 ${fmtMoney(c.cost)}）` };
+  state.money = round2(state.money - c.cost);
+  state.stadium = { ...(state.stadium ?? { level: 0 }), building: state.day + c.days };
+  return { ok: true, message: `スタジアムの拡張工事を始めました（完成まで ${c.days}日程）` };
+}
+
+export function stadiumTick(state: GameState) {
+  const st = state.stadium;
+  if (!st?.building || state.day < st.building) return;
+  st.level++;
+  delete st.building;
+  const team = state.teams.find((t) => t.id === state.userTeamId);
+  if (team) team.rep = Math.min(99, team.rep + 1);
+  sendMail(state, {
+    from: 'board',
+    sender: 'クラブ会長',
+    subject: `🏟 スタジアムがレベル${st.level}に（収容 ${stadiumCapacity(state).toLocaleString()}人）`,
+    body: `スタジアムの拡張工事が完了しました。\n\nホームの試合の入場収入が増え、クラブの格も上がりました。`,
+  });
+}
+
+/** ホームの試合の入場収入（百万ユーロ） */
+export function gateIncome(state: GameState): number {
+  return round2(stadiumLevel(state) * 0.35);
+}
+
+/** シーズンをまたぐ時：工事・遠征の残り日数を新しいシーズンの日付に合わせる */
+export function shiftClubDays(state: GameState, by: number) {
+  if (state.facilities?.building) state.facilities.building.done = Math.max(0, state.facilities.building.done - by);
+  if (state.stadium?.building) state.stadium.building = Math.max(0, state.stadium.building - by);
+  if (state.expedition) state.expedition.done = Math.max(0, state.expedition.done - by);
+}
+
+/* ======================= 特訓キャンプ ======================= */
+
+export function campCost(p: Player, kind: 'stat' | 'skill'): number {
+  const base = 8 * Math.pow(1.5, p.campCount ?? 0);
+  return round2(kind === 'skill' ? base * 1.5 : base);
+}
+
+export function campSkillCandidates(p: Player): string[] {
+  const fit = autoSkills(p.stats, p.position, p.style).filter((s) => !p.skills.includes(s));
+  if (fit.length) return fit;
+  const gk = p.position === 'GK';
+  return SKILLS.filter((s) => !p.skills.includes(s.id) && (gk ? s.id.startsWith('gk') || s.id === 'pkStopper' : !s.id.startsWith('gk') && s.id !== 'pkStopper')).map((s) => s.id);
+}
+
+export function runCamp(state: GameState, playerId: string, kind: 'stat' | 'skill'): Result {
+  const p = state.players[playerId];
+  if (!p || p.teamId !== state.userTeamId) return { ok: false, message: '自分のクラブの選手を選んでください' };
+  if (p.injury > 0) return { ok: false, message: 'ケガをしている選手は特訓できません' };
+  if (p.campDay === state.day && p.campSeason === state.season) return { ok: false, message: 'この選手は今日もう特訓しました' };
+  const cost = campCost(p, kind);
+  if (state.money < cost) return { ok: false, message: `資金が足りません（必要 ${fmtMoney(cost)}）` };
+  if (kind === 'skill') {
+    if (p.skills.length >= 12) return { ok: false, message: 'これ以上スキルを覚えられません（最大12個）' };
+    const cand = campSkillCandidates(p);
+    if (!cand.length) return { ok: false, message: '覚えられるスキルがありません' };
+    const sk = pick(cand);
+    p.skills = [...p.skills, sk];
+    pay();
+    return { ok: true, message: `${p.name}が特殊スキル「${SKILLS.find((x) => x.id === sk)?.label ?? sk}」を覚えました！` };
+  }
+  const before = overall(p);
+  const keys = (Object.keys(OVR_WEIGHTS[p.position]) as StatKey[]).filter((k) => p.stats[k] < 99);
+  if (!keys.length) return { ok: false, message: 'もう伸ばせる能力がありません' };
+  for (let i = 0; i < 4; i++) {
+    const k = pick(keys);
+    p.stats[k] = Math.min(99, p.stats[k] + randInt(1, 2));
+  }
+  pay();
+  const after = overall(p);
+  return { ok: true, message: after > before ? `${p.name}の総合値が ${before} → ${after} に上がりました！` : `${p.name}の能力が少し上がりました` };
+
+  function pay() {
+    state.money = round2(state.money - cost);
+    p.campCount = (p.campCount ?? 0) + 1;
+    p.campDay = state.day;
+    p.campSeason = state.season;
+  }
+}
+
+/* ======================= 海外スカウト遠征 ======================= */
+
+export type Region = 'samerica' | 'africa' | 'asia' | 'eeurope';
+
+export const REGIONS: { id: Region; label: string; icon: string; cost: number; nations: string[]; note: string }[] = [
+  { id: 'samerica', label: '南米', icon: '🌎', cost: 70, nations: ['ブラジル', 'アルゼンチン', 'ウルグアイ', 'コロンビア', 'エクアドル'], note: 'テクニックのある攻撃的な選手が多い' },
+  { id: 'africa', label: 'アフリカ', icon: '🌍', cost: 55, nations: ['ナイジェリア', 'ガーナ', 'セネガル', 'コートジボワール', 'カメルーン'], note: 'スピードと身体能力に優れた選手が多い' },
+  { id: 'asia', label: 'アジア', icon: '🌏', cost: 45, nations: ['日本', '韓国', 'ウズベキスタン', 'オーストラリア', 'イラン'], note: '勤勉で技術の高い選手が多い' },
+  { id: 'eeurope', label: '東欧', icon: '🏰', cost: 60, nations: ['セルビア', 'クロアチア', 'ポーランド', 'チェコ', 'ウクライナ'], note: '戦術眼のある守備的な選手が多い' },
+];
+const EXPEDITION_DAYS = 6;
+
+export function startExpedition(state: GameState, region: Region): Result {
+  const r = REGIONS.find((x) => x.id === region)!;
+  if (state.expedition) return { ok: false, message: 'スカウトはすでに遠征中です' };
+  if (state.money < r.cost) return { ok: false, message: `資金が足りません（必要 ${fmtMoney(r.cost)}）` };
+  state.money = round2(state.money - r.cost);
+  state.expedition = { region, done: state.day + EXPEDITION_DAYS };
+  return { ok: true, message: `スカウトが${r.label}へ出発しました（${EXPEDITION_DAYS}日程後に報告が届きます）` };
+}
+
+/** 遠征の結果：掘り出し物の話を必ず持ち帰る（当たりが出やすい） */
+export function expeditionTick(state: GameState, spawn: (state: GameState, opts: { nations: string[]; jackpot: number; bust: number; region: string }) => void) {
+  const e = state.expedition;
+  if (!e || state.day < e.done || state.gemOffer) return;
+  const r = REGIONS.find((x) => x.id === e.region)!;
+  delete state.expedition;
+  spawn(state, { nations: r.nations, jackpot: 0.4, bust: 0.15, region: r.label });
+}
+
+/* ======================= お金持ちのクラブへの値上げ ======================= */
+
+/** 資金が多いクラブには、他のクラブが移籍金を高めに要求してくる */
+export function richMarkup(state: GameState): number {
+  return 1 + Math.min(1, Math.max(0, (state.money - 300) / 1500));
 }
 
 /** 練習場：試合での成長のしやすさ */

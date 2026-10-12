@@ -5,9 +5,9 @@ import { createMatch, sideRoles, simulateToEnd, sidePower, type LiveMatch } from
 import { legendGrowth, legendTick, spawnHeir } from './legend';
 import { legendChallengeTick } from './legendChallenge';
 import { sodeChallengeTick, sodeGrowth } from './sodegaura';
-import { facilityTick, trainingBoost } from './club';
+import { expeditionTick, facilityTick, gateIncome, medicalBoost, scienceBoost, shiftClubDays, stadiumTick, trainingBoost } from './club';
 import { coachChallengeTick, inheritAceTick, markAce, mysteryTick } from './hidden2';
-import { afterUserMatch, dailyEvents, heirsDue, jobOfferAtSeasonEnd, listedPlayersTick, onRetire, planHeirs, promoteAcademy, seasonEndAchievements } from './events';
+import { afterUserMatch, dailyEvents, heirsDue, spawnGem, jobOfferAtSeasonEnd, listedPlayersTick, onRetire, planHeirs, promoteAcademy, seasonEndAchievements } from './events';
 import { mailBestEleven, mailCompetition, mailContractAdvice, mailGrowth, mailInjury, mailPlayerFeelings, mailRedCard, mailScoutAdvice, mailTacticAdvice, mailWindow, sendMail, tryAptitudeGain, tryNewSkill } from './mail';
 import { applyFormation, autoLineup, available, repairLineup, setAutoLineup, squadOf, updateSpirit } from './lineup';
 import { FORMATION_LIST, FORMATIONS, rolesOf } from './positions';
@@ -223,7 +223,9 @@ export function playDay(state: GameState, userMatch?: LiveMatch): DayReport {
   // 負傷の回復・調子の変化
   for (const p of Object.values(state.players)) {
     if (p.injury > 0) p.injury--;
-    updateCondition(p);
+    const mineP = p.teamId === state.userTeamId;
+    if (mineP && p.injury > 0 && rand() < medicalBoost(state)) p.injury--;
+    updateCondition(p, mineP ? scienceBoost(state) : 0);
   }
 
   // 移籍期間中の CPU からのオファーと補強
@@ -234,6 +236,8 @@ export function playDay(state: GameState, userMatch?: LiveMatch): DayReport {
   legendChallengeTick(state, day);
   sodeChallengeTick(state, day);
   facilityTick(state);
+  stadiumTick(state);
+  expeditionTick(state, (st, o) => spawnGem(st, o));
   coachChallengeTick(state, day);
   mysteryTick(state);
   dailyEvents(state, day);
@@ -250,7 +254,8 @@ function userResultNews(state: GameState, f: Fixture, m: LiveMatch) {
   const gf = home ? m.score.home : m.score.away;
   const ga = home ? m.score.away : m.score.home;
   const prizeTable = MATCH_PRIZE[f.comp];
-  const prize = gf > ga ? prizeTable.win : gf === ga ? prizeTable.draw : prizeTable.loss;
+  const gate = home && f.stage !== 'F' ? gateIncome(state) : 0;
+  const prize = round2((gf > ga ? prizeTable.win : gf === ga ? prizeTable.draw : prizeTable.loss) + gate);
   state.money = round2(state.money + prize);
   const opp = teamById(state, home ? f.away : f.home);
   const scorers = m.events.filter((e) => e.type === 'goal' && e.side === (home ? 'home' : 'away')).map((e) => state.players[e.playerId!]?.name);
@@ -410,11 +415,11 @@ function applyMatch(state: GameState, f: Fixture, m: LiveMatch) {
 }
 
 /** 調子（コンディション）の変化。毎試合ごとに決め直す。安定度が高いほど好調が出やすく、絶不調が出にくい */
-export function updateCondition(p: Player) {
-  const t = clamp((p.traits.form - 1) / 7, 0, 1);
+export function updateCondition(p: Player, extraForm = 0) {
+  const t = clamp((p.traits.form + extraForm - 1) / 7, 0, 1.4);
   const low = [12, 22, 32, 22, 12];
   const high = [2, 10, 38, 32, 18];
-  const w = low.map((x, i) => x + (high[i] - x) * t);
+  const w = low.map((x, i) => Math.max(0.5, x + (high[i] - x) * t));
   let r = rand() * w.reduce((a, b) => a + b, 0);
   let c = 1;
   for (let i = 0; i < 5; i++) {
@@ -619,6 +624,7 @@ export function endSeason(state: GameState): SeasonSummary {
   state.clTeams = [...plTop, ...eu];
 
   state.season++;
+  shiftClubDays(state, state.day);
   state.day = 0;
   state.offers = [];
   state.negotiations = {};

@@ -18,6 +18,7 @@ import {
   wageRoomFor,
 } from '../game/transfer';
 import { useGame } from '../store';
+import { richMarkup } from '../game/club';
 
 /** マスターリーグ風の移籍交渉：①クラブと移籍金 → ②選手と契約条件 */
 export function Negotiation({ id, onClose }: { id: string; onClose: () => void }) {
@@ -96,6 +97,7 @@ export function Negotiation({ id, onClose }: { id: string; onClose: () => void }
           <p className="hint">
             クラブ内での立場や契約年数によって、求められる金額は市場価値より高くなります。
             {ask > value * 1.3 ? '（主力選手のため、かなり高額になりそうだ）' : ''}
+            {richMarkup(state) > 1.05 ? '（資金の豊富なクラブには、相手も強気に吹っかけてくる）' : ''}
             残り交渉回数 {MAX_TRIES - rec.clubTries}
           </p>
           <div className="money-input">

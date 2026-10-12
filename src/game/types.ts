@@ -111,6 +111,10 @@ export interface Player {
   /** サポーターが付けた愛称と、そのための活躍ポイント */
   nickname?: string;
   fanPoints?: number;
+  /** 特訓キャンプの回数と、最後に特訓した日 */
+  campCount?: number;
+  campDay?: number;
+  campSeason?: number;
   /** 背番号の魂を受け継いだ（その番号） */
   aceOf?: number;
   /** 謎の代理人から獲得した選手 */
@@ -389,7 +393,11 @@ export interface GameState {
   /** 謎の代理人からの話 */
   mysteryOffer?: { playerId: string; fee: number; expires: number };
   /** クラブの施設（古いセーブには無い） */
-  facilities?: { training?: number; scout?: number; academy?: number; building?: { kind: 'training' | 'scout' | 'academy'; done: number } };
+  facilities?: { training?: number; scout?: number; academy?: number; medical?: number; science?: number; analysis?: number; building?: { kind: 'training' | 'scout' | 'academy' | 'medical' | 'science' | 'analysis'; done: number } };
+  /** スタジアム（古いセーブには無い） */
+  stadium?: { level: number; building?: number; name?: string };
+  /** 海外スカウト遠征 */
+  expedition?: { region: 'samerica' | 'africa' | 'asia' | 'eeurope'; done: number };
   /** 監督の経験値と表示する称号 */
   manager?: { xp: number; title?: string; backfilled?: boolean };
   /** 殿堂の歴代ベストイレブン（殿堂の名前＋シーズン） */

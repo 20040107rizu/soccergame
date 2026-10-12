@@ -1,4 +1,5 @@
 import { markAce } from './hidden2';
+import { richMarkup } from './club';
 import { managerPerks, managerTitle } from './collection';
 import { windowStatus } from './competitions';
 import { aiFillSquads, teamById } from './season';
@@ -42,7 +43,7 @@ export function askingPrice(state: GameState, p: Player): number {
   if (!p.teamId) return 0;
   const t = teamById(state, p.teamId);
   const imp = importance(state, p);
-  const v = marketValue(p) * (1.05 + imp * 0.45 + p.contractYears * 0.04) * (t.rep >= 90 ? 1.12 : 1);
+  const v = marketValue(p) * (1.05 + imp * 0.45 + p.contractYears * 0.04) * (t.rep >= 90 ? 1.12 : 1) * richMarkup(state);
   return round2(v);
 }
 

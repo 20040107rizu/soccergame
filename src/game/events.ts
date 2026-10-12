@@ -1,5 +1,5 @@
 import { checkMiracle, markAce, revealMystery, zoneAfterMatch, zoneBonus } from './hidden2';
-import { academyBoost, fanTick, scoutBoost } from './club';
+import { academyBoost, analysisBoost, fanTick, scoutBoost } from './club';
 import { addXp, managerPerks, matchXp, registerDex } from './collection';
 import { generatePlayer } from './data';
 import { fairSalary, fmtMoney, round2, wageCap, payroll } from './economy';
@@ -136,7 +136,7 @@ export function matchBonuses(state: GameState, f: Fixture, team: Team, opp: Team
     if (t === 'bloomer' && p.joinedSeason === state.season && p.exTeamId) k *= 1.03;
     if (p.exTeamId === opp.id) k *= 1.04; // 古巣相手に燃える
     if (p.nickname && f.home === team.id && f.stage !== 'F') k *= 1.03; // 愛称を呼ぶホームの声援
-    k *= zoneBonus(state, team.id);
+    k *= zoneBonus(state, team.id) * analysisBoost(state, team.id);
     if (k !== 1) out[p.id] = k;
   }
   return out;
@@ -395,13 +395,15 @@ const GEM_NATIONS = ['ウクライナ', 'セルビア', 'クロアチア', 'ポ�
 const GEM_CLUBS = ['ヴォルスクラ', 'ズヴェズダ', 'ロコモティフ', 'オリンピア', 'スパルタク', 'ディナモ', 'ユニオン', 'アトレティコ', 'スポルティング', 'レヴァディア'];
 export const GEM_RATE = 0.012;
 
-export function spawnGem(state: GameState): Player {
+export function spawnGem(state: GameState, opts?: { nations: string[]; jackpot: number; bust: number; region: string }): Player {
   const roll = rand();
-  const tier = roll < 0.25 ? 'jackpot' : roll < 0.75 ? 'normal' : 'bust';
+  const jp = opts?.jackpot ?? 0.25;
+  const bust = opts?.bust ?? 0.25;
+  const tier = roll < jp ? 'jackpot' : roll < 1 - bust ? 'normal' : 'bust';
   const pos = pick(POSITIONS.filter((x) => x !== 'GK'));
   const level = tier === 'jackpot' ? randInt(66, 72) : tier === 'normal' ? randInt(60, 66) : randInt(55, 60);
   const p = generatePlayer({ position: pos, level, age: randInt(18, 22), teamId: null });
-  const nat = pick(GEM_NATIONS);
+  const nat = pick(opts?.nations ?? GEM_NATIONS);
   p.nationality = nat;
   p.potential = tier === 'jackpot' ? randInt(86, 93) : tier === 'normal' ? randInt(74, 80) : randInt(60, 66);
   p.growth = tier === 'jackpot' ? 'late' : 'normal';
@@ -423,7 +425,7 @@ export function spawnGem(state: GameState): Player {
   sendMail(state, {
     from: 'scout',
     sender: 'チーフスカウト',
-    subject: `【掘り出し物？】${origin}に面白い選手が`,
+    subject: opts ? `【${opts.region}遠征の報告】${origin}に面白い選手が` : `【掘り出し物？】${origin}に面白い選手が`,
     body: `監督、${origin}に面白い選手がいます。\n\n${p.name}（${p.age}歳・${p.position}）\n${comment}\n\n推定総合値：${estLow}〜${estHigh}\n伸びしろ：？？？\n移籍金：${fmtMoney(fee)}\n\n本当の才能は獲ってみないと分かりません。当たりか外れか…賭けてみますか？（回答期限 5日）`,
     action: 'gem',
     playerId: p.id,

@@ -12,6 +12,7 @@ import { TRAITS, type TraitId } from '../game/events';
 import { releaseCost, releasePlayer, renewContract, renewDemand, seekBuyer } from '../game/transfer';
 import { useGame } from '../store';
 import { changeNumber } from '../game/lineup';
+import { campCost, runCamp } from '../game/club';
 
 const GROWTH_LABEL = { early: '早熟', normal: '標準', late: '晩成' };
 
@@ -228,6 +229,40 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
           >
             {w.open ? '獲得交渉を始める' : '移籍市場は閉まっています'}
           </button>
+        )}
+        {mine && (
+          <div className="card camp-card">
+            <b>🏕 特訓キャンプ</b>
+            <small className="muted">お金を使って、この選手を集中的に鍛えます（同じ選手ほど費用が上がります。1日1回まで）</small>
+            <div className="row gap">
+              <button
+                className="btn grow"
+                disabled={state.money < campCost(p, 'stat')}
+                onClick={() => {
+                  if (!confirm(`${p.name}の能力を特訓しますか？（${fmtMoney(campCost(p, 'stat'))}）`)) return;
+                  const r = update((d) => runCamp(d, p.id, 'stat'));
+                  toast(r.message ?? '');
+                }}
+              >
+                能力アップ
+                <br />
+                <small>{fmtMoney(campCost(p, 'stat'))}</small>
+              </button>
+              <button
+                className="btn grow"
+                disabled={state.money < campCost(p, 'skill') || p.skills.length >= 12}
+                onClick={() => {
+                  if (!confirm(`${p.name}に新しいスキルを特訓しますか？（${fmtMoney(campCost(p, 'skill'))}）`)) return;
+                  const r = update((d) => runCamp(d, p.id, 'skill'));
+                  toast(r.message ?? '');
+                }}
+              >
+                スキル習得
+                <br />
+                <small>{fmtMoney(campCost(p, 'skill'))}</small>
+              </button>
+            </div>
+          </div>
         )}
         {mine && (
           <>
