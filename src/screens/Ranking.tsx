@@ -60,6 +60,7 @@ export function Ranking() {
                 {r.nickname}
                 {r.playerId === me && <small className="muted">（あなた）</small>}
               </b>
+              <FriendTitle team={r.team} />
               <div className="small muted">
                 {r.club} · シーズン{r.season} · {r.progress}
               </div>
@@ -210,5 +211,16 @@ export function FriendPlayer({ p, team, onClose }: { p: Player; team: Team; onCl
       </div>
       {skill && <p className="skill-desc">{SKILLS.find((x) => x.id === skill)?.desc}</p>}
     </Sheet>
+  );
+}
+
+/** フレンドの監督レベルと称号（チーム情報に入っていれば表示） */
+function FriendTitle({ team }: { team?: string }) {
+  const snap = useMemo(() => parseSnapshot(team), [team]);
+  if (!snap?.mgr) return null;
+  return (
+    <div className="small friend-title">
+      Lv.{snap.mgr.lv}「{snap.mgr.title}」
+    </div>
   );
 }

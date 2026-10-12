@@ -7,6 +7,7 @@ import { teamById, userPayroll } from '../game/season';
 import { MAX_SQUAD } from '../game/transfer';
 import { useGame } from '../store';
 import { Records } from './Records';
+import { ManagerCard } from './ManagerCard';
 import { Feedback } from './Feedback';
 import { APP_VERSION } from '../version';
 
@@ -54,6 +55,8 @@ export function Club() {
           </div>
         </label>
       </div>
+
+      <ManagerCard />
 
       <button className="btn feedback-btn" onClick={() => setFb(true)}>
         📝 感想・不具合を送る

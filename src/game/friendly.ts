@@ -1,3 +1,4 @@
+import { managerLevel, managerTitle } from './collection';
 import { emptyStats } from './data';
 import { createMatch, type LiveMatch } from './engine';
 import { teamById } from './season';
@@ -20,6 +21,8 @@ export interface TeamSnapshot {
   slots: { x: number; y: number }[];
   /** 先頭 11 人がスタメン（slots と同じ順）、残りがベンチ */
   players: SnapPlayer[];
+  /** 監督のレベルと称号（古いデータには無い） */
+  mgr?: { lv: number; title: string };
 }
 
 interface SnapPlayer {
@@ -69,6 +72,7 @@ export function teamSnapshot(state: GameState): TeamSnapshot {
     spirit: Math.round(team.spirit),
     slots: team.slots,
     players,
+    mgr: { lv: managerLevel(state), title: managerTitle(state) },
   };
 }
 

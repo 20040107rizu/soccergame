@@ -1,3 +1,4 @@
+import { managerPerks, managerTitle } from './collection';
 import { windowStatus } from './competitions';
 import { aiFillSquads, teamById } from './season';
 import { fairSalary, fmtMoney, marketValue, payroll, round2, wageCap } from './economy';
@@ -131,6 +132,11 @@ export function playerInterest(state: GameState, p: Player): Interest {
   } else {
     score += 15;
     reasons.push({ label: '所属', value: 'フリー（新天地を探している）', good: true });
+  }
+  const perk = managerPerks(state).interest;
+  if (perk) {
+    score += perk;
+    reasons.push({ label: '監督の評判', value: `${managerTitle(state)}の下でプレーしたい`, good: true });
   }
   if (p.age >= 31) {
     score += 5;

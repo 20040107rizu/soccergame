@@ -80,6 +80,19 @@ describe('セーブデータの引き継ぎ', () => {
     expect(g.userTeamId).toBe('tot');
   });
 
+  it('図鑑・監督レベル・殿堂の新しい項目がない v0.13 のセーブも読める', () => {
+    const s = newGame('テスト', 'new');
+    delete s.dex;
+    delete s.manager;
+    delete s.hofXI;
+    s.hallOfFame = [{ name: '昔の名選手', position: 'CF', nationality: '日本', apps: 120, goals: 50, peak: 85, season: 3, note: '名選手' }];
+    store.set('masterleague.save.3', JSON.stringify(s));
+    const g = loadGame(3)!;
+    expect(g.hallOfFame?.[0].name).toBe('昔の名選手');
+    expect(g.dex).toBeUndefined();
+    expect(g.userTeamId).toBe('new');
+  });
+
   it('本体が壊れていてもバックアップから復旧する', () => {
     const s = newGame('テスト', 'liv');
     saveGame(1, s);

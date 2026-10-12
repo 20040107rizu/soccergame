@@ -1,3 +1,4 @@
+import { managerPerks } from './collection';
 import { SODE_COLORS, SODE_NAME, SODE_PLAYERS, SODE_SHORT, SODE_SLOTS, type SodeSeed } from '../data/sodegaura';
 import { fairSalary, fmtMoney, round2 } from './economy';
 import type { TeamSnapshot } from './friendly';
@@ -141,7 +142,7 @@ export function sodeTerms(state: GameState): { fee: number; chance: number } {
   const user = teamById(state, state.userTeamId);
   return {
     fee: round2(Math.max(15, state.money * 0.2)),
-    chance: clamp(0.4 + (user.rep - 80) * 0.006, 0.3, 0.55),
+    chance: clamp(0.4 + (user.rep - 80) * 0.006, 0.3, 0.55) + managerPerks(state).special,
   };
 }
 

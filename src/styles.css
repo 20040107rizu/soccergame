@@ -2751,3 +2751,139 @@ button.friend-row {
 .sr-intro.hide { opacity: 0; pointer-events: none; }
 .sr-intro h1 { font-size: 26px; letter-spacing: 0.1em; color: #ffd84d; }
 .sr-intro p { color: #9dbfaa; margin-top: 10px; font-size: 14px; line-height: 1.7; }
+
+/* ===== 図鑑・殿堂・監督レベル ===== */
+.btn.dex-btn {
+  width: 100%;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, #1b3a2c, #24493a);
+  border: 1px solid var(--line);
+  font-weight: 800;
+}
+.dex-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.dex-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+  min-width: 0;
+}
+.dex-card b {
+  font-size: 12px;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dex-card small {
+  font-size: 10px;
+}
+.dex-card.rare {
+  border-color: #ffd34d;
+  box-shadow: 0 0 10px #ffd34d33;
+}
+.dex-card.unknown {
+  opacity: 0.6;
+  border-style: dashed;
+}
+.dex-badge {
+  margin-left: 4px;
+}
+.hof-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+.hof-card {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid #ffd34d66;
+  border-radius: 12px;
+  padding: 10px;
+}
+.hof-card .grow {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-start;
+  min-width: 0;
+}
+.hof-pitch {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: 14px;
+  background: repeating-linear-gradient(180deg, #1f7a45 0 12%, #23854c 12% 24%);
+  border: 2px solid #e8fff055;
+  margin-bottom: 8px;
+}
+.hof-slot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 70px;
+}
+.hof-slot small {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hof-pick {
+  width: 100%;
+  text-align: left;
+}
+.mgr-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mgr-lv {
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--accent);
+}
+.mgr-title {
+  font-weight: 800;
+  font-size: 15px;
+}
+.mgr-perks {
+  list-style: none;
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 0.6;
+}
+.mgr-perks li.on {
+  color: var(--text);
+  opacity: 1;
+}
+.mgr-perks li span {
+  display: inline-block;
+  min-width: 42px;
+  color: var(--accent);
+  font-weight: 800;
+}
+.friend-title {
+  color: var(--accent);
+  font-weight: 700;
+}

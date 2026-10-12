@@ -1,3 +1,4 @@
+import { dexBadges, managerLevel, managerTitle } from '../game/collection';
 import { useState } from 'react';
 import { Crest, RepStars, Sheet, SpiritGauge } from '../components/ui';
 import { unreadCount } from '../game/mail';
@@ -43,6 +44,14 @@ export function Home({ onPreMatch }: { onPreMatch: () => void }) {
           <div className="club-name">{team.name}</div>
           <div className="club-sub">
             {state.managerName}監督 · シーズン{state.season} · <RepStars rep={team.rep} />
+          </div>
+          <div className="club-sub">
+            Lv.{managerLevel(state)}「{managerTitle(state)}」
+            {dexBadges(state).map((b) => (
+              <span key={b} className="dex-badge" title="図鑑コンプリート">
+                {b === 'legend' ? '🌟' : b === 'heir' ? '👑' : b === 'sode' ? '⚡' : '★'}
+              </span>
+            ))}
           </div>
         </div>
         <div className="club-rank">

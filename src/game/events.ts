@@ -1,3 +1,4 @@
+import { addXp, managerPerks, matchXp, registerDex } from './collection';
 import { generatePlayer } from './data';
 import { fairSalary, fmtMoney, round2, wageCap, payroll } from './economy';
 import type { LiveMatch } from './engine';
@@ -53,6 +54,11 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'secondGen', label: '伝説の再来', desc: '〇〇2世を獲得', hidden: true },
   { id: 'revenge', label: '恩返し', desc: '古巣相手に元所属選手がゴール', hidden: true },
   { id: 'legendSlayer', label: '伝説を超えた日', desc: 'レジェンドXIに勝利', hidden: true },
+  { id: 'dex50', label: '名簿をめくれば', desc: '選手図鑑に50人が登録された' },
+  { id: 'dex100', label: '大所帯', desc: '選手図鑑に100人が登録された' },
+  { id: 'dexAll-legend', label: '伝説の収集家', desc: '図鑑のレジェンドをすべて集めた', hidden: true },
+  { id: 'dexAll-heir', label: '受け継がれる血', desc: '図鑑の2世をすべて集めた', hidden: true },
+  { id: 'dexAll-sode', label: '全員そろった', desc: '図鑑のひみつのチームをすべて集めた', hidden: true },
 ];
 
 export function unlock(state: GameState, id: string) {
@@ -61,6 +67,7 @@ export function unlock(state: GameState, id: string) {
   const a = ACHIEVEMENTS.find((x) => x.id === id);
   if (!a) return;
   state.achievements[id] = { season: state.season };
+  addXp(state, a.hidden ? 60 : 30);
   sendMail(state, {
     from: 'board',
     sender: 'クラブ会長',
@@ -197,6 +204,10 @@ export function afterUserMatch(state: GameState, f: Fixture, m: LiveMatch, key: 
       sendMail(state, { from: 'agent', sender: `${p.name}の代理人`, subject: `【不満】${p.name}「約束が違う」`, body: `出場機会を約束していただいたはずですが、守られませんでした。\n${p.name}は大変失望しており、調子も落ちています。チームの雰囲気にも影響が出ているようです。`, playerId: p.id, important: true });
     }
   }
+
+  // 図鑑・監督の経験値
+  for (const a of registerDex(state)) unlock(state, a);
+  matchXp(state, gf, ga, f.comp);
 
   // 3. 因縁の相手
   state.rivals = state.rivals ?? {};
@@ -383,8 +394,9 @@ export function spawnGem(state: GameState): Player {
   state.players[p.id] = p;
   const ovr = overall(p);
   // スカウトの見立ては幅が広く、当たりか外れかは見抜けない
-  const estLow = clamp(ovr - randInt(4, 10), 45, 99);
-  const estHigh = clamp(ovr + randInt(4, 12), 50, 99);
+  const sharp = managerPerks(state).scout;
+  const estLow = clamp(ovr - (sharp ? randInt(2, 5) : randInt(4, 10)), 45, 99);
+  const estHigh = clamp(ovr + (sharp ? randInt(2, 6) : randInt(4, 12)), 50, 99);
   const fee = round2(1 + rand() * 5);
   const salary = round2(Math.max(0.3, fairSalary(p)));
   state.gemOffer = { playerId: p.id, fee, salary, estLow, estHigh, expires: state.day + 5 };
@@ -653,7 +665,8 @@ export function onRetire(state: GameState, p: Player) {
   const ok = apps >= 60 || (p.legend && apps >= 10) || (p.awakened && apps >= 30) || (peak >= 88 && apps >= 20);
   if (!ok) return;
   const note = p.legend ? (p.legend.heir ? '伝説の再来' : 'レジェンド') : p.awakened ? '覚醒した才能' : p.academy ? 'ユース出身' : apps >= 150 ? 'クラブの象徴' : '名選手';
-  const e: HallEntry = { name: p.name, position: p.position, nationality: p.nationality, apps, goals: p.clubGoals ?? 0, peak, season: state.season, note };
+  const club = teamById(state, state.userTeamId);
+  const e: HallEntry = { name: p.name, position: p.position, nationality: p.nationality, apps, goals: p.clubGoals ?? 0, peak, season: state.season, note, club: club.name, clubId: club.id, number: p.number, colors: [club.color, club.color2] };
   state.hallOfFame = [...(state.hallOfFame ?? []), e];
   sendMail(state, { from: 'board', sender: 'クラブ会長', subject: `【殿堂入り】${p.name}`, body: `${p.name}が現役を引退し、クラブの殿堂入りを果たしました。\n\n出場 ${apps}試合 / ${e.goals}得点 / 最高総合値 ${peak}\n\nその名は永遠にクラブの歴史に刻まれます。` });
   unlock(state, 'hof');
@@ -727,6 +740,8 @@ export function listedPlayersTick(state: GameState) {
 
 /** シーズン終了時のまとめ（endSeason から呼ばれる） */
 export function seasonEndAchievements(state: GameState, rank: number, losses: number, clLabel: string) {
+  // 監督の経験値：順位とタイトル
+  addXp(state, Math.max(0, 21 - rank) * 6 + (rank === 1 ? 200 : 0) + (({ 優勝: 250, 決勝: 120, 準決勝: 80, 準々決勝: 50, ラウンド16: 30 } as Record<string, number>)[clLabel] ?? 0));
   if (rank === 1) unlock(state, 'champion');
   if (rank === 1 && losses === 0) unlock(state, 'invincible');
   if (clLabel === '優勝') unlock(state, 'clWinner');

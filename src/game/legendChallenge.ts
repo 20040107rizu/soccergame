@@ -1,3 +1,4 @@
+import { managerPerks } from './collection';
 import { fmtMoney, round2 } from './economy';
 import { unlock } from './events';
 import type { TeamSnapshot } from './friendly';
@@ -159,7 +160,7 @@ export function pickTerms(state: GameState): { fee: number; chance: number } {
   const user = teamById(state, state.userTeamId);
   return {
     fee: round2(Math.max(20, state.money * 0.3)),
-    chance: clamp(0.2 + (user.rep - 80) * 0.005, 0.1, 0.3),
+    chance: clamp(0.2 + (user.rep - 80) * 0.005, 0.1, 0.3) + managerPerks(state).special,
   };
 }
 
