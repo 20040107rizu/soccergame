@@ -9,6 +9,8 @@ import type { GameState, NegotiationRecord, Player } from './types';
 export const MIN_SQUAD = 18;
 export const MAX_SQUAD = 32;
 export const MAX_TRIES = 3;
+/** 選手との契約交渉で提示できる回数 */
+export const PLAYER_TRIES = 5;
 
 export type Result = { ok: true; message?: string } | { ok: false; message: string };
 
@@ -141,7 +143,9 @@ export function playerInterest(state: GameState, p: Player): Interest {
 export function salaryDemand(state: GameState, p: Player): number {
   const it = playerInterest(state, p);
   const base = Math.max(fairSalary(p), p.salary * (p.teamId ? 1.1 : 0.9));
-  return round2(base * (1.25 - it.score / 250));
+  // 移籍に乗り気でない選手ほど高い年俸を求める（お金を積めば振り向いてくれる）
+  const reluctant = it.score < 20 ? (20 - it.score) * 0.02 : 0;
+  return round2(base * (1.15 - it.score / 300 + reluctant));
 }
 
 export interface PlayerReply {
@@ -154,24 +158,24 @@ export function offerToPlayer(state: GameState, playerId: string, salary: number
   const p = state.players[playerId];
   const rec = record(state, playerId);
   if (rec.closed) return { result: 'closed', message: `${p.name}の代理人は交渉を打ち切りました。` };
-  const it = playerInterest(state, p);
-  if (it.refuse) {
-    rec.closed = true;
-    return { result: 'closed', message: `${p.name}「今のクラブを離れるつもりはない」` };
-  }
   const { total, cap } = payrollInfo(state);
   if (total + salary > cap) return { result: 'reject', message: `年俸総額の上限（${fmtMoney(cap)}）を超えてしまいます。` };
   rec.playerTries++;
   const demand = salaryDemand(state, p);
   const wantYears = p.age >= 30 ? 2 : 1;
-  const yearsOk = years >= wantYears && !(p.age <= 23 && years > 5);
-  if (salary >= demand && yearsOk) return { result: 'accept', message: `${p.name}「よろしくお願いします！」` };
-  if (rec.playerTries >= MAX_TRIES) {
+  const yearsOk = years >= wantYears;
+  const enough = salary >= demand * 0.97;
+  if (enough && yearsOk) return { result: 'accept', message: `${p.name}「よろしくお願いします！」` };
+  const close = salary >= demand * 0.75;
+  // 回数を使い切っても、条件が近ければ最後にもう一度だけチャンスをくれる
+  if (rec.playerTries > PLAYER_TRIES || (rec.playerTries >= PLAYER_TRIES && !close)) {
     rec.closed = true;
     return { result: 'closed', message: `${p.name}「残念だけど、今回は見送らせてもらう」` };
   }
-  if (!yearsOk && salary >= demand) return { result: 'counter', counter: salary, message: `${p.name}「最低でも${wantYears}年の契約が欲しい」` };
-  if (salary >= demand * 0.85) return { result: 'counter', counter: demand, message: `${p.name}「年俸${fmtMoney(demand)}なら即決するよ」` };
+  const last = rec.playerTries >= PLAYER_TRIES ? '（これが最後のチャンスだ）' : '';
+  if (!yearsOk && enough) return { result: 'counter', counter: salary, message: `${p.name}「最低でも${wantYears}年の契約が欲しい」${last}` };
+  if (close) return { result: 'counter', counter: demand, message: `${p.name}「年俸${fmtMoney(demand)}なら即決するよ」${last}` };
+  if (salary >= demand * 0.6) return { result: 'reject', message: `${p.name}「悪くはないけど、もう少し上げてほしい」` };
   return { result: 'reject', message: `${p.name}「その条件では考えられない」` };
 }
 

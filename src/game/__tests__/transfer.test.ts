@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { squadOf } from '../lineup';
 import { newGame } from '../season';
-import { askingPrice, completeSigning, offerToClub, offerToPlayer, playerInterest, salaryDemand } from '../transfer';
+import { askingPrice, completeSigning, offerToClub, offerToPlayer, PLAYER_TRIES, playerInterest, salaryDemand } from '../transfer';
 
 describe('移籍交渉', () => {
   it('クラブ合意 → 選手合意で移籍が成立する', () => {
@@ -31,5 +31,17 @@ describe('移籍交渉', () => {
     offerToClub(s, target.id, ask * 0.5);
     expect(offerToClub(s, target.id, ask * 0.5).result).toBe('closed');
     expect(offerToClub(s, target.id, ask * 2).result).toBe('closed');
+  });
+
+  it('選手との年俸交渉は何度か提示でき、近い条件なら逆提示してくれる', () => {
+    const s = newGame('テスト', 'mci');
+    s.money = 500;
+    const target = Object.values(s.players).find((p) => p.teamId === 'ful' && p.position === 'CF')!;
+    offerToClub(s, target.id, askingPrice(s, target));
+    const demand = salaryDemand(s, target);
+    for (let i = 0; i < PLAYER_TRIES - 1; i++) expect(offerToPlayer(s, target.id, demand * 0.3, 3).result).toBe('reject');
+    const r = offerToPlayer(s, target.id, demand * 0.8, 3);
+    expect(r.result).toBe('counter');
+    expect(offerToPlayer(s, target.id, r.counter!, 3).result).toBe('accept');
   });
 });

@@ -11,6 +11,7 @@ import {
   negotiationOf,
   offerToClub,
   offerToPlayer,
+  PLAYER_TRIES,
   payrollInfo,
   playerInterest,
   salaryDemand,
@@ -132,7 +133,7 @@ export function Negotiation({ id, onClose }: { id: string; onClose: () => void }
             </ul>
           </div>
           <p className="hint">
-            残り交渉回数 {MAX_TRIES - rec.playerTries} · 年俸総額 {fmtMoney(total)} / 上限 {fmtMoney(cap)}
+            残り交渉回数 {Math.max(0, PLAYER_TRIES - rec.playerTries)} · 年俸総額 {fmtMoney(total)} / 上限 {fmtMoney(cap)}
           </p>
           <label className="field">
             <span>年俸（年額）</span>
