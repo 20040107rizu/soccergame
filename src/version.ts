@@ -3,9 +3,14 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.12.3';
+export const APP_VERSION = '0.12.4';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.12.4',
+    date: '2026-10-12',
+    items: ['受信箱を種類別（未読・重要・移籍・チーム・スカウト・クラブ/大会・極秘）に絞り込めるように', '「既読にする」ボタンを追加'],
+  },
   {
     version: '0.12.3',
     date: '2026-10-12',

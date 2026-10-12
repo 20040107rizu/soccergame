@@ -2452,3 +2452,40 @@ button.friend-row {
   border-color: #ffd34d;
   background: #ffd34d33;
 }
+
+.inbox-filter {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+.inbox-filter::-webkit-scrollbar {
+  display: none;
+}
+.inbox-filter .chip {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.chip-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--red);
+  color: #1a0505;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+.inbox-readall {
+  display: block;
+  margin: 0 0 8px auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-decoration: underline;
+}

@@ -21,17 +21,60 @@ const FROM_ICON: Record<string, string> = {
   board: '👔',
 };
 
+type Cat = 'all' | 'unread' | 'important' | 'transfer' | 'team' | 'scout' | 'club' | 'legend';
+
+const CATS: { v: Cat; label: string; test: (m: Mail) => boolean }[] = [
+  { v: 'all', label: 'すべて', test: () => true },
+  { v: 'unread', label: '未読', test: (m) => !m.read },
+  { v: 'important', label: '❗重要', test: (m) => !!m.important },
+  { v: 'transfer', label: '🤝移籍', test: (m) => !m.legend && (m.from === 'agent' || m.from === 'club' || !!m.offerId) },
+  { v: 'team', label: '🧑‍🏫チーム', test: (m) => !m.legend && (m.from === 'coach' || m.from === 'medical' || m.from === 'advisor') },
+  { v: 'scout', label: '🔭スカウト', test: (m) => !m.legend && m.from === 'scout' },
+  { v: 'club', label: '🏆クラブ・大会', test: (m) => !m.legend && (m.from === 'board' || m.from === 'league') },
+  { v: 'legend', label: '🌟極秘', test: (m) => !!m.legend },
+];
+
 /** メールの受信箱（ホーム画面） */
 export function InboxList({ limit }: { limit?: number }) {
   const { state, update } = useGame();
   const [open, setOpen] = useState<string | null>(null);
+  const [cat, setCat] = useState<Cat>('all');
   const mails = state.mails ?? [];
-  const list = limit ? mails.slice(0, limit) : mails;
+  const cur = CATS.find((c) => c.v === cat)!;
+  const filtered = mails.filter(cur.test);
+  const list = limit ? filtered.slice(0, limit) : filtered;
   const mail = mails.find((m) => m.id === open);
+  // メールがある種類だけ表示（「すべて」「未読」は常に表示）
+  const cats = CATS.filter((c) => c.v === 'all' || c.v === 'unread' || c.v === cat || mails.some(c.test));
+  const unreadIn = filtered.filter((m) => !m.read).length;
   return (
     <>
+      <div className="inbox-filter">
+        {cats.map((c) => {
+          const n = c.v === 'all' || c.v === 'unread' ? 0 : mails.filter((m) => !m.read && c.test(m)).length;
+          const total = c.v === 'unread' ? mails.filter((m) => !m.read).length : 0;
+          return (
+            <button key={c.v} className={'chip' + (cat === c.v ? ' on' : '')} onClick={() => setCat(c.v)}>
+              {c.label}
+              {(n > 0 || total > 0) && <span className="chip-count">{n || total}</span>}
+            </button>
+          );
+        })}
+      </div>
+      {unreadIn > 0 && (
+        <button
+          className="inbox-readall"
+          onClick={() =>
+            update((d) => {
+              for (const m of d.mails) if (cur.test(m)) m.read = true;
+            })
+          }
+        >
+          {cat === 'all' ? 'すべて既読にする' : `「${cur.label}」を既読にする`}
+        </button>
+      )}
       <div className="inbox">
-        {list.length === 0 && <p className="muted center">メールはありません</p>}
+        {list.length === 0 && <p className="muted center">{cat === 'all' ? 'メールはありません' : 'この種類のメールはありません'}</p>}
         {list.map((m) => (
           <button
             key={m.id}
