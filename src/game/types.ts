@@ -149,6 +149,8 @@ export interface DemandEvent {
   playerId: string;
   kind: 'playtime' | 'raise';
   expires: number;
+  /** 話し合いに失敗した回数（古いセーブには無い） */
+  tries?: number;
 }
 
 export interface JobOffer {

@@ -51,6 +51,16 @@ describe('セーブデータの引き継ぎ', () => {
     expect(haaland?.height).toBe(194);
   });
 
+  it('年俸アップ要求の途中（回数の記録なし）の v0.12.1 セーブも読める', () => {
+    const s = newGame('テスト', 'ars');
+    const pid = Object.values(s.players).find((p) => p.teamId === 'ars')!.id;
+    s.demand = { playerId: pid, kind: 'raise', expires: 99 };
+    store.set('masterleague.save.3', JSON.stringify(s));
+    const g = loadGame(3)!;
+    expect(g.demand?.playerId).toBe(pid);
+    expect(g.demand?.tries).toBeUndefined();
+  });
+
   it('本体が壊れていてもバックアップから復旧する', () => {
     const s = newGame('テスト', 'liv');
     saveGame(1, s);

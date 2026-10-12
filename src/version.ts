@@ -3,9 +3,17 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.12.1';
+export const APP_VERSION = '0.12.2';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.12.2',
+    date: '2026-10-12',
+    items: [
+      '選手からの年俸アップ要求で、説得に失敗してもすぐ決裂せず、何度か話し合えるように',
+      '「間を取る」（中間の年俸で手を打つ）を追加。説得の成功率も少しアップ',
+    ],
+  },
   {
     version: '0.12.1',
     date: '2026-10-12',

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Crest } from '../components/ui';
 import { fmtMoney } from '../game/economy';
-import { acceptJob, answerDemand, passGem, persuadeChance, raiseAmount, signGem } from '../game/events';
+import { acceptJob, answerDemand, compromiseAmount, compromiseChance, DEMAND_TRIES, passGem, persuadeChance, raiseAmount, signGem } from '../game/events';
 import { teamById } from '../game/season';
 import { declineLegendChallenge, legendTeamSnapshot, negotiateLegendPick, pickCandidates, pickTerms } from '../game/legendChallenge';
 import { PosTag } from '../components/ui';
@@ -67,22 +67,34 @@ function GemPanel({ playerId, onDone }: { playerId: string; onDone: () => void }
 function DemandPanel({ playerId }: { playerId: string }) {
   const { state, update, toast } = useGame();
   const [result, setResult] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const d = state.demand;
   if (result) return <Done text={result} />;
   if (!d || d.playerId !== playerId) return <p className="hint">この件はもう対応済みです。</p>;
   const p = state.players[d.playerId];
   if (!p) return null;
-  const run = (c: 'persuade' | 'accept' | 'release') => {
+  const run = (c: 'persuade' | 'compromise' | 'accept' | 'release') => {
     const r = update((s) => answerDemand(s, c));
     if (!r.ok) return toast(r.message);
+    if ('keep' in r && r.keep) return setNote(r.message ?? '');
     setResult(r.message ?? '');
   };
+  const left = DEMAND_TRIES - (d.tries ?? 0);
   return (
     <div className="event-card">
-      <div className="event-title">どう対応する？</div>
+      <div className="event-title">
+        どう対応する？ <small>話し合いできる回数 あと{left}回</small>
+      </div>
+      {note && <p className="small">{note}</p>}
       <button className="btn" onClick={() => run('persuade')}>
-        説得する（成功率 約{Math.round(persuadeChance(state, p) * 100)}%・失敗すると調子と雰囲気が悪化）
+        説得する（成功率 約{Math.round(persuadeChance(state, p) * 100)}%）
       </button>
+      {d.kind === 'raise' && (
+        <button className="btn" onClick={() => run('compromise')}>
+          間を取る（年俸 {fmtMoney(p.salary)} → {fmtMoney(compromiseAmount(p))}・成功率 約{Math.round(compromiseChance(state, p) * 100)}%）
+        </button>
+      )}
+      <p className="hint">話し合いが決裂すると、調子とチームの雰囲気が悪化します</p>
       <button className="btn" onClick={() => run('accept')}>
         {d.kind === 'raise' ? `要求をのむ（年俸 ${fmtMoney(p.salary)} → ${fmtMoney(raiseAmount(p))}）` : '要求をのむ（次の6試合で3試合以上の先発を約束）'}
       </button>

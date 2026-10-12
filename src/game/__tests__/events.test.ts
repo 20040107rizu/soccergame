@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { acceptJob, answerDemand, awaken, hiddenTrait, matchBonuses, onRetire, promoteAcademy, signGem, spawnDemand, spawnGem, unlock, jobOfferAtSeasonEnd } from '../events';
 import { spawnHeir } from '../legend';
 import { squadOf } from '../lineup';
@@ -34,6 +34,28 @@ describe('隠しシステム', () => {
     expect(s.players[p.id].promise?.need).toBe(3);
     // spawnDemand は候補がいなければ何もしない
     expect(typeof spawnDemand(s)).toBe('boolean');
+  });
+
+  it('年俸アップ要求は失敗しても何度か話し合える', () => {
+    const s = newGame('テスト', 'ars');
+    const p = squadOf(s, 'ars')[0];
+    // 古いセーブの形（tries なし）
+    s.demand = { playerId: p.id, kind: 'raise', expires: 99 };
+    const spy = vi.spyOn(Math, 'random').mockReturnValue(0.999);
+    const r1 = answerDemand(s, 'persuade');
+    expect(r1.ok && 'keep' in r1 && r1.keep).toBe(true);
+    expect(s.demand?.tries).toBe(1);
+    answerDemand(s, 'compromise');
+    expect(s.demand?.tries).toBe(2);
+    answerDemand(s, 'persuade');
+    expect(s.demand).toBeUndefined();
+    spy.mockReturnValue(0);
+    s.demand = { playerId: p.id, kind: 'raise', expires: 99 };
+    const before = p.salary;
+    expect(answerDemand(s, 'compromise').ok).toBe(true);
+    expect(s.demand).toBeUndefined();
+    expect(s.players[p.id].salary).toBeGreaterThan(before);
+    spy.mockRestore();
   });
 
   it('監督オファーを受けるとクラブが変わる', () => {

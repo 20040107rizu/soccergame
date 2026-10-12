@@ -484,10 +484,22 @@ export function raiseAmount(p: Player): number {
 
 export function persuadeChance(state: GameState, p: Player): number {
   const team = teamById(state, state.userTeamId);
-  return clamp(0.35 + (p.loyalty - 50) / 150 + (team.rep - 75) / 200, 0.1, 0.8);
+  return clamp(0.45 + (p.loyalty - 50) / 150 + (team.rep - 75) / 200, 0.2, 0.85);
 }
 
-export function answerDemand(state: GameState, choice: 'persuade' | 'accept' | 'release'): Result {
+/** 話し合いできる回数（失敗してもこの回数までは続けられる） */
+export const DEMAND_TRIES = 3;
+
+/** 間を取った年俸（今の年俸と希望額の中間） */
+export function compromiseAmount(p: Player): number {
+  return round2((p.salary + raiseAmount(p)) / 2);
+}
+
+export function compromiseChance(state: GameState, p: Player): number {
+  return clamp(persuadeChance(state, p) + 0.3, 0.5, 0.95);
+}
+
+export function answerDemand(state: GameState, choice: 'persuade' | 'compromise' | 'accept' | 'release'): Result & { keep?: boolean } {
   const d = state.demand;
   if (!d) return { ok: false, message: 'この件はもう終わっています' };
   const p = state.players[d.playerId];
@@ -496,16 +508,31 @@ export function answerDemand(state: GameState, choice: 'persuade' | 'accept' | '
     delete state.demand;
     return { ok: false, message: 'この件はもう終わっています' };
   }
-  if (choice === 'persuade') {
-    delete state.demand;
-    if (rand() < persuadeChance(state, p)) {
+  if (choice === 'persuade' || choice === 'compromise') {
+    const comp = choice === 'compromise' && d.kind === 'raise';
+    const amt = comp ? compromiseAmount(p) : 0;
+    if (comp && payroll(squadOf(state, team.id)) - p.salary + amt > wageCap(team)) return { ok: false, message: `年俸総額の上限（${fmtMoney(wageCap(team))}）を超えてしまいます` };
+    if (rand() < (comp ? compromiseChance(state, p) : persuadeChance(state, p))) {
+      delete state.demand;
+      if (comp) {
+        p.salary = amt;
+        p.contractYears = Math.max(p.contractYears, 2);
+        p.loyalty = clamp(p.loyalty + 5, 0, 100);
+        return { ok: true, message: `${p.name}「…それなら納得です」年俸を ${fmtMoney(amt)} に上げました` };
+      }
       p.loyalty = clamp(p.loyalty + 10, 0, 100);
       return { ok: true, message: `${p.name}「…わかりました。監督を信じます」` };
     }
+    d.tries = (d.tries ?? 0) + 1;
+    if (d.tries < DEMAND_TRIES) {
+      p.loyalty = clamp(p.loyalty - 3, 0, 100);
+      return { ok: true, message: `${p.name}「うーん…まだ納得できません」（あと${DEMAND_TRIES - d.tries}回話し合えます）`, keep: true };
+    }
+    delete state.demand;
     p.loyalty = clamp(p.loyalty - 10, 0, 100);
     p.condition = Math.max(1, p.condition - 1) as Player['condition'];
     team.spirit = Math.max(30, team.spirit - 2);
-    return { ok: true, message: `${p.name}「話になりません」説得は失敗…調子とチームの雰囲気が下がった` };
+    return { ok: true, message: `${p.name}「話になりません」話し合いは決裂…調子とチームの雰囲気が下がった` };
   }
   if (choice === 'accept') {
     if (d.kind === 'raise') {
