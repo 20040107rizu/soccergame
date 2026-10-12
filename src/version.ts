@@ -3,9 +3,14 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.12.6';
+export const APP_VERSION = '0.12.7';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.12.7',
+    date: '2026-10-12',
+    items: ['年俸総額の上限を大きく引き上げ（特に中小クラブ。主力の契約延長や補強で枠が詰まりにくく）'],
+  },
   {
     version: '0.12.6',
     date: '2026-10-12',

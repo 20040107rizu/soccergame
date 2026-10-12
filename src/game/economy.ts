@@ -43,7 +43,7 @@ export function fairSalary(p: Player): number {
 
 /** クラブが払える年俸総額の上限 */
 export function wageCap(team: Team): number {
-  return Math.max(45, (team.rep - 33) * 3);
+  return round2(30 + team.rep * 1.7);
 }
 
 export function payroll(players: Player[]): number {
