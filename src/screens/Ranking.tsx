@@ -13,6 +13,10 @@ import { fetchRanking, playerId, rankingEnabled, type RankingRow } from '../game
 import { ACHIEVEMENTS } from '../game/events';
 import { FACILITIES } from '../game/club';
 import type { TeamSnapshot } from '../game/friendly';
+import { BadgeStrip, BadgeWall } from '../components/Badges';
+import { Jersey } from '../components/Jersey';
+import { computeBadges } from '../game/badges';
+import { managerLevel } from '../game/collection';
 
 type Sort = 'titles' | 'points' | 'money' | 'achievements';
 
@@ -23,6 +27,8 @@ export function Ranking() {
   const [sort, setSort] = useState<Sort>('titles');
   const [open, setOpen] = useState<RankingRow | null>(null);
   const me = playerId();
+  const { state } = useGame();
+  const mineBadges = useMemo(() => new Set(computeBadges(state, managerLevel(state), Object.keys(state.dex ?? {}).length)), [state]);
 
   useEffect(() => {
     if (!rankingEnabled()) return;
@@ -64,6 +70,7 @@ export function Ranking() {
                 {r.playerId === me && <small className="muted">（あなた）</small>}
               </b>
               <FriendTitle team={r.team} />
+              <FriendBadges team={r.team} mine={mineBadges} />
               <div className="small muted">
                 {r.club} · シーズン{r.season} · {r.progress}
               </div>
@@ -233,6 +240,12 @@ export function FriendPlayer({ p, team, onClose }: { p: Player; team: Team; onCl
   );
 }
 
+/** フレンドのバッジ（上位だけ） */
+function FriendBadges({ team, mine }: { team?: string; mine: Set<string> }) {
+  const snap = useMemo(() => parseSnapshot(team), [team]);
+  return <BadgeStrip ids={snap?.prof?.bd} mine={mine} />;
+}
+
 /** フレンドの監督レベルと称号（チーム情報に入っていれば表示） */
 function FriendTitle({ team }: { team?: string }) {
   const snap = useMemo(() => parseSnapshot(team), [team]);
@@ -248,6 +261,7 @@ function FriendTitle({ team }: { team?: string }) {
 function Career({ row, snap }: { row: RankingRow; snap: TeamSnapshot }) {
   const { state } = useGame();
   const [allHist, setAllHist] = useState(false);
+  const myBadges = useMemo(() => new Set(computeBadges(state, managerLevel(state), Object.keys(state.dex ?? {}).length)), [state]);
   const pr = snap.prof;
   if (!pr) return <p className="hint">この人の実績はまだ届いていません（相手が最新版で試合を進めると見られるようになります）。</p>;
   const mine = state.achievements ?? {};
@@ -258,6 +272,7 @@ function Career({ row, snap }: { row: RankingRow; snap: TeamSnapshot }) {
   return (
     <div className="career">
       <div className="card career-head">
+        <Jersey color={pr.colors?.[0] ?? snap.color} color2={pr.colors?.[1] ?? snap.color2} number={pr.lv > 99 ? '★' : pr.lv} size={58} pattern={pr.kit} />
         <div className="mgr-lv">Lv.{pr.lv}</div>
         <div className="grow">
           <b>{row.nickname}監督</b>
@@ -293,6 +308,13 @@ function Career({ row, snap }: { row: RankingRow; snap: TeamSnapshot }) {
           <b>{pr.dex}人</b>
         </div>
       </div>
+      <h3 className="section-title">🎖 バッジ（{pr.bd?.length ?? 0}）</h3>
+      <BadgeWall ids={pr.bd} mine={myBadges} />
+      {pr.stadium && pr.stadium[0] > 0 && (
+        <p className="small">
+          🏟 {pr.stadium[1] || 'ホームスタジアム'}（Lv.{pr.stadium[0]}）{pr.statues ? ` · 🗿 銅像 ${pr.statues}体` : ''}
+        </p>
+      )}
       {pr.best && (
         <p className="small">
           歴代最高の選手：<b>{pr.best[0]}</b>（総合値 {pr.best[1]}）

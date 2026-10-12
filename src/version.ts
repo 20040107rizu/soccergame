@@ -3,9 +3,17 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.17.0';
+export const APP_VERSION = '0.18.0';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.18.0',
+    date: '2026-10-12',
+    items: [
+      '🎖 バッジを追加：タイトル・監督レベル・実績などで手に入り、フレンドランキングでパッと見られます（レアなものほど派手に光ります）',
+      '🛍 クラブの見た目：ユニフォームの柄（黄金も！）・スタジアムの命名・クラブ博物館・殿堂の選手の銅像',
+    ],
+  },
   {
     version: '0.17.0',
     date: '2026-10-12',

@@ -134,3 +134,32 @@ describe('お金の使い道', async () => {
     expect(tr.askingPrice(s, target)).toBeGreaterThan(cheap * 1.8);
   });
 });
+
+describe('見た目・バッジ', async () => {
+  const club = await import('../club');
+  const bd = await import('../badges');
+  it('ユニフォーム・スタジアム名・銅像・博物館を買える', () => {
+    const s = newGame('テスト', 'ars');
+    s.money = 1000;
+    expect(club.buyKit(s, 'gold').ok).toBe(true);
+    expect(club.currentKit(s)).toBe('gold');
+    expect(club.renameStadium(s, 'ドリームアリーナ').ok).toBe(true);
+    expect(s.stadium?.name).toBe('ドリームアリーナ');
+    expect(club.buildStatue(s, 'x@1').ok).toBe(true);
+    expect(club.buildStatue(s, 'x@1').ok).toBe(false);
+    expect(club.buildMuseum(s).ok).toBe(true);
+    const ids = bd.computeBadges(s, 1, 0);
+    expect(ids).toEqual(expect.arrayContaining(['goldkit', 'museum', 'statue-1']));
+  });
+
+  it('タイトルの数で上位のバッジになり、珍しい順に並ぶ', () => {
+    const s = newGame('テスト', 'ars');
+    s.history = Array.from({ length: 12 }, (_, i) => ({ season: i + 1, rank: 1, champion: 'ars', userCl: i < 3 ? '優勝' : '準決勝' }));
+    s.achievements = { legend: { season: 2 } };
+    s.flags = { ...(s.flags ?? {}), 'sode-根本陸': true };
+    const list = bd.sortBadges(bd.computeBadges(s, 120, 0));
+    expect(list[0].id).toBe('sode'); // ミシック
+    expect(list.find((b) => b.group === 'league')?.id).toBe('league-10');
+    expect(list.filter((b) => b.group === 'league').length).toBe(1);
+  });
+});

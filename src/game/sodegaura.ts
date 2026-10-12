@@ -106,6 +106,8 @@ export function finishSodeChallenge(state: GameState, gf: number, ga: number) {
   const c = state.sodeChallenge;
   if (!c || c.status !== 'invited') return;
   if (gf > ga) {
+    state.flags = state.flags ?? {};
+    state.flags.sodeWin = true;
     const pool = SODE_PLAYERS.map((_, i) => i).filter((i) => !state.flags?.[`sode-${SODE_PLAYERS[i].name}`]);
     if (!pool.length) {
       delete state.sodeChallenge;

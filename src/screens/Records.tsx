@@ -6,6 +6,8 @@ import { teamById } from '../game/season';
 import type { HallEntry, Position } from '../game/types';
 import { useGame } from '../store';
 import { Dex } from './Dex';
+import { buildStatue, currentKit, STATUE_COST } from '../game/club';
+import { fmtMoney } from '../game/economy';
 
 const hofKey = (e: HallEntry) => `${e.name}@${e.season}`;
 
@@ -85,8 +87,10 @@ export function Records() {
 }
 
 function HallOfFame({ hof }: { hof: HallEntry[] }) {
-  const { state, update } = useGame();
+  const { state, update, toast } = useGame();
   const team = teamById(state, state.userTeamId);
+  const kit = currentKit(state);
+  const statues = state.cosmetics?.statues ?? [];
   const [pickSlot, setPickSlot] = useState<number | null>(null);
   const clubs = [...new Set(hof.map((e) => e.club ?? team.name))];
   const [club, setClub] = useState(clubs.includes(team.name) ? team.name : clubs[0] ?? team.name);
@@ -102,11 +106,12 @@ function HallOfFame({ hof }: { hof: HallEntry[] }) {
       <div className="hof-grid">
         {list.map((e) => (
           <div key={hofKey(e)} className="hof-card">
-            <Jersey color={colors(e)[0]} color2={colors(e)[1]} number={e.number ?? '★'} size={60} />
+            <Jersey color={colors(e)[0]} color2={colors(e)[1]} number={e.number ?? '★'} size={60} pattern={(e.club ?? team.name) === team.name ? kit : 'plain'} />
             <div className="grow">
               <div className="row gap">
                 <PosTag pos={e.position} />
                 <b>{e.name}</b>
+                {statues.includes(hofKey(e)) && <span title="銅像">🗿</span>}
               </div>
               <span className="chip accent">{e.note}</span>
               <small className="muted">
@@ -114,6 +119,19 @@ function HallOfFame({ hof }: { hof: HallEntry[] }) {
                 <br />
                 {e.nationality} · シーズン{e.season}に引退
               </small>
+              {!statues.includes(hofKey(e)) && (
+                <button
+                  className="btn small ghost"
+                  disabled={state.money < STATUE_COST}
+                  onClick={() => {
+                    if (!confirm(`${e.name}の銅像を ${fmtMoney(STATUE_COST)} で建てますか？`)) return;
+                    const r = update((d) => buildStatue(d, hofKey(e)));
+                    toast(r.message ?? '');
+                  }}
+                >
+                  🗿 銅像を建てる（{fmtMoney(STATUE_COST)}）
+                </button>
+              )}
             </div>
           </div>
         ))}

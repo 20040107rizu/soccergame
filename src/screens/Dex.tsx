@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Jersey } from '../components/Jersey';
 import { PosTag, Seg, Sheet } from '../components/ui';
 import { DEX_CATS, type DexCat } from '../game/collection';
+import { currentKit } from '../game/club';
 import { teamById } from '../game/season';
 import { useGame } from '../store';
 
@@ -36,7 +37,7 @@ export function Dex({ onClose }: { onClose: () => void }) {
       <div className="dex-grid">
         {list.map((e) => (
           <div key={e.key} className={'dex-card' + (def.rare ? ' rare' : '')}>
-            <Jersey color={e.colors?.[0] ?? team.color} color2={e.colors?.[1] ?? team.color2} number={e.number} size={52} />
+            <Jersey color={e.colors?.[0] ?? team.color} color2={e.colors?.[1] ?? team.color2} number={e.number} size={52} pattern={e.club === team.name ? currentKit(state) : 'plain'} />
             <b>{e.name}</b>
             <small>
               <PosTag pos={e.pos} /> 最高 {e.peak}

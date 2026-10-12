@@ -293,3 +293,64 @@ export function fanTick(state: GameState, used: string[], ratings: Record<string
     });
   }
 }
+
+/* ======================= 見た目・自慢用 ======================= */
+
+export type KitId = 'plain' | 'stripes' | 'hoops' | 'sash' | 'halves' | 'gold';
+
+export const KITS: { id: KitId; label: string; cost: number }[] = [
+  { id: 'plain', label: '無地', cost: 0 },
+  { id: 'stripes', label: '縦じま', cost: 30 },
+  { id: 'hoops', label: '横じま', cost: 30 },
+  { id: 'sash', label: 'たすき', cost: 50 },
+  { id: 'halves', label: 'ツートン', cost: 50 },
+  { id: 'gold', label: '黄金', cost: 300 },
+];
+
+export function ownedKits(state: GameState): KitId[] {
+  return ['plain', ...((state.cosmetics?.kits ?? []) as KitId[])];
+}
+
+export function currentKit(state: GameState): KitId {
+  return (state.cosmetics?.kit as KitId) ?? 'plain';
+}
+
+export function buyKit(state: GameState, id: KitId): Result {
+  const k = KITS.find((x) => x.id === id)!;
+  if (ownedKits(state).includes(id)) {
+    state.cosmetics = { ...(state.cosmetics ?? {}), kit: id };
+    return { ok: true, message: `ユニフォームを「${k.label}」にしました` };
+  }
+  if (state.money < k.cost) return { ok: false, message: `資金が足りません（必要 ${fmtMoney(k.cost)}）` };
+  state.money = round2(state.money - k.cost);
+  state.cosmetics = { ...(state.cosmetics ?? {}), kits: [...(state.cosmetics?.kits ?? []), id], kit: id };
+  return { ok: true, message: `「${k.label}」のユニフォームを手に入れました` };
+}
+
+export const RENAME_COST = 20;
+export function renameStadium(state: GameState, name: string): Result {
+  const n = name.trim().slice(0, 20);
+  if (!n) return { ok: false, message: '名前を入れてください' };
+  if (state.money < RENAME_COST) return { ok: false, message: `資金が足りません（必要 ${fmtMoney(RENAME_COST)}）` };
+  state.money = round2(state.money - RENAME_COST);
+  state.stadium = { ...(state.stadium ?? { level: 0 }), name: n };
+  return { ok: true, message: `スタジアムの名前を「${n}」にしました` };
+}
+
+export const STATUE_COST = 100;
+export function buildStatue(state: GameState, key: string): Result {
+  if (state.cosmetics?.statues?.includes(key)) return { ok: false, message: 'もう銅像があります' };
+  if (state.money < STATUE_COST) return { ok: false, message: `資金が足りません（必要 ${fmtMoney(STATUE_COST)}）` };
+  state.money = round2(state.money - STATUE_COST);
+  state.cosmetics = { ...(state.cosmetics ?? {}), statues: [...(state.cosmetics?.statues ?? []), key] };
+  return { ok: true, message: 'スタジアムの前に銅像が建ちました' };
+}
+
+export const MUSEUM_COST = 500;
+export function buildMuseum(state: GameState): Result {
+  if (state.cosmetics?.museum) return { ok: false, message: 'もう博物館があります' };
+  if (state.money < MUSEUM_COST) return { ok: false, message: `資金が足りません（必要 ${fmtMoney(MUSEUM_COST)}）` };
+  state.money = round2(state.money - MUSEUM_COST);
+  state.cosmetics = { ...(state.cosmetics ?? {}), museum: true };
+  return { ok: true, message: '🏛 クラブ博物館が完成しました' };
+}

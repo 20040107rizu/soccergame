@@ -1,3 +1,4 @@
+import { computeBadges } from './badges';
 import { SODE_PLAYERS } from '../data/sodegaura';
 import { LEGENDS } from './legend';
 import { squadOf } from './lineup';
@@ -272,6 +273,12 @@ export interface ManagerProfile {
   miracles: number;
   /** 歴代最高の選手 [名前, 総合値] */
   best?: [string, number];
+  /** バッジ・ユニフォームの柄・スタジアム・銅像の数 */
+  bd?: string[];
+  kit?: string;
+  colors?: [string, string];
+  stadium?: [number, string];
+  statues?: number;
 }
 
 export function managerProfile(state: GameState): ManagerProfile {
@@ -290,5 +297,10 @@ export function managerProfile(state: GameState): ManagerProfile {
     fac: [state.facilities?.training ?? 0, state.facilities?.scout ?? 0, state.facilities?.academy ?? 0],
     miracles: (state.miracles ?? []).length,
     best: best ? [best.name, best.peak] : undefined,
+    bd: computeBadges(state, managerLevel(state), Object.keys(state.dex ?? {}).length),
+    kit: state.cosmetics?.kit ?? 'plain',
+    colors: [teamById(state, state.userTeamId).color, teamById(state, state.userTeamId).color2],
+    stadium: [state.stadium?.level ?? 0, state.stadium?.name ?? ''],
+    statues: state.cosmetics?.statues?.length ?? 0,
   };
 }

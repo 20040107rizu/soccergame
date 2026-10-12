@@ -9,6 +9,7 @@ import { useGame } from '../store';
 import { Records } from './Records';
 import { ManagerCard } from './ManagerCard';
 import { Facilities } from './Facilities';
+import { Cosmetics, MyBadges } from './Cosmetics';
 import { Feedback } from './Feedback';
 import { APP_VERSION } from '../version';
 
@@ -59,7 +60,11 @@ export function Club() {
 
       <ManagerCard />
 
+      <MyBadges />
+
       <Facilities />
+
+      <Cosmetics />
 
       <button className="btn feedback-btn" onClick={() => setFb(true)}>
         📝 感想・不具合を送る
