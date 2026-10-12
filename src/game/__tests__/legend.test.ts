@@ -64,3 +64,14 @@ describe('オファー交渉', () => {
     expect(s.offers.find((o) => o.id === 'o2')).toBeUndefined();
   });
 });
+
+describe('ダビド・ビジャ', () => {
+  it('レジェンドとして出現しうる（2世の元にもなる）', async () => {
+    const { spawnHeir, legendName } = await import('../legend');
+    expect(legendName('villa')).toBe('ダビド・ビジャ');
+    const s = newGame('テスト', 'ars');
+    const h = spawnHeir(s, 'villa')!;
+    expect(h.name).toBe('ダビド・ビジャ2世');
+    expect(h.position).toBe('CF');
+  });
+});

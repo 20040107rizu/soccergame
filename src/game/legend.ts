@@ -70,6 +70,7 @@ const LEGENDS: LegendSeed[] = [
   { id: 'ibra', height: 195, name: 'ズラタン・イブラヒモビッチ', en: 'Zlatan Ibrahimović', pos: 'CF', nat: 'スウェーデン', foot: 'R', style: 'TM', sig: ['physical', 'finishing', 'ballControl', 'kickingPower'], skills: ['acrobaticShot', 'heelTrick', 'header', 'scissors'], look: [1, 3, 0, 1] },
   { id: 'delpiero', height: 173, name: 'アレッサンドロ・デル・ピエロ', en: 'Alessandro Del Piero', pos: 'ST', nat: 'イタリア', foot: 'R', style: 'N10', sig: ['curl', 'setPiece', 'finishing', 'ballControl'], skills: ['controlCurve', 'pkTaker', 'knuckle'], look: [1, 1, 0, 0] },
   { id: 'lampard', height: 184, name: 'フランク・ランパード', en: 'Frank Lampard', pos: 'CMF', nat: 'イングランド', foot: 'R', style: 'HOLE', sig: ['finishing', 'kickingPower', 'offense', 'lowPass'], skills: ['middleShot', 'pkTaker', 'risingShot'], look: [0, 1, 1, 0] },
+  { id: 'villa', height: 175, name: 'ダビド・ビジャ', en: 'David Villa', pos: 'CF', nat: 'スペイン', foot: 'R', style: 'LBR', sig: ['finishing', 'offense', 'curl', 'acceleration'], skills: ['controlCurve', 'oneTouchShot', 'phenomFinish', 'knuckle', 'acrobaticShot'], look: [1, 1, 0, 3] },
 ];
 
 export const LEGEND_LABEL: Record<LegendKind, string> = { prodigy: '急成長期待', monster: '規格外' };
