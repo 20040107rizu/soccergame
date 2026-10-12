@@ -107,7 +107,7 @@ export interface Player {
   /** レジェンド（極稀に現れるレア選手） */
   legend?: LegendInfo;
   /** ひみつのチーム出身（試合を重ねるほど本来の能力に近づく） */
-  sode?: { name: string; mailedOvr?: number };
+  sode?: { name: string; mailedOvr?: number; extra?: number };
   /** 直前に所属していたクラブ（恩返し弾用） */
   exTeamId?: string;
   /** 現クラブに加入したシーズン */

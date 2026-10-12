@@ -189,8 +189,10 @@ export function makeSodePlayer(s: SodeSeed, full = false): Player {
     p.potential = overall(p);
     return p;
   }
-  // 荒削り：本来の能力の形を保ったまま、全体を下げる
-  const target = { ...p.stats };
+  // 2回に1回は、本来の能力を超えて伸びる素質を持っている
+  const extra = rand() < 0.5 ? randInt(2, 5) : 0;
+  const target = sodeTarget(s, extra);
+  p.stats = { ...target };
   const isGk = s.pos === 'GK';
   const lower = (d: number) => {
     for (const k of STAT_KEYS) {
@@ -205,7 +207,7 @@ export function makeSodePlayer(s: SodeSeed, full = false): Player {
   p.skills = [...new Set([...s.skills.slice(0, 2), ...(s.skills.includes('superSub') ? ['superSub'] : [])])];
   p.potential = overall({ ...p, stats: target });
   p.growth = 'late';
-  p.sode = { name: s.name, mailedOvr: overall(p) };
+  p.sode = { name: s.name, mailedOvr: overall(p), ...(extra ? { extra } : {}) };
   return p;
 }
 
@@ -246,12 +248,19 @@ export function negotiateSodePick(state: GameState): Result & { joined?: boolean
   return { ok: true, joined: true, message: `${p.name}が入団！` };
 }
 
+/** 成長の行き先（extra があれば本来の能力より少し上まで） */
+function sodeTarget(s: SodeSeed, extra = 0): Stats {
+  const t = sodeStats(s);
+  if (extra) for (const k of STAT_KEYS) if (s.pos === 'GK' || !k.startsWith('gk')) t[k] = clamp(t[k] + extra, 35, 99);
+  return t;
+}
+
 /** 試合ごと：本来の能力に向かって、とても速く成長する */
 export function sodeGrowth(p: Player, rating: number): { from: number; to: number } | null {
   if (!p.sode) return null;
   const seed = SODE_PLAYERS.find((x) => x.name === p.sode!.name);
   if (!seed) return null;
-  const target = sodeStats(seed);
+  const target = sodeTarget(seed, p.sode.extra ?? 0);
   const before = overall(p);
   const gaps = (Object.keys(target) as StatKey[]).filter((k) => p.stats[k] < target[k]);
   if (!gaps.length) return null;

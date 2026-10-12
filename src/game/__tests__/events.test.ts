@@ -178,7 +178,7 @@ describe('ひみつのチーム戦', () => {
     const p = Object.values(s.players).find((x) => x.name === seed.name && x.teamId === 'ars')!;
     expect(p.age).toBe(17);
     expect(overall(p)).toBeLessThanOrEqual(70);
-    expect(p.potential).toBe(sc.sodeFullOverall(seed));
+    expect(p.potential).toBeGreaterThanOrEqual(sc.sodeFullOverall(seed));
     expect(s.sodeChallenge).toBeUndefined();
     // 試合を重ねると本来の能力まで伸び、それ以上にはならない
     let games = 0;
@@ -189,6 +189,26 @@ describe('ひみつのチーム戦', () => {
     console.log('sode growth games', seed.name, games, overall(p), p.potential);
     expect(overall(p)).toBe(p.potential);
     expect(games).toBeGreaterThan(10);
+  });
+
+  it('2回に1回は、本来の能力より上まで伸びる素質を持つ', async () => {
+    const { vi } = await import('vitest');
+    const sc = await import('../sodegaura');
+    const { SODE_PLAYERS } = await import('../../data/sodegaura');
+    const seed = SODE_PLAYERS.find((x) => x.name === '佐藤瑠威')!;
+    const full = sc.sodeFullOverall(seed);
+    const spy = vi.spyOn(Math, 'random').mockImplementation(() => 0.1);
+    const up = sc.makeSodePlayer(seed);
+    spy.mockRestore();
+    expect(up.sode?.extra).toBeGreaterThan(0);
+    expect(up.potential).toBeGreaterThan(full);
+    const spy2 = vi.spyOn(Math, 'random').mockImplementation(() => 0.9);
+    const normal = sc.makeSodePlayer(seed);
+    spy2.mockRestore();
+    expect(normal.sode?.extra).toBeUndefined();
+    expect(normal.potential).toBe(full);
+    for (let i = 0; i < 300 && overall(up) < up.potential; i++) sc.sodeGrowth(up, 6.5);
+    expect(overall(up)).toBe(up.potential);
   });
 
   it('負けたら交渉権はない', async () => {
