@@ -2407,3 +2407,28 @@ button.friend-row {
   padding: 4px 0;
   border-bottom: 1px solid var(--line);
 }
+.friend-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.plan-grid div {
+  background: var(--card2);
+  border-radius: 10px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+}
+.plan-grid small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.plan-grid b {
+  font-size: 16px;
+}

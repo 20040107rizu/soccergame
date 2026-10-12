@@ -53,6 +53,8 @@ export function LineupBoard(props: {
   benchLabel?: string;
   /** 試合中：交代した選手は戻れない旨などの補足 */
   hint?: string;
+  /** 見るだけ（フレンドのチームなど）：移動・入れ替えはできない */
+  readOnly?: boolean;
 }) {
   const { team, slots, lineup, bench, reserves, players, energy, injured, onMove, onSlotMove, onDetail } = props;
   const [sel, setSel] = useState<Loc | null>(null);
@@ -78,6 +80,7 @@ export function LineupBoard(props: {
     if (sameLoc(sel, loc)) return setSel(null);
     // ピッチ同士は表示する選手の切り替え（入れ替えはドラッグで）
     if (sel.kind === 'pitch' && loc.kind === 'pitch') return setSel(loc);
+    if (props.readOnly) return setSel(loc);
     onMove(sel, loc);
     setSel(null);
   };
@@ -142,6 +145,10 @@ export function LineupBoard(props: {
     const dx = e.clientX - pr.cx;
     const dy = e.clientY - pr.cy;
     if (!pr.moved && Math.hypot(dx, dy) < 8) return;
+    if (props.readOnly) {
+      endPress();
+      return;
+    }
     if (!pr.armed) {
       // 押してすぐ縦に動かした → 画面スクロール。横方向ならドラッグ
       if (Math.abs(dx) > Math.abs(dy) * 1.5) pr.armed = true;
@@ -266,7 +273,9 @@ export function LineupBoard(props: {
       </div>
       <p className="hint center">
         {sel
-          ? 'ベンチの選手をタップで交代 · 同じ選手をもう一度タップで解除'
+          ? props.readOnly
+            ? '同じ選手をもう一度タップで解除 · 長押しで詳細'
+            : 'ベンチの選手をタップで交代 · 同じ選手をもう一度タップで解除'
           : props.hint ?? 'タップで適性表示 · 長押しで詳細 · 少し押さえてからスライドで移動（他の選手に重ねると入れ替え）'}
       </p>
 

@@ -84,20 +84,16 @@ export function parseSnapshot(raw: unknown): TeamSnapshot | null {
 
 export const FRIEND_TEAM_ID = 'friend';
 
-/**
- * 親善試合用の一時的なゲーム状態を作る（自分のセーブには一切書き込まない）。
- * 自分のクラブ（ホーム）とフレンドのクラブ（アウェー）の試合を1つだけ持つ。
- */
-export function friendlyMatch(state: GameState, snap: TeamSnapshot, nickname: string): { state: GameState; match: LiveMatch } {
-  const temp: GameState = structuredClone(state);
-  const me = teamById(temp, temp.userTeamId);
+/** スナップショットから、表示・試合用の選手とチームを作る */
+export function snapshotTeam(snap: TeamSnapshot, base: Team, nickname: string): { team: Team; players: Record<string, Player> } {
+  const players: Record<string, Player> = {};
   const ids: string[] = [];
   snap.players.forEach((sp, i) => {
     const id = `fr_${i}`;
     ids.push(id);
     const stats = {} as Stats;
     STAT_KEYS.forEach((k, j) => (stats[k] = Number(sp.st[j]) || 50));
-    const p: Player = {
+    players[id] = {
       id,
       name: sp.n,
       nameEn: '',
@@ -126,10 +122,9 @@ export function friendlyMatch(state: GameState, snap: TeamSnapshot, nickname: st
       career: emptyStats(),
       appearance: sp.app ?? { skin: 2, hairStyle: 1, hairColor: 0 },
     };
-    temp.players[id] = p;
   });
-  const friend: Team = {
-    ...me,
+  const team: Team = {
+    ...base,
     id: FRIEND_TEAM_ID,
     name: `${snap.name}（${nickname}）`,
     en: '',
@@ -145,7 +140,19 @@ export function friendlyMatch(state: GameState, snap: TeamSnapshot, nickname: st
     lastLineup: undefined,
     original: false,
   };
-  temp.teams = [...temp.teams.filter((t) => t.id !== FRIEND_TEAM_ID), friend];
+  return { team, players };
+}
+
+/**
+ * 親善試合用の一時的なゲーム状態を作る（自分のセーブには一切書き込まない）。
+ * 自分のクラブ（ホーム）とフレンドのクラブ（アウェー）の試合を1つだけ持つ。
+ */
+export function friendlyMatch(state: GameState, snap: TeamSnapshot, nickname: string): { state: GameState; match: LiveMatch } {
+  const temp: GameState = structuredClone(state);
+  const me = teamById(temp, temp.userTeamId);
+  const { team, players } = snapshotTeam(snap, me, nickname);
+  Object.assign(temp.players, players);
+  temp.teams = [...temp.teams.filter((t) => t.id !== FRIEND_TEAM_ID), team];
   temp.fixtures = [{ id: 'friendly', comp: 'PL', day: temp.day, home: me.id, away: FRIEND_TEAM_ID }];
   return { state: temp, match: createMatch(temp, 'friendly') };
 }
