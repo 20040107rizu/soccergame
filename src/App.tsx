@@ -7,6 +7,8 @@ import type { GameState } from './game/types';
 import type { LiveMatch } from './game/engine';
 import { friendlyMatch, type TeamSnapshot } from './game/friendly';
 import { finishLegendChallenge } from './game/legendChallenge';
+import { finishSodeChallenge } from './game/sodegaura';
+import { SODE_NAME } from './data/sodegaura';
 import { Club } from './screens/Club';
 import { Competitions } from './screens/Competitions';
 import { Help } from './screens/Help';
@@ -95,10 +97,18 @@ function Shell({ firstTab }: { firstTab: Tab }) {
   // ランキング画面から「親善試合」、メールから「レジェンドXI戦」を始める
   useEffect(() => {
     const h = (e: Event) => {
-      const d = (e as CustomEvent<{ snap: TeamSnapshot; nickname: string; challenge?: boolean }>).detail;
+      const d = (e as CustomEvent<{ snap: TeamSnapshot; nickname: string; challenge?: boolean | 'sode' }>).detail;
       const fm = friendlyMatch(state, d.snap, d.nickname);
       setFriendly(
-        d.challenge
+        d.challenge === 'sode'
+          ? {
+              ...fm,
+              onEnd: (gf, ga) => {
+                update((s) => finishSodeChallenge(s, gf, ga));
+                toast(gf > ga ? `⚡ ${SODE_NAME}に勝利！（${gf}-${ga}）受信箱を確認しよう` : `${SODE_NAME}に敗れた…（${gf}-${ga}）`);
+              },
+            }
+          : d.challenge
           ? {
               ...fm,
               onEnd: (gf, ga) => {

@@ -70,6 +70,16 @@ describe('セーブデータの引き継ぎ', () => {
     expect(g.userTeamId).toBe('che');
   });
 
+  it('ひみつのチームの項目がない v0.12.9 のセーブも読める', () => {
+    const s = newGame('テスト', 'tot');
+    delete s.sodeChallenge;
+    for (const m of s.mails) delete m.sode;
+    store.set('masterleague.save.3', JSON.stringify(s));
+    const g = loadGame(3)!;
+    expect(g.sodeChallenge).toBeUndefined();
+    expect(g.userTeamId).toBe('tot');
+  });
+
   it('本体が壊れていてもバックアップから復旧する', () => {
     const s = newGame('テスト', 'liv');
     saveGame(1, s);

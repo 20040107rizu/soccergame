@@ -323,7 +323,9 @@ export interface Mail {
   /** レジェンド選手の極秘情報 */
   legend?: boolean;
   /** メール内で選択する操作 */
-  action?: 'gem' | 'demand' | 'job' | 'legendMatch' | 'legendPick';
+  action?: 'gem' | 'demand' | 'job' | 'legendMatch' | 'legendPick' | 'sodeMatch' | 'sodePick';
+  /** ひみつのチーム関係 */
+  sode?: boolean;
 }
 
 export interface GameState {
@@ -352,6 +354,8 @@ export interface GameState {
   legendOffer?: LegendOffer;
   /** レジェンドXI との対戦イベント */
   legendChallenge?: { status: 'invited' | 'won'; expires: number };
+  /** ひみつのチームからの挑戦（古いセーブには無い） */
+  sodeChallenge?: { status: 'invited' | 'won'; expires: number; pick?: number; revealed?: boolean };
   gemOffer?: GemOffer;
   demand?: DemandEvent;
   jobOffer?: JobOffer;

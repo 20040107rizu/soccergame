@@ -27,11 +27,11 @@ const CATS: { v: Cat; label: string; test: (m: Mail) => boolean }[] = [
   { v: 'all', label: 'すべて', test: () => true },
   { v: 'unread', label: '未読', test: (m) => !m.read },
   { v: 'important', label: '❗重要', test: (m) => !!m.important },
-  { v: 'transfer', label: '🤝移籍', test: (m) => !m.legend && (m.from === 'agent' || m.from === 'club' || !!m.offerId) },
+  { v: 'transfer', label: '🤝移籍', test: (m) => !m.legend && !m.sode && (m.from === 'agent' || m.from === 'club' || !!m.offerId) },
   { v: 'team', label: '🧑‍🏫チーム', test: (m) => !m.legend && (m.from === 'coach' || m.from === 'medical' || m.from === 'advisor') },
   { v: 'scout', label: '🔭スカウト', test: (m) => !m.legend && m.from === 'scout' },
-  { v: 'club', label: '🏆クラブ・大会', test: (m) => !m.legend && (m.from === 'board' || m.from === 'league') },
-  { v: 'legend', label: '🌟極秘', test: (m) => !!m.legend },
+  { v: 'club', label: '🏆クラブ・大会', test: (m) => !m.legend && !m.sode && (m.from === 'board' || m.from === 'league') },
+  { v: 'legend', label: '🌟極秘', test: (m) => !!m.legend || !!m.sode },
 ];
 
 /** メールの受信箱（ホーム画面） */
@@ -78,7 +78,7 @@ export function InboxList({ limit }: { limit?: number }) {
         {list.map((m) => (
           <button
             key={m.id}
-            className={'mail-row' + (m.read ? '' : ' unread') + (m.important ? ' important' : '') + (m.legend ? ' legend' : '')}
+            className={'mail-row' + (m.read ? '' : ' unread') + (m.important ? ' important' : '') + (m.legend ? ' legend' : '') + (m.sode ? ' sode' : '')}
             onClick={() => {
               setOpen(m.id);
               if (!m.read)
@@ -88,7 +88,7 @@ export function InboxList({ limit }: { limit?: number }) {
                 });
             }}
           >
-            <span className="mail-icon">{m.legend ? '🌟' : FROM_ICON[m.from] ?? '✉️'}</span>
+            <span className="mail-icon">{m.legend ? '🌟' : m.sode ? '⚡' : FROM_ICON[m.from] ?? '✉️'}</span>
             <span className="mail-main">
               <small>
                 {m.sender} · {state.calendar[Math.min(m.day, state.calendar.length - 1)]?.label ?? ''}

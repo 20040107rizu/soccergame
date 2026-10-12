@@ -7,6 +7,9 @@ import { declineLegendChallenge, legendTeamSnapshot, negotiateLegendPick, pickCa
 import { PosTag } from '../components/ui';
 import type { Mail } from '../game/types';
 import { useGame } from '../store';
+import { SODE_NAME } from '../data/sodegaura';
+import { declineSodeChallenge, negotiateSodePick, sodePickSeed, sodeTeamSnapshot, sodeTerms } from '../game/sodegaura';
+import { SodeReveal } from '../components/SodeReveal';
 
 /** メール内で選択するイベント（掘り出し物・わがまま・監督オファー） */
 export function EventPanel({ mail, onDone }: { mail: Mail; onDone: () => void }) {
@@ -15,6 +18,8 @@ export function EventPanel({ mail, onDone }: { mail: Mail; onDone: () => void })
   if (mail.action === 'job') return <JobPanel />;
   if (mail.action === 'legendMatch') return <LegendMatchPanel onDone={onDone} />;
   if (mail.action === 'legendPick') return <LegendPickPanel />;
+  if (mail.action === 'sodeMatch') return <SodeMatchPanel onDone={onDone} />;
+  if (mail.action === 'sodePick') return <SodePickPanel />;
   return null;
 }
 
@@ -227,6 +232,107 @@ function LegendPickPanel() {
           </button>
         </>
       )}
+    </div>
+  );
+}
+
+/** ひみつのチームからの挑戦状 */
+function SodeMatchPanel({ onDone }: { onDone: () => void }) {
+  const { state, update } = useGame();
+  const c = state.sodeChallenge;
+  if (!c || c.status !== 'invited') return <p className="hint">この挑戦はもう終わっています。</p>;
+  return (
+    <div className="sode-card">
+      <div className="sode-title">
+        ⚡ {SODE_NAME} <small>回答期限 あと{Math.max(0, c.expires - state.day)}日</small>
+      </div>
+      <p className="small">勝てば、メンバーの誰か1人と移籍の話ができるかもしれません。挑戦は1回きりです。</p>
+      <div className="row gap">
+        <button
+          className="btn ghost grow"
+          onClick={() => {
+            if (!confirm('挑戦を辞退しますか？')) return;
+            update((d) => declineSodeChallenge(d));
+            onDone();
+          }}
+        >
+          辞退する
+        </button>
+        <button
+          className="btn sode-btn grow"
+          onClick={() => {
+            onDone();
+            window.dispatchEvent(new CustomEvent('start-friendly', { detail: { snap: sodeTeamSnapshot(), nickname: '', challenge: 'sode' } }));
+          }}
+        >
+          挑戦する
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** 勝利後：運命の1人の演出 → 交渉 */
+function SodePickPanel() {
+  const { state, update, toast } = useGame();
+  const [show, setShow] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const c = state.sodeChallenge;
+  const seed = sodePickSeed(state);
+  if (result) return <div className="sode-card result">{result}</div>;
+  if (!c || c.status !== 'won' || !seed || c.pick === undefined) return <p className="hint">この話はもう終わっています。</p>;
+  const { fee } = sodeTerms(state);
+  const reveal = show && (
+    <SodeReveal
+      pick={c.pick}
+      onDone={() => {
+        setShow(false);
+        update((d) => {
+          if (d.sodeChallenge) d.sodeChallenge.revealed = true;
+        });
+      }}
+    />
+  );
+  if (!c.revealed) {
+    return (
+      <div className="sode-card">
+        <div className="sode-title">
+          ⚡ 運命の1人 <small>回答期限 あと{Math.max(0, c.expires - state.day)}日</small>
+        </div>
+        <p className="small">{SODE_NAME}の誰が、あなたのクラブに興味を示しているのか…</p>
+        <button className="btn sode-btn" onClick={() => setShow(true)}>
+          誰が来るか見る
+        </button>
+        {reveal}
+      </div>
+    );
+  }
+  return (
+    <div className="sode-card">
+      <div className="sode-title">
+        ⚡ {seed.name}（{seed.pos}） <small>回答期限 あと{Math.max(0, c.expires - state.day)}日</small>
+      </div>
+      <p className="small">
+        移籍金 <b>{fmtMoney(fee)}</b> · 交渉のチャンスは1回だけ。
+      </p>
+      <div className="row gap">
+        <button className="btn ghost grow" onClick={() => setShow(true)}>
+          演出をもう一度
+        </button>
+        <button
+          className="btn sode-btn grow"
+          disabled={state.money < fee}
+          onClick={() => {
+            if (!confirm(`${seed.name}と交渉しますか？（チャンスは1回だけです）`)) return;
+            const r = update((d) => negotiateSodePick(d));
+            if (!r.ok) return toast(r.message);
+            setResult(r.joined ? `⚡ ${seed.name}が入団！` : `😢 ${seed.name}は首を縦に振らなかった…`);
+          }}
+        >
+          交渉する
+        </button>
+      </div>
+      {reveal}
     </div>
   );
 }

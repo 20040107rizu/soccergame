@@ -152,3 +152,40 @@ describe('レジェンドXI 戦', () => {
     expect(s.legendChallenge).toBeUndefined();
   });
 });
+
+describe('ひみつのチーム戦', () => {
+  it('挑戦状 → 勝利でランダムに1人選ばれ、交渉成立で加入する', async () => {
+    const { vi } = await import('vitest');
+    const sc = await import('../sodegaura');
+    const { SODE_PLAYERS } = await import('../../data/sodegaura');
+    const s = newGame('テスト', 'ars');
+    s.money = 500;
+    sc.spawnSodeChallenge(s);
+    expect(s.mails[0].action).toBe('sodeMatch');
+    const snap = sc.sodeTeamSnapshot();
+    expect(snap.players.length).toBe(18);
+    expect(snap.slots.length).toBe(11);
+    // スーパーサブ必須の3人
+    for (const n of ['石井健人', '鳥居大雅', '佐倉大晟']) expect(SODE_PLAYERS.find((p) => p.name === n)?.skills).toContain('superSub');
+    sc.finishSodeChallenge(s, 3, 2);
+    expect(s.sodeChallenge?.status).toBe('won');
+    const seed = sc.sodePickSeed(s)!;
+    expect(seed).toBeTruthy();
+    const spy = vi.spyOn(Math, 'random').mockImplementationOnce(() => 0.01);
+    const r = sc.negotiateSodePick(s);
+    spy.mockRestore();
+    expect(r.ok && r.joined).toBe(true);
+    const p = Object.values(s.players).find((x) => x.name === seed.name && x.teamId === 'ars')!;
+    expect(p.age).toBe(17);
+    expect(p.potential).toBeGreaterThan(overall(p));
+    expect(s.sodeChallenge).toBeUndefined();
+  });
+
+  it('負けたら交渉権はない', async () => {
+    const sc = await import('../sodegaura');
+    const s = newGame('テスト', 'ars');
+    sc.spawnSodeChallenge(s);
+    sc.finishSodeChallenge(s, 1, 1);
+    expect(s.sodeChallenge).toBeUndefined();
+  });
+});
