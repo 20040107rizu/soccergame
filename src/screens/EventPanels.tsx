@@ -7,6 +7,11 @@ import { declineLegendChallenge, legendTeamSnapshot, negotiateLegendPick, pickCa
 import { PosTag } from '../components/ui';
 import type { Mail } from '../game/types';
 import { useGame } from '../store';
+import { applyCoachReward, coachDef, coachRewardOptions, declineCoachChallenge, nearFirst, passMystery, signMystery } from '../game/hidden2';
+import { parseSnapshot } from '../game/friendly';
+import { squadOf } from '../game/lineup';
+import { overall } from '../game/stats';
+import type { Position } from '../game/types';
 import { SODE_NAME } from '../data/sodegaura';
 import { declineSodeChallenge, negotiateSodePick, sodePickSeed, sodeTeamSnapshot, sodeTerms } from '../game/sodegaura';
 import { SodeReveal } from '../components/SodeReveal';
@@ -20,6 +25,9 @@ export function EventPanel({ mail, onDone }: { mail: Mail; onDone: () => void })
   if (mail.action === 'legendPick') return <LegendPickPanel />;
   if (mail.action === 'sodeMatch') return <SodeMatchPanel onDone={onDone} />;
   if (mail.action === 'sodePick') return <SodePickPanel />;
+  if (mail.action === 'coachMatch') return <CoachMatchPanel onDone={onDone} />;
+  if (mail.action === 'coachPick') return <CoachPickPanel />;
+  if (mail.action === 'mystery') return <MysteryPanel playerId={mail.playerId!} onDone={onDone} />;
   return null;
 }
 
@@ -335,6 +343,136 @@ function SodePickPanel() {
         </button>
       </div>
       {reveal}
+    </div>
+  );
+}
+
+/** 伝説の監督からの挑戦状 */
+function CoachMatchPanel({ onDone }: { onDone: () => void }) {
+  const { state, update } = useGame();
+  const c = state.coachChallenge;
+  if (!c || c.status !== 'invited') return <p className="hint">この挑戦はもう終わっています。</p>;
+  const def = coachDef(c.coach);
+  const snap = parseSnapshot(c.snap);
+  return (
+    <div className="event-card">
+      <div className="event-title">
+        🎩 {def?.name} <small>回答期限 あと{Math.max(0, c.expires - state.day)}日</small>
+      </div>
+      <p className="small">
+        {snap?.name} · {snap?.formation} · 勝てば、選手1人に新しい適性ポジションを1つ。挑戦は1回きりです。
+      </p>
+      <div className="row gap">
+        <button
+          className="btn ghost grow"
+          onClick={() => {
+            if (!confirm('挑戦を辞退しますか？')) return;
+            update((d) => declineCoachChallenge(d));
+            onDone();
+          }}
+        >
+          辞退する
+        </button>
+        <button
+          className="btn primary grow"
+          disabled={!snap}
+          onClick={() => {
+            onDone();
+            window.dispatchEvent(new CustomEvent('start-friendly', { detail: { snap, nickname: '', challenge: 'coach' } }));
+          }}
+        >
+          挑戦する
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** 名将に勝利：選手と新しい適性ポジションを選ぶ */
+function CoachPickPanel() {
+  const { state, update, toast } = useGame();
+  const [pid, setPid] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+  const c = state.coachChallenge;
+  if (result) return <Done text={result} />;
+  if (!c || c.status !== 'won') return <p className="hint">この話はもう終わっています。</p>;
+  const squad = squadOf(state, state.userTeamId).sort((a, b) => overall(b) - overall(a));
+  const p = pid ? state.players[pid] : null;
+  const opts = p ? nearFirst(p, coachRewardOptions(p)) : [];
+  return (
+    <div className="event-card">
+      <div className="event-title">
+        🎩 選手の可能性を広げる <small>回答期限 あと{Math.max(0, c.expires - state.day)}日</small>
+      </div>
+      <label className="field">
+        <span>選手</span>
+        <select value={pid ?? ''} onChange={(e) => setPid(e.target.value || null)}>
+          <option value="">選手を選ぶ</option>
+          {squad.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.position} {x.name}（{overall(x)}）
+            </option>
+          ))}
+        </select>
+      </label>
+      {p && (
+        <div className="coach-pos">
+          {opts.map((pos) => (
+            <button
+              key={pos}
+              className="chip"
+              onClick={() => {
+                if (!confirm(`${p.name}に ${pos} の適性を持たせますか？`)) return;
+                const r = update((d) => applyCoachReward(d, p.id, pos as Position));
+                if (!r.ok) return toast(r.message);
+                setResult(`🎩 ${r.message}`);
+              }}
+            >
+              {pos}
+              {p.aptitudes[pos] ? <small>（可→適性）</small> : null}
+            </button>
+          ))}
+          {opts.length === 0 && <p className="hint">この選手は、もう全部のポジションに適性があります。</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 謎の代理人 */
+function MysteryPanel({ playerId, onDone }: { playerId: string; onDone: () => void }) {
+  const { state, update, toast } = useGame();
+  const [result, setResult] = useState<string | null>(null);
+  const o = state.mysteryOffer;
+  if (result) return <Done text={result} />;
+  if (!o || o.playerId !== playerId) return <p className="hint">この話はもう終わっています。</p>;
+  return (
+    <div className="event-card">
+      <div className="event-title">
+        ？ 謎の代理人 <small>回答期限 あと{Math.max(0, o.expires - state.day)}日</small>
+      </div>
+      <div className="row gap">
+        <button
+          className="btn ghost grow"
+          onClick={() => {
+            update((d) => passMystery(d));
+            onDone();
+          }}
+        >
+          断る
+        </button>
+        <button
+          className="btn primary grow"
+          disabled={state.money < o.fee}
+          onClick={() => {
+            const r = update((d) => signMystery(d));
+            if (!r.ok) return toast(r.message);
+            setResult(r.message ?? '');
+          }}
+        >
+          話に乗る（{fmtMoney(o.fee)}）
+        </button>
+      </div>
     </div>
   );
 }

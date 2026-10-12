@@ -27,7 +27,8 @@ const XI_SLOTS: { pos: Position; x: number; y: number }[] = [
 /** クラブの記録：実績（トロフィー）・殿堂・図鑑 */
 export function Records() {
   const { state } = useGame();
-  const [tab, setTab] = useState<'ach' | 'hof'>('ach');
+  const [tab, setTab] = useState<'ach' | 'hof' | 'miracle'>('ach');
+  const miracles = state.miracles ?? [];
   const [dex, setDex] = useState(false);
   const got = state.achievements ?? {};
   const hof = state.hallOfFame ?? [];
@@ -46,6 +47,7 @@ export function Records() {
         options={[
           { v: 'ach', label: `🏆 実績 ${n}/${ACHIEVEMENTS.length}` },
           { v: 'hof', label: `🏛 殿堂 ${hof.length}人` },
+          ...(miracles.length ? [{ v: 'miracle' as const, label: `✨ 奇跡 ${miracles.length}` }] : []),
         ]}
       />
       {tab === 'ach' ? (
@@ -61,6 +63,19 @@ export function Records() {
               </div>
             );
           })}
+        </div>
+      ) : tab === 'miracle' ? (
+        <div className="list">
+          {[...miracles].reverse().map((m, i) => (
+            <div key={i} className="card hof">
+              <b>
+                ✨ {m.score} vs {m.opp}
+              </b>
+              <small className="muted">
+                シーズン{m.season} · {m.from}点差からの大逆転
+              </small>
+            </div>
+          ))}
         </div>
       ) : (
         <HallOfFame hof={hof} />

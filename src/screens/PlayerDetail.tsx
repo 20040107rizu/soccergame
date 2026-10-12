@@ -11,6 +11,7 @@ import { LEGEND_LABEL } from '../game/legend';
 import { TRAITS, type TraitId } from '../game/events';
 import { releaseCost, releasePlayer, renewContract, renewDemand, seekBuyer } from '../game/transfer';
 import { useGame } from '../store';
+import { changeNumber } from '../game/lineup';
 
 const GROWTH_LABEL = { early: '早熟', normal: '標準', late: '晩成' };
 
@@ -24,6 +25,13 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
   if (!p) return null;
   const team = p.teamId ? teamById(state, p.teamId) : undefined;
   const mine = p.teamId === state.userTeamId;
+  const changeNum = () => {
+    const v = prompt('新しい背番号（1〜99）。同じ番号の選手がいれば入れ替えます', String(p.number));
+    if (v === null) return;
+    const n = Number(v);
+    if (!update((d) => changeNumber(d, p.id, n))) return toast('1〜99の数字を入れてください');
+    toast(`背番号を ${n} にしました`);
+  };
   const userTeam = teamById(state, state.userTeamId);
   const canEdit = mine && userTeam.original && p.custom;
   const w = windowStatus(state);
@@ -38,7 +46,14 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
           {p.nickname && <div className="pd-nick">📣「{p.nickname}」</div>}
           {p.nameEn && <div className="pd-en">{p.nameEn}</div>}
           <div className="pd-sub">
-            <PosTag pos={p.position} /> {p.age}歳 · {p.height ? `${p.height}cm · ` : ''}{p.nationality} · {p.foot === 'R' ? '右足' : '左足'} · #{p.number}
+            <PosTag pos={p.position} /> {p.age}歳 · {p.height ? `${p.height}cm · ` : ''}{p.nationality} · {p.foot === 'R' ? '右足' : '左足'} ·{' '}
+            {mine ? (
+              <button className="num-btn" onClick={changeNum}>
+                #{p.number} ✎
+              </button>
+            ) : (
+              <>#{p.number}</>
+            )}
           </div>
           <div className="pd-sub">{team ? team.name : 'フリー'}</div>
           {p.legend && <span className="legend-badge">🌟 レジェンド・{LEGEND_LABEL[p.legend.kind]}</span>}

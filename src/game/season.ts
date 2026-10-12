@@ -6,6 +6,7 @@ import { legendGrowth, legendTick, spawnHeir } from './legend';
 import { legendChallengeTick } from './legendChallenge';
 import { sodeChallengeTick, sodeGrowth } from './sodegaura';
 import { facilityTick, trainingBoost } from './club';
+import { coachChallengeTick, inheritAceTick, markAce, mysteryTick } from './hidden2';
 import { afterUserMatch, dailyEvents, heirsDue, jobOfferAtSeasonEnd, listedPlayersTick, onRetire, planHeirs, promoteAcademy, seasonEndAchievements } from './events';
 import { mailBestEleven, mailCompetition, mailContractAdvice, mailGrowth, mailInjury, mailPlayerFeelings, mailRedCard, mailScoutAdvice, mailTacticAdvice, mailWindow, sendMail, tryAptitudeGain, tryNewSkill } from './mail';
 import { applyFormation, autoLineup, available, repairLineup, setAutoLineup, squadOf, updateSpirit } from './lineup';
@@ -233,6 +234,8 @@ export function playDay(state: GameState, userMatch?: LiveMatch): DayReport {
   legendChallengeTick(state, day);
   sodeChallengeTick(state, day);
   facilityTick(state);
+  coachChallengeTick(state, day);
+  mysteryTick(state);
   dailyEvents(state, day);
   listedPlayersTick(state);
 
@@ -547,6 +550,7 @@ export function endSeason(state: GameState): SeasonSummary {
   // 隠しシステム：実績・2世の予定・監督オファー（成績が確定した時点で）
   const userRow = tbl.find((r) => r.teamId === state.userTeamId);
   seasonEndAchievements(state, rank, userRow?.loss ?? 99, userCl);
+  inheritAceTick(state);
   planHeirs(state, rank);
   const repOrder = state.teams.filter((t) => t.league === 'PL').sort((a, b) => b.rep - a.rep);
   jobOfferAtSeasonEnd(state, rank, repOrder.findIndex((t) => t.id === state.userTeamId) + 1, userCl);
@@ -583,6 +587,7 @@ export function endSeason(state: GameState): SeasonSummary {
       p.contractYears--;
       if (p.contractYears <= 0) {
         if (p.teamId === state.userTeamId) {
+          markAce(state, p);
           summary.left.push(p.name);
           p.teamId = null;
           p.contractYears = 0;

@@ -56,12 +56,12 @@ export function PlayerIcon({ p, team, size = 40 }: { p: Player; team?: Team; siz
 }
 
 /** チームスピリットのゲージ */
-export function SpiritGauge({ v: raw, label = 'チームスピリット' }: { v: number; label?: string }) {
+export function SpiritGauge({ v: raw, label = 'チームスピリット', zone }: { v: number; label?: string; zone?: boolean }) {
   const v = Math.round(raw);
-  const color = v >= 90 ? '#19d3c5' : v >= 75 ? '#3ccb5a' : v >= 60 ? '#f2d43d' : '#f28c28';
+  const color = zone ? '#ffd34d' : v >= 90 ? '#19d3c5' : v >= 75 ? '#3ccb5a' : v >= 60 ? '#f2d43d' : '#f28c28';
   return (
-    <div className="spirit">
-      <span>{label}</span>
+    <div className={'spirit' + (zone ? ' zone' : '')}>
+      <span>{zone ? '✨ ゾーン' : label}</span>
       <div className="spirit-bar">
         <i style={{ width: `${(v / 99) * 100}%`, background: color }} />
       </div>

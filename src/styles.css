@@ -2928,3 +2928,23 @@ button.friend-row {
   font-weight: 800;
   font-size: 13px;
 }
+
+/* ===== 隠し要素（名将・ゾーン・背番号） ===== */
+.spirit.zone .spirit-bar i {
+  background: linear-gradient(90deg, #ffd34d, #fff6c2, #ffd34d) !important;
+  box-shadow: 0 0 10px #ffd34d;
+}
+.spirit.zone span {
+  color: #ffd34d;
+  font-weight: 800;
+}
+.num-btn {
+  color: var(--accent);
+  font-weight: 800;
+  text-decoration: underline;
+}
+.coach-pos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

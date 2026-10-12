@@ -1,3 +1,4 @@
+import { markAce } from './hidden2';
 import { managerPerks, managerTitle } from './collection';
 import { windowStatus } from './competitions';
 import { aiFillSquads, teamById } from './season';
@@ -255,6 +256,7 @@ export function acceptOffer(state: GameState, offerId: string): Result {
   const buyer = teamById(state, o.fromTeam);
   state.money = round2(state.money + o.fee);
   buyer.budget = round2(buyer.budget - o.fee);
+  markAce(state, p);
   p.exTeamId = state.userTeamId;
   p.teamId = buyer.id;
   p.joinedSeason = state.season;
@@ -348,6 +350,7 @@ export function releasePlayer(state: GameState, playerId: string): Result {
   const cost = releaseCost(p);
   if (cost > state.money) return { ok: false, message: '違約金を払う資金が足りません' };
   state.money = round2(state.money - cost);
+  markAce(state, p);
   p.exTeamId = state.userTeamId;
   p.teamId = null;
   delete p.promise;

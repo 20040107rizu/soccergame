@@ -80,7 +80,7 @@ export function Home({ onPreMatch }: { onPreMatch: () => void }) {
         </div>
       </div>
       <div className="card tight">
-        <SpiritGauge v={team.spirit} />
+        <SpiritGauge v={team.spirit} zone={(state.zone ?? 0) > 0} />
       </div>
 
       <div className={'window-banner' + (w.open ? ' open' : '')}>

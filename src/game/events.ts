@@ -1,3 +1,4 @@
+import { checkMiracle, markAce, revealMystery, zoneAfterMatch, zoneBonus } from './hidden2';
 import { academyBoost, fanTick, scoutBoost } from './club';
 import { addXp, managerPerks, matchXp, registerDex } from './collection';
 import { generatePlayer } from './data';
@@ -55,6 +56,10 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'secondGen', label: '伝説の再来', desc: '〇〇2世を獲得', hidden: true },
   { id: 'revenge', label: '恩返し', desc: '古巣相手に元所属選手がゴール', hidden: true },
   { id: 'legendSlayer', label: '伝説を超えた日', desc: 'レジェンドXIに勝利', hidden: true },
+  { id: 'coachSlayer', label: '名将越え', desc: '伝説の監督に勝利', hidden: true },
+  { id: 'aceHeir', label: '魂の継承', desc: 'エースナンバーの魂を若手が受け継いだ', hidden: true },
+  { id: 'miracle', label: '奇跡の夜', desc: '2点差以上をひっくり返して勝利', hidden: true },
+  { id: 'mysteryJackpot', label: '怪しい話に乗ってみた', desc: '謎の代理人の選手が大当たりだった', hidden: true },
   { id: 'dex50', label: '名簿をめくれば', desc: '選手図鑑に50人が登録された' },
   { id: 'dex100', label: '大所帯', desc: '選手図鑑に100人が登録された' },
   { id: 'dexAll-legend', label: '伝説の収集家', desc: '図鑑のレジェンドをすべて集めた', hidden: true },
@@ -131,6 +136,7 @@ export function matchBonuses(state: GameState, f: Fixture, team: Team, opp: Team
     if (t === 'bloomer' && p.joinedSeason === state.season && p.exTeamId) k *= 1.03;
     if (p.exTeamId === opp.id) k *= 1.04; // 古巣相手に燃える
     if (p.nickname && f.home === team.id && f.stage !== 'F') k *= 1.03; // 愛称を呼ぶホームの声援
+    k *= zoneBonus(state, team.id);
     if (k !== 1) out[p.id] = k;
   }
   return out;
@@ -209,6 +215,11 @@ export function afterUserMatch(state: GameState, f: Fixture, m: LiveMatch, key: 
 
   // サポーターの愛称（ホームの試合）
   if (key === 'home' && !m.neutral) fanTick(state, side.usedPlayers, m.ratings, goals.map((g) => g.playerId!).filter(Boolean), ga === 0);
+
+  // 奇跡の試合・ゾーン・謎の代理人の正体
+  zoneAfterMatch(state);
+  checkMiracle(state, m.events.filter((e) => e.type === 'goal'), key, opp.name, gf, ga);
+  for (const id of side.usedPlayers) if (state.players[id]) revealMystery(state, state.players[id]);
 
   // 図鑑・監督の経験値
   for (const a of registerDex(state)) unlock(state, a);
@@ -664,6 +675,7 @@ export function promoteAcademy(state: GameState): string[] {
 
 /** 引退する自クラブの選手を殿堂入りさせる（条件を満たせば） */
 export function onRetire(state: GameState, p: Player) {
+  markAce(state, p);
   inheritNumber(state, p);
   if (p.teamId !== state.userTeamId) return;
   const apps = p.clubApps ?? 0;

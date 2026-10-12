@@ -111,6 +111,8 @@ export interface Player {
   /** サポーターが付けた愛称と、そのための活躍ポイント */
   nickname?: string;
   fanPoints?: number;
+  /** 背番号の魂を受け継いだ（その番号） */
+  aceOf?: number;
   /** 謎の代理人から獲得した選手 */
   mystery?: { tier: 'jackpot' | 'normal' | 'bust'; revealed?: boolean };
   /** 直前に所属していたクラブ（恩返し弾用） */
@@ -335,7 +337,7 @@ export interface Mail {
   /** レジェンド選手の極秘情報 */
   legend?: boolean;
   /** メール内で選択する操作 */
-  action?: 'gem' | 'demand' | 'job' | 'legendMatch' | 'legendPick' | 'sodeMatch' | 'sodePick';
+  action?: 'gem' | 'demand' | 'job' | 'legendMatch' | 'legendPick' | 'sodeMatch' | 'sodePick' | 'coachMatch' | 'coachPick' | 'mystery';
   /** ひみつのチーム関係 */
   sode?: boolean;
 }
@@ -377,6 +379,15 @@ export interface GameState {
   hallOfFame?: HallEntry[];
   /** 選手図鑑（古いセーブには無い） */
   dex?: Record<string, import('./collection').DexEntry>;
+  /** 伝説の監督からの挑戦状（古いセーブには無い） */
+  coachChallenge?: { status: 'invited' | 'won'; coach: string; expires: number; snap: string };
+  /** クラブを去ったエースの背番号 */
+  aceNumbers?: Record<number, { name: string; keys: string[]; skills: string[]; season: number }>;
+  /** 大逆転した試合の記録と、ゾーンの残り試合数 */
+  miracles?: { season: number; opp: string; score: string; from: number }[];
+  zone?: number;
+  /** 謎の代理人からの話 */
+  mysteryOffer?: { playerId: string; fee: number; expires: number };
   /** クラブの施設（古いセーブには無い） */
   facilities?: { training?: number; scout?: number; academy?: number; building?: { kind: 'training' | 'scout' | 'academy'; done: number } };
   /** 監督の経験値と表示する称号 */

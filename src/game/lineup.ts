@@ -193,3 +193,13 @@ export function spiritPreview(team: Team): number {
   const changed = team.lineup.filter((id) => !prev.has(id)).length;
   return Math.max(30, team.spirit - changed * SPIRIT_CHANGE_PENALTY);
 }
+
+/** 背番号を変える（同じ番号の選手がいれば入れ替える） */
+export function changeNumber(state: GameState, playerId: string, n: number): boolean {
+  const p = state.players[playerId];
+  if (!p || p.teamId !== state.userTeamId || !Number.isInteger(n) || n < 1 || n > 99) return false;
+  const holder = squadOf(state, p.teamId).find((x) => x.number === n && x.id !== p.id);
+  if (holder) holder.number = p.number;
+  p.number = n;
+  return true;
+}
