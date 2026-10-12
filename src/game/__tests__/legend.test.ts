@@ -17,7 +17,7 @@ describe('レジェンド', () => {
     const r = acceptLegend(s);
     expect(r.ok && r.joined).toBe(true);
     expect(s.players[p.id].teamId).toBe('ars');
-    expect(s.players[p.id].number).toBe(10);
+    expect(s.players[p.id].number).toBe(p.position === 'GK' ? 1 : 10);
     const start = overall(s.players[p.id]);
     for (let i = 0; i < 20; i++) {
       const t = teamById(s, 'ars');
