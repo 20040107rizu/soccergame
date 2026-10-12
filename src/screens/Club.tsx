@@ -17,6 +17,7 @@ export function Club() {
   const squad = squadOf(state, team.id).sort((a, b) => POSITIONS.indexOf(a.position) - POSITIONS.indexOf(b.position));
   const { total, cap } = userPayroll(state);
   const [fb, setFb] = useState(false);
+  const [manager, setManager] = useState(state.managerName);
 
   return (
     <div className="screen">
@@ -31,6 +32,27 @@ export function Club() {
             年俸 {fmtMoney(total)} / 上限 {fmtMoney(cap)}
           </div>
         </div>
+      </div>
+
+      <div className="card">
+        <label className="field">
+          <span>監督名（フレンドランキングの表示名にもなります）</span>
+          <div className="row gap">
+            <input className="grow" value={manager} maxLength={16} placeholder="例：タナカ" onChange={(e) => setManager(e.target.value)} />
+            <button
+              className="btn primary"
+              disabled={!manager.trim() || manager.trim() === state.managerName}
+              onClick={() => {
+                update((d) => {
+                  d.managerName = manager.trim();
+                });
+                toast('監督名を変更しました');
+              }}
+            >
+              変更
+            </button>
+          </div>
+        </label>
       </div>
 
       <button className="btn feedback-btn" onClick={() => setFb(true)}>

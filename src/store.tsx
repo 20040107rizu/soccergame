@@ -53,7 +53,7 @@ export function GameProvider(props: { initial: GameState; slot: Slot; actions: U
   useEffect(() => {
     const t = setTimeout(() => sendRanking(latest.current, slot), 1500);
     return () => clearTimeout(t);
-  }, [state.day, state.season, slot]);
+  }, [state.day, state.season, state.managerName, slot]);
 
   return <GameCtx.Provider value={{ state, slot, update, ...props.actions }}>{props.children}</GameCtx.Provider>;
 }

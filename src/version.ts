@@ -3,9 +3,14 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.9.0';
+export const APP_VERSION = '0.9.1';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.9.1',
+    date: '2026-10-12',
+    items: ['フレンドランキングを開始！「大会」→「フレンド」でみんなの状況が見られます', 'クラブ画面で監督名をいつでも変更できるように'],
+  },
   {
     version: '0.9.0',
     date: '2026-10-12',
