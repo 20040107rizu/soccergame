@@ -106,16 +106,24 @@ export const NEIGHBORS: Record<Position, Position[]> = {
 };
 
 /** ポジション適性による能力の補正 */
-export function aptitudeMultiplier(level: number | undefined, pos: Position, main: Position): number {
-  if (pos === 'GK' || main === 'GK') return pos === main ? 1 : 0.35;
+/**
+ * 基本ポジション以外で起用した時の総合値の下がり幅。
+ * 適性ありでも基本ポジションより約10下がり、適性が下がるほどさらに下がる。
+ */
+export function aptitudePenalty(level: number | undefined, pos: Position, main: Position): number {
   switch (level) {
     case 3:
-      return 1;
+      return 0;
     case 2:
-      return 0.97;
+      return 10;
     case 1:
-      return 0.92;
+      return 15;
     default:
-      return NEIGHBORS[main].includes(pos) ? 0.88 : 0.8;
+      return NEIGHBORS[main].includes(pos) ? 20 : 25;
   }
+}
+
+/** GK とフィールドの入れ替え（ほぼ使い物にならない） */
+export function crossGkMultiplier(pos: Position, main: Position): number {
+  return (pos === 'GK') === (main === 'GK') ? 1 : 0.35;
 }

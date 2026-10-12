@@ -239,7 +239,7 @@ export function PlayerEditor({ id, onClose }: { id: string | 'new'; onClose: () 
             </div>
           </div>
           <p className="hint">
-            ★ の能力が {p.position} の総合値に反映されます（全ての能力が 99 で総合値 {OVR_MAX}）。
+            {p.position === 'GK' ? 'GK の総合値は GK の能力と跳躍で決まります。' : `フィールド選手は GK 以外の全ての能力が総合値に影響し、★ の能力は ${p.position} で特に大きく影響します。`}（全ての能力が 99 で総合値 {OVR_MAX}）
           </p>
           {STAT_GROUPS.filter((g) => g.label !== 'GK' || p.position === 'GK').map((g) => (
             <div key={g.label}>

@@ -3,9 +3,17 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.10.1';
+export const APP_VERSION = '0.11.0';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.11.0',
+    date: '2026-10-12',
+    items: [
+      '総合値の計算を見直し：フィールド選手は全ての能力が影響（苦手な能力が多いとカンストしない）、GK は GK の能力で決まるように',
+      '基本ポジション以外で起用した時の総合値の下がり方を大きく（適性ありでも約10ダウン）',
+    ],
+  },
   {
     version: '0.10.1',
     date: '2026-10-12',

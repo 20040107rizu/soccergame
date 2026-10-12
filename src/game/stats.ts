@@ -1,4 +1,4 @@
-import { aptitudeMultiplier } from './positions';
+import { aptitudePenalty, crossGkMultiplier } from './positions';
 import { clamp, gauss } from './rng';
 import type { Player, Position, StatKey, Stats } from './types';
 
@@ -85,7 +85,7 @@ export const GK_KEYS: StatKey[] = ['gkAwareness', 'gkCatching', 'gkClearing', 'g
 
 /** 総合値の計算に使う、ポジション別の重み */
 export const OVR_WEIGHTS: Record<Position, Partial<Record<StatKey, number>>> = {
-  GK: { gkAwareness: 4, gkCatching: 2, gkClearing: 2, gkReflexes: 3, gkReach: 3, jump: 1 },
+  GK: { gkAwareness: 4, gkReflexes: 4, gkCatching: 2, gkClearing: 2, gkReach: 2, jump: 1 },
   CB: { defense: 4, ballWinning: 3, physical: 2, heading: 2, jump: 2, aggression: 1, speed: 1, lowPass: 1, defEngagement: 1 },
   LSB: { defense: 2, ballWinning: 2, speed: 2, stamina: 2, acceleration: 1, lowPass: 1, loftedPass: 1, dribbling: 1, defEngagement: 1 },
   RSB: { defense: 2, ballWinning: 2, speed: 2, stamina: 2, acceleration: 1, lowPass: 1, loftedPass: 1, dribbling: 1, defEngagement: 1 },
@@ -106,24 +106,35 @@ export const OVR_MAX = 109;
 const OVR_KNEE = 88;
 
 /**
- * 総合値：そのポジションに関係する能力値の加重平均。
- * 平均が 88 を超えると伸びが大きくなり、全て 99 で 109 になる（88 以下はそのまま）。
+ * 総合値。
+ * - フィールド選手：GK 以外の全ての能力値が総合値に影響する。そのうち基本ポジションに関係する能力（OVR_WEIGHTS）ほど大きく影響する。
+ * - GK：GK の能力（と跳躍）だけで決まる。
+ * 加重平均が 88 を超えると伸びが大きくなり、全て 99 で 109 になる（88 以下はそのまま）。
  */
 export function overallFor(stats: Stats, pos: Position): number {
   const w = OVR_WEIGHTS[pos];
   let sum = 0;
   let total = 0;
-  for (const k in w) {
-    const key = k as StatKey;
-    sum += (stats[key] ?? 50) * w[key]!;
-    total += w[key]!;
+  if (pos === 'GK') {
+    for (const k in w) {
+      const key = k as StatKey;
+      sum += (stats[key] ?? 50) * w[key]!;
+      total += w[key]!;
+    }
+  } else {
+    for (const key of STAT_KEYS) {
+      if (GK_KEYS.includes(key)) continue;
+      const weight = 1 + 3 * (w[key] ?? 0);
+      sum += (stats[key] ?? 50) * weight;
+      total += weight;
+    }
   }
   const avg = sum / total;
   const over = Math.max(0, avg - OVR_KNEE);
   return Math.round(avg + ((OVR_MAX - 99) * over * over) / ((99 - OVR_KNEE) * (99 - OVR_KNEE)));
 }
 
-/** その能力値が、このポジションの総合値に影響するか */
+/** その能力値が、このポジションの総合値に特に大きく影響するか（★） */
 export function affectsOverall(pos: Position, key: StatKey): boolean {
   return OVR_WEIGHTS[pos][key] !== undefined;
 }
@@ -135,7 +146,8 @@ export function overall(p: Player): number {
 /** 指定ポジションでプレーした時の能力（適性込み） */
 export function ratingAt(p: Player, pos: Position): number {
   const base = overallFor(p.stats, pos);
-  return Math.round(base * aptitudeMultiplier(p.aptitudes[pos], pos, p.position));
+  const lv = pos === p.position ? 3 : p.aptitudes[pos];
+  return Math.max(1, Math.round(base * crossGkMultiplier(pos, p.position) - (crossGkMultiplier(pos, p.position) < 1 ? 0 : aptitudePenalty(lv, pos, p.position))));
 }
 
 /* ---------------- プレースタイル ---------------- */

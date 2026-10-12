@@ -264,7 +264,7 @@ export function awaken(state: GameState, p: Player, why: string) {
   const before = overall(p);
   p.awakened = true;
   p.potential = Math.min(109, p.potential + randInt(4, 8));
-  const n = randInt(32, 44);
+  const n = randInt(44, 58);
   for (let i = 0; i < n; i++) awakenBump(p);
   const newSkill = autoSkills(p.stats, p.position, p.style).find((s) => !p.skills.includes(s)) ?? pick(SKILLS.filter((s) => !p.skills.includes(s.id) && (p.position === 'GK') === (s.cat === 'gk')))?.id;
   if (newSkill && p.skills.length < 12) p.skills.push(newSkill);

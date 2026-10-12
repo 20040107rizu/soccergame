@@ -11,6 +11,16 @@ describe('総合値', () => {
   it('88 以下はそのまま', () => {
     for (const pos of POSITIONS) expect(overallFor(all(80), pos)).toBe(80);
   });
+  it('苦手な能力が多いとカンストしない（イニエスタ2世のケース）', () => {
+    const v = [93, 99, 70, 99, 99, 99, 45, 53, 56, 55, 61, 54, 60, 50, 58, 76, 99, 99, 99, 57, 72, 37, 40, 41, 49, 35];
+    const st = Object.fromEntries(STAT_KEYS.map((k, i) => [k, v[i]])) as unknown as Stats;
+    expect(overallFor(st, 'CMF')).toBeLessThan(95);
+  });
+  it('GK の総合値は GK の能力で決まる', () => {
+    const st = all(50);
+    for (const k of ['gkAwareness', 'gkCatching', 'gkClearing', 'gkReflexes', 'gkReach'] as StatKey[]) st[k] = 90;
+    expect(overallFor(st, 'GK')).toBeGreaterThan(80);
+  });
   it('ポジションに関係する能力を上げると総合値が上がる', () => {
     for (const pos of POSITIONS) {
       const base = all(85);
