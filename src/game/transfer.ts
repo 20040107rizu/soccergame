@@ -198,7 +198,7 @@ export function wageRoomFor(state: GameState, p: Player): { room: number; enough
 
 export function payrollInfo(state: GameState): { total: number; cap: number } {
   const t = teamById(state, state.userTeamId);
-  return { total: payroll(squadOf(state, t.id)), cap: wageCap(t) };
+  return { total: payroll(squadOf(state, t.id)), cap: wageCap(t, state.stadium?.level ?? 0) };
 }
 
 /* ---------------- 成立 ---------------- */

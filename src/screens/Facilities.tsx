@@ -28,7 +28,7 @@ export function Facilities() {
             <small className="muted">
               収容 {stadiumCapacity(state).toLocaleString()}人 · ホームの入場収入 {fmtMoney(gateIncome(state))}／試合
             </small>
-            <small className="muted">拡張するたびに入場収入とクラブの格が上がります</small>
+            <small className="muted">拡張するたびに入場収入・クラブの格・年俸総額の上限が上がります</small>
           </div>
           {sc ? (
             <button

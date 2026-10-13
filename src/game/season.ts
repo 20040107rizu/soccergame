@@ -682,5 +682,5 @@ function promoteYouth(state: GameState): string[] {
 
 export function userPayroll(state: GameState): { total: number; cap: number } {
   const t = teamById(state, state.userTeamId);
-  return { total: payroll(squadOf(state, t.id)), cap: wageCap(t) };
+  return { total: payroll(squadOf(state, t.id)), cap: wageCap(t, state.stadium?.level ?? 0) };
 }

@@ -547,7 +547,7 @@ export function answerDemand(state: GameState, choice: 'persuade' | 'compromise'
   if (choice === 'persuade' || choice === 'compromise') {
     const comp = choice === 'compromise' && d.kind === 'raise';
     const amt = comp ? compromiseAmount(p) : 0;
-    if (comp && payroll(squadOf(state, team.id)) - p.salary + amt > wageCap(team)) return { ok: false, message: `年俸総額の上限（${fmtMoney(wageCap(team))}）を超えてしまいます` };
+    if (comp && payroll(squadOf(state, team.id)) - p.salary + amt > wageCap(team, state.stadium?.level ?? 0)) return { ok: false, message: `年俸総額の上限（${fmtMoney(wageCap(team, state.stadium?.level ?? 0))}）を超えてしまいます` };
     if (rand() < (comp ? compromiseChance(state, p) : persuadeChance(state, p))) {
       delete state.demand;
       if (comp) {
@@ -573,7 +573,7 @@ export function answerDemand(state: GameState, choice: 'persuade' | 'compromise'
   if (choice === 'accept') {
     if (d.kind === 'raise') {
       const amt = raiseAmount(p);
-      if (payroll(squadOf(state, team.id)) - p.salary + amt > wageCap(team)) return { ok: false, message: `年俸総額の上限（${fmtMoney(wageCap(team))}）を超えてしまいます` };
+      if (payroll(squadOf(state, team.id)) - p.salary + amt > wageCap(team, state.stadium?.level ?? 0)) return { ok: false, message: `年俸総額の上限（${fmtMoney(wageCap(team, state.stadium?.level ?? 0))}）を超えてしまいます` };
       p.salary = amt;
       p.contractYears = Math.max(p.contractYears, 3);
     } else {
