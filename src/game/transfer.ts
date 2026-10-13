@@ -383,3 +383,22 @@ export function renewContract(state: GameState, playerId: string, salary: number
   p.contractYears = years;
   return { ok: true, message: `${p.name}と${years}年契約を結びました` };
 }
+
+/** 一括契約更新の対象と条件（希望年俸どおり、年数は年齢に合わせる） */
+export function bulkRenewPlan(state: GameState, maxYearsLeft: number): { p: Player; salary: number; years: number }[] {
+  return squadOf(state, state.userTeamId)
+    .filter((p) => p.contractYears <= maxYearsLeft)
+    .sort((a, b) => overall(b) - overall(a))
+    .map((p) => ({ p, salary: Math.ceil(renewDemand(p) * 20) / 20, years: p.age >= 33 ? 1 : p.age >= 30 ? 2 : Math.min(5, Math.max(3, p.contractYears + 3)) }));
+}
+
+/** まとめて契約更新（年俸総額の上限に達したらそこで止める。総合値の高い順） */
+export function bulkRenew(state: GameState, maxYearsLeft: number): { done: string[]; skipped: string[] } {
+  const done: string[] = [];
+  const skipped: string[] = [];
+  for (const x of bulkRenewPlan(state, maxYearsLeft)) {
+    const r = renewContract(state, x.p.id, x.salary, x.years);
+    (r.ok ? done : skipped).push(x.p.name);
+  }
+  return { done, skipped };
+}

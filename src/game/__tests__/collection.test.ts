@@ -190,3 +190,36 @@ describe('追加バッジとゴッド', async () => {
     expect(list.map((b) => b.id)).toContain('legend5');
   });
 });
+
+describe('まとめて操作', async () => {
+  const club = await import('../club');
+  const tr = await import('../transfer');
+  it('スタメンをまとめて特訓し、同じ日はもうできない', () => {
+    const s = newGame('テスト', 'ars');
+    s.money = 5000;
+    const n = club.campTargets(s, 'xi').length;
+    expect(n).toBe(11);
+    const r = club.runCampAll(s, 'xi');
+    expect(r.done).toBe(11);
+    expect(club.campTargets(s, 'xi').length).toBe(0);
+  });
+
+  it('お金が足りない時は途中まで', () => {
+    const s = newGame('テスト', 'ars');
+    s.money = 20;
+    expect(club.runCampAll(s, 'all').done).toBe(2);
+  });
+
+  it('残り1年以下の選手とまとめて契約を更新する', () => {
+    const s = newGame('テスト', 'ars');
+    for (const t of s.teams) if (t.id === 'ars') t.rep = 99;
+    const squad = Object.values(s.players).filter((p) => p.teamId === 'ars');
+    squad.slice(0, 4).forEach((p) => (p.contractYears = 1));
+    const plan = tr.bulkRenewPlan(s, 1);
+    expect(plan.length).toBeGreaterThanOrEqual(4);
+    const r = tr.bulkRenew(s, 1);
+    expect(r.done.length + r.skipped.length).toBe(plan.length);
+    expect(squad.slice(0, 4).every((p) => p.contractYears >= 1)).toBe(true);
+    expect(r.done.length).toBeGreaterThan(0);
+  });
+});

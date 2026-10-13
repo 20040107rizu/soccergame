@@ -3243,3 +3243,9 @@ button.friend-row {
   box-shadow: 0 0 16px #ffc400, 0 0 30px #fff3b0;
   animation: bdg-god 2.4s ease-in-out infinite;
 }
+.bulk-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}

@@ -182,6 +182,34 @@ export function runCamp(state: GameState, playerId: string, kind: 'stat' | 'skil
   }
 }
 
+/** 一括特訓の対象（ケガ中・今日特訓済みは除く） */
+export function campTargets(state: GameState, group: 'xi' | 'all'): Player[] {
+  const team = state.teams.find((t) => t.id === state.userTeamId)!;
+  const ids = group === 'xi' ? team.lineup.filter(Boolean) : squadOf(state, team.id).map((p) => p.id);
+  return ids
+    .map((id) => state.players[id])
+    .filter((p): p is Player => !!p && p.injury === 0 && !(p.campDay === state.day && p.campSeason === state.season))
+    .sort((a, b) => overall(b) - overall(a));
+}
+
+/** まとめて能力アップ（資金が尽きたらそこまで） */
+export function runCampAll(state: GameState, group: 'xi' | 'all'): { done: number; up: number; cost: number } {
+  let done = 0;
+  let up = 0;
+  let cost = 0;
+  for (const p of campTargets(state, group)) {
+    const c = campCost(p, 'stat');
+    if (state.money < c) break;
+    const before = overall(p);
+    if (runCamp(state, p.id, 'stat').ok) {
+      done++;
+      cost += c;
+      if (overall(p) > before) up++;
+    }
+  }
+  return { done, up, cost: round2(cost) };
+}
+
 /* ======================= 海外スカウト遠征 ======================= */
 
 export type Region = 'samerica' | 'africa' | 'asia' | 'eeurope';

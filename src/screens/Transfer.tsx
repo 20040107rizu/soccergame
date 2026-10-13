@@ -9,6 +9,7 @@ import { acceptOffer, payrollInfo, rejectOffer } from '../game/transfer';
 import { POSITIONS, type Position } from '../game/types';
 import { useGame } from '../store';
 import { OfferNegotiation } from './OfferNegotiation';
+import { BulkActions } from './BulkActions';
 
 type Tab = 'search' | 'watch' | 'offers' | 'mine';
 type League = 'all' | 'PL' | 'EU' | 'free';
@@ -134,6 +135,7 @@ export function Transfer() {
               年俸総額 {fmtMoney(total)} / 上限 {fmtMoney(cap)}。選手をタップすると契約延長・売却・契約解除ができます。
             </p>
           )}
+          {tab === 'mine' && <BulkActions />}
           <Seg scroll small value={pos} onChange={setPos} options={[{ v: 'ALL' as const, label: '全' }, ...POSITIONS.map((p) => ({ v: p, label: p }))]} />
           <div className="row gap wrap">
             <select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
