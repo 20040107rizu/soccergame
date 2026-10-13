@@ -3201,3 +3201,45 @@ button.friend-row {
 .jersey-gold {
   filter: drop-shadow(0 0 6px #ffc400aa);
 }
+
+/* ゴッド：ミシックのさらに上。光輪がまわり、星が周回し、後光が脈打つ */
+.bdg.t-divine::before {
+  inset: -4px;
+  background: conic-gradient(from 0deg, #fff7d1, #ffc400, #ffffff, #ff4d4d, #ffd84d, #4dff88, #4db8ff, #c04dff, #fff7d1);
+  animation: bdg-spin 2s linear infinite;
+  box-shadow: 0 0 16px #fff3b0, 0 0 34px #ffc400, 0 0 60px #c04dff88;
+}
+.bdg.t-divine .bdg-in {
+  background: radial-gradient(circle at 50% 40%, #3a2a00 0%, #120a00 60%, #000 100%);
+  box-shadow: inset 0 0 14px #ffc400aa;
+  animation: bdg-god 2.4s ease-in-out infinite;
+}
+.bdg.t-divine::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 0%, #fff 0 2px, transparent 3px),
+    radial-gradient(circle at 100% 50%, #ffd84d 0 2px, transparent 3px),
+    radial-gradient(circle at 50% 100%, #fff 0 2px, transparent 3px),
+    radial-gradient(circle at 0% 50%, #ffd84d 0 2px, transparent 3px),
+    radial-gradient(circle at 85% 15%, #c04dff 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 15% 85%, #4db8ff 0 1.5px, transparent 2.5px);
+  animation: bdg-spin 4s linear infinite reverse;
+}
+.bdg.sm.t-divine::after {
+  inset: -7px;
+}
+@keyframes bdg-god {
+  0%, 100% { box-shadow: inset 0 0 10px #ffc400aa, 0 0 0 0 #fff3b000; }
+  50% { box-shadow: inset 0 0 22px #fff3b0, 0 0 22px 6px #fff3b0aa; }
+}
+.bdg-tier.t-divine {
+  background: linear-gradient(90deg, #fff7d1, #ffc400, #fff7d1);
+  color: #3a2a00;
+  box-shadow: 0 0 16px #ffc400, 0 0 30px #fff3b0;
+  animation: bdg-god 2.4s ease-in-out infinite;
+}

@@ -3,9 +3,14 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.18.3';
+export const APP_VERSION = '0.19.0';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.19.0',
+    date: '2026-10-13',
+    items: ['🎖 バッジを22種類追加（連勝・鉄壁・勝ち点100・ケチの極み・下剋上など）', 'ミシックのさらに上のレア度「ゴッド」を追加'],
+  },
   {
     version: '0.18.3',
     date: '2026-10-12',

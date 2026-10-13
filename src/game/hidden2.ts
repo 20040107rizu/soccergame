@@ -1,3 +1,4 @@
+import { addCounter, earnBadge, markSpent } from './badges';
 import { fairSalary, fmtMoney, marketValue, round2 } from './economy';
 import { unlock } from './events';
 import type { TeamSnapshot } from './friendly';
@@ -175,6 +176,7 @@ export function checkMiracle(state: GameState, goals: { side?: string; minute: n
   unlock(state, 'miracle');
   if (rand() >= 0.3) return;
   state.zone = 3;
+  earnBadge(state, 'zone');
   const team = teamById(state, state.userTeamId);
   team.spirit = 99;
   sendMail(state, {
@@ -261,6 +263,7 @@ export function signMystery(state: GameState): Result {
   if (squadOf(state, state.userTeamId).length >= MAX_SQUAD) return { ok: false, message: `登録は最大${MAX_SQUAD}人までです` };
   delete state.mysteryOffer;
   state.money = round2(state.money - o.fee);
+  markSpent(state, o.fee);
   p.teamId = state.userTeamId;
   p.salary = round2(Math.max(0.3, fairSalary(p) * 0.7));
   p.contractYears = 3;
@@ -291,7 +294,10 @@ export function revealMystery(state: GameState, p: Player) {
         ? '値段なりの、堅実な選手でした。'
         : '…安いのには、やはり理由がありました。ケガと好不調の波に悩まされそうです。';
   sendMail(state, { from: 'coach', sender: 'ヘッドコーチ', subject: `【正体判明】${p.name}`, body: `謎の代理人から獲得した${p.name}。しばらく一緒にやって、正体が分かってきました。\n\n${text}`, playerId: p.id, important: t === 'jackpot' });
-  if (t === 'jackpot') unlock(state, 'mysteryJackpot');
+  if (t === 'jackpot') {
+    unlock(state, 'mysteryJackpot');
+    addCounter(state, 'jackpot');
+  }
 }
 
 /** 隣のポジション（名将の報酬の候補を並べる時に、近い順にする） */

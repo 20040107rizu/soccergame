@@ -163,3 +163,30 @@ describe('見た目・バッジ', async () => {
     expect(list.filter((b) => b.group === 'league').length).toBe(1);
   });
 });
+
+describe('追加バッジとゴッド', async () => {
+  const bd = await import('../badges');
+  const { LEGENDS } = await import('../legend');
+  it('シーズンの記録・連勝・ケチ・下剋上でバッジが付く', () => {
+    const s = newGame('テスト', 'bou');
+    for (let i = 0; i < 10; i++) bd.matchBadges(s, true, 'PL', []);
+    bd.seasonBadges(s, 1, { ga: 18, points: 101 }, 55);
+    const ids = bd.computeBadges(s, 1, 0);
+    expect(ids).toEqual(expect.arrayContaining(['streak10', 'wall', 'points100', 'miser', 'underdog']));
+    // 移籍金を使ったシーズンはケチにならない
+    const t = newGame('テスト', 'ars');
+    bd.markSpent(t, 10);
+    bd.seasonBadges(t, 1, { ga: 30, points: 90 }, 92);
+    expect(bd.computeBadges(t, 1, 0)).not.toContain('miser');
+    expect(bd.computeBadges(t, 1, 0)).not.toContain('underdog');
+  });
+
+  it('レジェンドを図鑑で全員そろえるとゴッドのバッジ', () => {
+    const s = newGame('テスト', 'ars');
+    s.dex = Object.fromEntries(LEGENDS.map((l) => [`legend:${l.id}`, { key: `legend:${l.id}`, name: l.name, pos: l.pos, nat: l.nat, cat: 'legend' as const, peak: 90, first: 1, number: 10, club: 'x' }]));
+    const list = bd.sortBadges(bd.computeBadges(s, 1, LEGENDS.length));
+    expect(list[0].id).toBe('dexLegendAll');
+    expect(list[0].tier).toBe('divine');
+    expect(list.map((b) => b.id)).toContain('legend5');
+  });
+});

@@ -1,3 +1,4 @@
+import { markSpent } from './badges';
 import { markAce } from './hidden2';
 import { richMarkup } from './club';
 import { managerPerks, managerTitle } from './collection';
@@ -217,6 +218,7 @@ export function completeSigning(state: GameState, playerId: string, salary: numb
   if (fee > state.money) return { ok: false, message: '移籍資金が足りません' };
   const from = p.teamId ? teamById(state, p.teamId) : null;
   state.money = round2(state.money - fee);
+  markSpent(state, fee);
   if (from) from.budget = round2(from.budget + fee);
   p.exTeamId = p.teamId ?? p.exTeamId;
   p.teamId = state.userTeamId;

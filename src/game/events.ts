@@ -1,3 +1,4 @@
+import { addCounter, markSpent, matchBadges } from './badges';
 import { checkMiracle, markAce, revealMystery, zoneAfterMatch, zoneBonus } from './hidden2';
 import { academyBoost, analysisBoost, fanTick, scoutBoost } from './club';
 import { addXp, managerPerks, matchXp, registerDex } from './collection';
@@ -223,6 +224,7 @@ export function afterUserMatch(state: GameState, f: Fixture, m: LiveMatch, key: 
 
   // 図鑑・監督の経験値
   for (const a of registerDex(state)) unlock(state, a);
+  matchBadges(state, won, f.comp, side.usedPlayers);
   matchXp(state, gf, ga, f.comp);
 
   // 3. 因縁の相手
@@ -443,6 +445,7 @@ export function signGem(state: GameState): Result {
   if (squadOf(state, state.userTeamId).length >= MAX_SQUAD) return { ok: false, message: `登録は最大${MAX_SQUAD}人までです` };
   delete state.gemOffer;
   state.money = round2(state.money - o.fee);
+  markSpent(state, o.fee);
   p.teamId = state.userTeamId;
   p.salary = o.salary;
   p.contractYears = 4;
@@ -468,7 +471,10 @@ export function signGem(state: GameState): Result {
   });
   state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'transfer', text: `【獲得】${p.gem!.origin}から${p.name}を ${fmtMoney(o.fee)} で獲得` });
   unlock(state, 'gem');
-  if (tier === 'jackpot') unlock(state, 'gemJackpot');
+  if (tier === 'jackpot') {
+    unlock(state, 'gemJackpot');
+    addCounter(state, 'jackpot');
+  }
   repairLineup(state, teamById(state, state.userTeamId));
   return { ok: true, message: `${p.name}を獲得しました` };
 }

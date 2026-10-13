@@ -1,3 +1,4 @@
+import { markSpent } from './badges';
 import { managerPerks } from './collection';
 import { SODE_COLORS, SODE_NAME, SODE_PLAYERS, SODE_SHORT, SODE_SLOTS, type SodeSeed } from '../data/sodegaura';
 import { fairSalary, fmtMoney, round2 } from './economy';
@@ -235,6 +236,7 @@ export function negotiateSodePick(state: GameState): Result & { joined?: boolean
   while (used.has(p.number)) p.number = randInt(2, 49);
   state.players[p.id] = p;
   state.money = round2(state.money - fee);
+  markSpent(state, fee);
   state.flags = state.flags ?? {};
   state.flags[`sode-${s.name}`] = true;
   state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'transfer', text: `【加入】${SODE_NAME}の${p.name}が入団（移籍金 ${fmtMoney(fee)}）` });

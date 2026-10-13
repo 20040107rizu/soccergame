@@ -1,3 +1,4 @@
+import { markSpent } from './badges';
 import { fairSalary, fmtMoney, round2 } from './economy';
 import { repairLineup, squadOf } from './lineup';
 import { sendMail } from './mail';
@@ -263,6 +264,7 @@ export function acceptLegend(state: GameState): Result & { joined?: boolean } {
     return { ok: true, joined: false, message: `${p.name}は入団を断った…` };
   }
   state.money = round2(state.money - o.fee);
+  markSpent(state, o.fee);
   const squad = squadOf(state, state.userTeamId);
   const want = p.position === 'GK' ? 1 : 10;
   const holder = squad.find((x) => x.number === want);

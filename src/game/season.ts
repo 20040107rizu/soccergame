@@ -1,3 +1,4 @@
+import { seasonBadges } from './badges';
 import { CL_2026, EU_SEEDS, emptyStats, generateOriginalSquad, generatePlayer, PL_SEEDS, playerFromSeed, teamFromSeed } from './data';
 import { CL_STAGE_PRIZE, fairSalary, fmtMoney as fmtYen, leaguePrize, marketValue, MATCH_PRIZE, payroll, round2, wageCap } from './economy';
 import { advanceCL, buildCalendar, clLeagueFixtures, plFixtures, plTable, resolveTie, stageComplete, STAGE_LABEL, windowStatus } from './competitions';
@@ -554,6 +555,7 @@ export function endSeason(state: GameState): SeasonSummary {
 
   // 隠しシステム：実績・2世の予定・監督オファー（成績が確定した時点で）
   const userRow = tbl.find((r) => r.teamId === state.userTeamId);
+  seasonBadges(state, rank, userRow, oldRep);
   seasonEndAchievements(state, rank, userRow?.loss ?? 99, userCl);
   inheritAceTick(state);
   planHeirs(state, rank);

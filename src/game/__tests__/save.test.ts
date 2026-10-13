@@ -93,6 +93,7 @@ describe('セーブデータの引き継ぎ', () => {
     delete s.mysteryOffer;
     delete s.stadium;
     delete s.cosmetics;
+    delete s.counters;
     delete s.expedition;
     s.hallOfFame = [{ name: '昔の名選手', position: 'CF', nationality: '日本', apps: 120, goals: 50, peak: 85, season: 3, note: '名選手' }];
     store.set('masterleague.save.3', JSON.stringify(s));

@@ -1,3 +1,4 @@
+import { addCounter } from './badges';
 import { fmtMoney, round2 } from './economy';
 import { squadOf } from './lineup';
 import { sendMail } from './mail';
@@ -175,6 +176,7 @@ export function runCamp(state: GameState, playerId: string, kind: 'stat' | 'skil
   function pay() {
     state.money = round2(state.money - cost);
     p.campCount = (p.campCount ?? 0) + 1;
+    addCounter(state, 'camp');
     p.campDay = state.day;
     p.campSeason = state.season;
   }

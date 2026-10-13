@@ -17,7 +17,7 @@ export function MyBadges() {
       <h3 className="section-title">🎖 バッジ（{ids.length}）</h3>
       <div className="card">
         <BadgeWall ids={ids} mine={new Set(ids)} />
-        <p className="hint">バッジはフレンドランキングにも表示されます。レア度は ノーマル → レア → スーパーレア → レジェンド → ミシック。🍀 は運も必要な珍しいバッジ。</p>
+        <p className="hint">バッジはフレンドランキングにも表示されます。レア度は ノーマル → レア → スーパーレア → レジェンド → ミシック → ゴッド。🍀 は運も必要な珍しいバッジ。</p>
       </div>
     </>
   );

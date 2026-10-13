@@ -394,6 +394,8 @@ export interface GameState {
   mysteryOffer?: { playerId: string; fee: number; expires: number };
   /** クラブの施設（古いセーブには無い） */
   facilities?: { training?: number; scout?: number; academy?: number; medical?: number; science?: number; analysis?: number; building?: { kind: 'training' | 'scout' | 'academy' | 'medical' | 'science' | 'analysis'; done: number } };
+  /** 回数の記録（バッジ用。古いセーブには無い） */
+  counters?: Record<string, number>;
   /** 見た目・自慢用（古いセーブには無い） */
   cosmetics?: { kits?: string[]; kit?: string; statues?: string[]; museum?: boolean };
   /** スタジアム（古いセーブには無い） */

@@ -1,7 +1,11 @@
+import { SODE_PLAYERS } from '../data/sodegaura';
+import { LEGENDS } from './legend';
+import { squadOf } from './lineup';
+import { overall } from './stats';
 import type { GameState } from './types';
 
 /** バッジのレア度（右ほど珍しい） */
-export type BadgeTier = 'bronze' | 'silver' | 'gold' | 'legend' | 'mythic';
+export type BadgeTier = 'bronze' | 'silver' | 'gold' | 'legend' | 'mythic' | 'divine';
 
 export const TIER_LABEL: Record<BadgeTier, string> = {
   bronze: 'ノーマル',
@@ -9,8 +13,9 @@ export const TIER_LABEL: Record<BadgeTier, string> = {
   gold: 'スーパーレア',
   legend: 'レジェンド',
   mythic: 'ミシック',
+  divine: 'ゴッド',
 };
-const TIER_RANK: Record<BadgeTier, number> = { bronze: 0, silver: 1, gold: 2, legend: 3, mythic: 4 };
+const TIER_RANK: Record<BadgeTier, number> = { bronze: 0, silver: 1, gold: 2, legend: 3, mythic: 4, divine: 5 };
 
 export interface BadgeDef {
   id: string;
@@ -55,7 +60,47 @@ export const BADGES: BadgeDef[] = [
   { id: 'miracle', icon: '✨', name: '奇跡の夜', desc: '2点差以上をひっくり返して勝利', tier: 'silver', hidden: true },
   { id: 'awaken', icon: '🔥', name: '覚醒の目撃者', desc: '選手の覚醒を目撃', tier: 'silver', luck: true },
   { id: 'golden', icon: '🎓', name: '黄金世代', desc: 'ユースの黄金世代が昇格', tier: 'gold', luck: true },
+  // 試合・記録
+  { id: 'bigWin', icon: '⚽', name: '大量得点', desc: '5点差以上で勝利', tier: 'silver' },
+  { id: 'streak10', icon: '🔥', name: '連勝街道', desc: 'リーグ戦で10連勝', tier: 'gold' },
+  { id: 'wall', icon: '🧱', name: '鉄壁', desc: '1シーズンのリーグ失点を20以下に', tier: 'gold' },
+  { id: 'points100', icon: '💯', name: '勝ち点100', desc: '1シーズンで勝ち点100以上', tier: 'legend' },
+  { id: 'topScorer', icon: '🎯', name: '得点王を輩出', desc: '自分の選手がリーグ得点王に', tier: 'silver' },
+  { id: 'goals40', icon: '👟', name: '40ゴールの怪物', desc: '1人の選手が1シーズンで40得点', tier: 'gold' },
+  // クラブ運営
+  { id: 'billionaire', icon: '💰', name: '億万長者', desc: '資金が1兆円に到達', tier: 'gold' },
+  { id: 'miser', icon: '🪙', name: 'ケチの極み', desc: '移籍金を1円も使わずにリーグ優勝', tier: 'legend' },
+  { id: 'fullHouse', icon: '🏟', name: '満員御礼', desc: '最大まで拡張したスタジアムでリーグ優勝', tier: 'legend' },
+  { id: 'threeClubs', icon: '🔁', name: '名将のタクト', desc: '3つ以上のクラブでリーグ優勝', tier: 'legend' },
+  { id: 'underdog', icon: '⬆️', name: '下剋上', desc: '格★1〜2のクラブでリーグ優勝', tier: 'mythic' },
+  // 育成・選手
+  { id: 'homegrown90', icon: '🌱', name: '叩き上げ', desc: 'ユース出身の選手が総合値90に到達', tier: 'gold' },
+  { id: 'ironman', icon: '🧓', name: '鉄人', desc: '38歳以上の選手がリーグ戦に出場', tier: 'silver' },
+  { id: 'mentor', icon: '🤝', name: '師弟の絆', desc: '師弟関係が生まれた', tier: 'silver' },
+  { id: 'beloved', icon: '📣', name: '愛されクラブ', desc: '愛称の付いた選手が5人同時に在籍', tier: 'gold' },
+  { id: 'camp100', icon: '🏕', name: '鬼コーチ', desc: '特訓キャンプを100回', tier: 'silver' },
+  // 運・レア
+  { id: 'legend5', icon: '🌟', name: '伝説コレクター', desc: 'レジェンドを5人獲得', tier: 'mythic', luck: true, hidden: true },
+  { id: 'heir3', icon: '🧬', name: '血統書つき', desc: '2世を3人獲得', tier: 'legend', luck: true, hidden: true },
+  { id: 'sodeTop', icon: '⚡', name: '黄金の世代交代', desc: 'ひみつのチームの上位4人のうち誰かを獲得', tier: 'mythic', luck: true, hidden: true },
+  { id: 'jackpot3', icon: '🃏', name: '二度目の賭け', desc: '掘り出し物・謎の代理人の大当たりを合計3回', tier: 'legend', luck: true, hidden: true },
+  { id: 'zone', icon: '✨', name: 'ゾーン突入', desc: 'チームがゾーンに入った', tier: 'gold', luck: true, hidden: true },
+  // 図鑑・コンプリート
+  { id: 'dexLegendAll', icon: '👑', name: 'レジェンド全員集合', desc: '図鑑のレジェンドをすべてそろえた', tier: 'divine', luck: true, hidden: true },
+  { id: 'dexSodeAll', icon: '⚡', name: '袖ヶ浦コンプリート', desc: 'ひみつのチームの18人をすべて図鑑にそろえた', tier: 'divine', luck: true, hidden: true },
+  { id: 'badges30', icon: '🎖', name: 'バッジ30個', desc: 'バッジを30個集めた', tier: 'legend' },
 ];
+
+/** 条件を満たしたバッジを記録する（一度取れば消えない） */
+export function earnBadge(state: GameState, id: string) {
+  state.flags = state.flags ?? {};
+  state.flags[`bd-${id}`] = true;
+}
+
+export function addCounter(state: GameState, key: string, n = 1): number {
+  state.counters = { ...(state.counters ?? {}), [key]: (state.counters?.[key] ?? 0) + n };
+  return state.counters[key];
+}
 
 export function badgeDef(id: string): BadgeDef | undefined {
   return BADGES.find((b) => b.id === id);
@@ -81,11 +126,26 @@ export function computeBadges(state: GameState, level: number, dexCount: number)
   if ((['training', 'scout', 'academy', 'medical', 'science', 'analysis'] as const).every((k) => (f[k] ?? 0) >= 10)) out.push('facilities');
   if (state.cosmetics?.museum) out.push('museum');
   if (state.cosmetics?.kits?.includes('gold')) out.push('goldkit');
-  for (const id of ['invincible', 'double', 'legend', 'secondGen', 'legendSlayer', 'gemJackpot', 'mysteryJackpot', 'coachSlayer', 'aceHeir', 'miracle', 'awaken', 'golden']) if (ach[id]) out.push(id);
+  for (const id of ['invincible', 'double', 'legend', 'secondGen', 'legendSlayer', 'gemJackpot', 'mysteryJackpot', 'coachSlayer', 'aceHeir', 'miracle', 'awaken', 'golden', 'bigWin', 'mentor']) if (ach[id]) out.push(id);
   const flags = state.flags ?? {};
   if (Object.keys(flags).some((k) => k.startsWith('sode-'))) out.push('sode');
   if (flags.sodeWin) out.push('sodeSlayer');
-  return out;
+  for (const k of Object.keys(flags)) if (k.startsWith('bd-') && flags[k]) out.push(k.slice(3));
+  // 図鑑から分かるもの
+  const dex = Object.values(state.dex ?? {});
+  const cat = (c: string) => dex.filter((e) => e.cat === c).length;
+  if (cat('legend') >= 5) out.push('legend5');
+  if (cat('heir') >= 3) out.push('heir3');
+  if (cat('legend') >= LEGENDS.length) out.push('dexLegendAll');
+  if (cat('sode') >= SODE_PLAYERS.length) out.push('dexSodeAll');
+  if (SODE_PLAYERS.some((p) => p.efo >= 99 && flags[`sode-${p.name}`])) out.push('sodeTop');
+  if ((state.counters?.camp ?? 0) >= 100) out.push('camp100');
+  if ((state.counters?.jackpot ?? 0) >= 3) out.push('jackpot3');
+  const winClubs = new Set(hist.filter((h) => h.rank === 1 && h.club).map((h) => h.club));
+  if (winClubs.size >= 3) out.push('threeClubs');
+  const uniq = [...new Set(out)];
+  if (uniq.length >= 30) uniq.push('badges30');
+  return uniq;
 }
 
 /** 並べる順（珍しい順）。同じ系統は一番上だけ */
@@ -98,4 +158,41 @@ export function sortBadges(ids: string[]): BadgeDef[] {
     else if (!best.has(b.group) || TIER_RANK[b.tier] > TIER_RANK[best.get(b.group)!.tier]) best.set(b.group, b);
   }
   return [...solo, ...best.values()].sort((a, b) => TIER_RANK[b.tier] - TIER_RANK[a.tier] || Number(!!b.luck) - Number(!!a.luck));
+}
+
+/** シーズン終了時の記録系バッジ */
+export function seasonBadges(state: GameState, rank: number, row: { ga: number; points: number } | undefined, startRep: number) {
+  if (row && row.ga <= 20) earnBadge(state, 'wall');
+  if (row && row.points >= 100) earnBadge(state, 'points100');
+  const players = Object.values(state.players);
+  const top = players.reduce((a, p) => (p.season.goals > a ? p.season.goals : a), 0);
+  const mine = squadOf(state, state.userTeamId);
+  if (top > 0 && mine.some((p) => p.season.goals === top)) earnBadge(state, 'topScorer');
+  if (mine.some((p) => p.season.goals + p.season.clGoals >= 40)) earnBadge(state, 'goals40');
+  if (rank === 1) {
+    if (!state.flags?.[`spent-${state.season}`]) earnBadge(state, 'miser');
+    if ((state.stadium?.level ?? 0) >= 10) earnBadge(state, 'fullHouse');
+    // ★1〜2（RepStars と同じ基準）
+    if (Math.max(1, Math.min(5, Math.round((startRep - 40) / 12))) <= 2) earnBadge(state, 'underdog');
+  }
+}
+
+/** 試合後の記録系バッジ */
+export function matchBadges(state: GameState, won: boolean, comp: string, used: string[]) {
+  if (comp === 'PL') {
+    const n = won ? addCounter(state, 'plStreak') : ((state.counters = { ...(state.counters ?? {}), plStreak: 0 }), 0);
+    if (n >= 10) earnBadge(state, 'streak10');
+  }
+  const mine = squadOf(state, state.userTeamId);
+  if (comp === 'PL' && used.some((id) => (state.players[id]?.age ?? 0) >= 38)) earnBadge(state, 'ironman');
+  if (mine.filter((p) => p.nickname).length >= 5) earnBadge(state, 'beloved');
+  if (mine.some((p) => p.academy && overall(p) >= 90)) earnBadge(state, 'homegrown90');
+  if (state.money >= 6250) earnBadge(state, 'billionaire');
+}
+
+/** 移籍金を払った（ケチの極みの判定用） */
+export function markSpent(state: GameState, fee: number) {
+  if (fee <= 0) return;
+  state.flags = state.flags ?? {};
+  state.flags[`spent-${state.season}`] = true;
 }

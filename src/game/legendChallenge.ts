@@ -1,3 +1,4 @@
+import { markSpent } from './badges';
 import { managerPerks } from './collection';
 import { fmtMoney, round2 } from './economy';
 import { unlock } from './events';
@@ -192,6 +193,7 @@ export function negotiateLegendPick(state: GameState, seedId: string): Result & 
   while (used.has(p.number)) p.number = randInt(2, 49);
   state.players[p.id] = p;
   state.money = round2(state.money - fee);
+  markSpent(state, fee);
   state.flags = state.flags ?? {};
   state.flags[`legend-${s.id}`] = true;
   state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'transfer', text: `【伝説加入】若き日の${p.name}が入団（移籍金 ${fmtMoney(fee)}）` });
