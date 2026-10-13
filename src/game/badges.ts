@@ -75,6 +75,7 @@ export const BADGES: BadgeDef[] = [
   { id: 'underdog', icon: '⬆️', name: '下剋上', desc: '格★1〜2のクラブでリーグ優勝', tier: 'mythic' },
   // 育成・選手
   { id: 'homegrown90', icon: '🌱', name: '叩き上げ', desc: 'ユース出身の選手が総合値90に到達', tier: 'gold' },
+  { id: 'raised', icon: '🌳', name: '育ての親', desc: '15歳から育てた選手が25歳までに総合値90に到達', tier: 'legend' },
   { id: 'ironman', icon: '🧓', name: '鉄人', desc: '38歳以上の選手がリーグ戦に出場', tier: 'silver' },
   { id: 'mentor', icon: '🤝', name: '師弟の絆', desc: '師弟関係が生まれた', tier: 'silver' },
   { id: 'beloved', icon: '📣', name: '愛されクラブ', desc: '愛称の付いた選手が5人同時に在籍', tier: 'gold' },
@@ -187,6 +188,7 @@ export function matchBadges(state: GameState, won: boolean, comp: string, used: 
   if (comp === 'PL' && used.some((id) => (state.players[id]?.age ?? 0) >= 38)) earnBadge(state, 'ironman');
   if (mine.filter((p) => p.nickname).length >= 5) earnBadge(state, 'beloved');
   if (mine.some((p) => p.academy && overall(p) >= 90)) earnBadge(state, 'homegrown90');
+  if (mine.some((p) => p.youth && p.age <= 25 && overall(p) >= 90)) earnBadge(state, 'raised');
   if (state.money >= 6250) earnBadge(state, 'billionaire');
 }
 

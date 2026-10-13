@@ -1,3 +1,4 @@
+import { GrowthAlbum } from '../components/GrowthAlbum';
 import { useState } from 'react';
 import { Heatmap } from '../components/Heatmap';
 import { COND_STYLE, CondArrow, Ovr, PlayerIcon, PosTag, Seg, Sheet, statColor } from '../components/ui';
@@ -213,6 +214,7 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
               </b>
             </div>
           </div>
+          {p.youth && <GrowthAlbum p={p} />}
         </>
       )}
 
@@ -344,7 +346,7 @@ function PlayerBadges({ id }: { id: string }) {
   const ex = p.exTeamId ? state.teams.find((t) => t.id === p.exTeamId) : undefined;
   const items = [
     p.awakened && '⚡ 覚醒',
-    p.academy && '🎓 ユース出身',
+    p.academy && (p.youth ? `🌱 ユース育ち（${p.youth.hist[0]?.[0] ?? 15}歳で入団）` : '🎓 ユース出身'),
     p.gem?.revealed && `💎 ${p.gem.origin}出身`,
     mentor && `🤝 師匠：${mentor.name}`,
     pupils.length > 0 && `🤝 弟子：${pupils.map((x) => x.name).join('、')}`,

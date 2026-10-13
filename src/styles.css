@@ -3249,3 +3249,100 @@ button.friend-row {
   gap: 8px;
   margin-bottom: 8px;
 }
+
+/* ---------- ユースチーム・成長アルバム ---------- */
+.album {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px 0;
+}
+.album-chart {
+  width: 100%;
+  height: auto;
+  background: var(--card2);
+  border-radius: 10px;
+}
+.album-grid {
+  stroke: rgba(127, 127, 127, 0.25);
+  stroke-width: 0.6;
+}
+.album-90 {
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+.album-25 {
+  stroke: rgba(230, 180, 34, 0.5);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+.album-label {
+  font-size: 9px;
+  fill: currentColor;
+  opacity: 0.6;
+}
+.album-line {
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+}
+.album-dot {
+  fill: var(--green);
+}
+.album-dot.best {
+  fill: var(--accent);
+}
+.youth-kid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.youth-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.youth-head .grow {
+  flex: 1;
+  min-width: 0;
+}
+.youth-hint {
+  font-size: 13px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--green);
+  background: rgba(127, 127, 127, 0.08);
+  border-radius: 6px;
+}
+.youth-hint small {
+  display: block;
+  opacity: 0.65;
+  margin-bottom: 2px;
+}
+.youth-groups {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px 10px;
+  font-size: 12px;
+}
+.youth-groups span {
+  display: flex;
+  justify-content: space-between;
+}
+.youth-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.youth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.youth-actions .btn {
+  flex: 1 1 30%;
+}
+.youth-kid select {
+  width: 100%;
+}

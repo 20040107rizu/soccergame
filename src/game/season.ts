@@ -7,6 +7,7 @@ import { legendGrowth, legendTick, spawnHeir } from './legend';
 import { legendChallengeTick } from './legendChallenge';
 import { sodeChallengeTick, sodeGrowth } from './sodegaura';
 import { expeditionTick, facilityTick, gateIncome, medicalBoost, scienceBoost, shiftClubDays, stadiumTick, trainingBoost } from './club';
+import { ensureYouth, youthDebut, youthSeasonEnd, youthSeasonGrowth, youthTick } from './youth';
 import { coachChallengeTick, inheritAceTick, markAce, mysteryTick } from './hidden2';
 import { afterUserMatch, dailyEvents, heirsDue, spawnGem, jobOfferAtSeasonEnd, listedPlayersTick, onRetire, planHeirs, promoteAcademy, seasonEndAchievements } from './events';
 import { mailBestEleven, mailCompetition, mailContractAdvice, mailGrowth, mailInjury, mailPlayerFeelings, mailRedCard, mailScoutAdvice, mailTacticAdvice, mailWindow, sendMail, tryAptitudeGain, tryNewSkill } from './mail';
@@ -127,6 +128,7 @@ export function newGame(managerName: string, userTeamId: string, original?: Orig
   });
   mailWindow(state, true);
   mailScoutAdvice(state);
+  ensureYouth(state);
   return state;
 }
 
@@ -243,6 +245,7 @@ export function playDay(state: GameState, userMatch?: LiveMatch): DayReport {
   mysteryTick(state);
   dailyEvents(state, day);
   listedPlayersTick(state);
+  youthTick(state);
 
   state.day++;
   state.updatedAt = Date.now();
@@ -378,6 +381,7 @@ function applyMatch(state: GameState, f: Fixture, m: LiveMatch) {
           mailGrowth(state, p, before, overall(p), false);
         }
         if (p.age <= 26 && r >= 8 && rand() < 0.05) tryNewSkill(state, p);
+        if (p.youth && !p.youth.debut) youthDebut(state, p, r);
       }
       const idx = side.lineup.indexOf(id);
       if (idx >= 0 && roles[idx]) tryAptitudeGain(state, p, roles[idx]);
@@ -568,7 +572,9 @@ export function endSeason(state: GameState): SeasonSummary {
     const before = overall(p);
     const curve = CURVE[p.growth];
     p.age++;
-    if (p.age <= curve.growUntil && before < p.potential) {
+    if (p.youth && p.age <= curve.growUntil) {
+      youthSeasonGrowth(p, p.season.apps + p.season.clApps);
+    } else if (p.age <= curve.growUntil && before < p.potential) {
       const apps = p.season.apps + p.season.clApps;
       const playBoost = clamp(apps / 20, 0.3, 1.3);
       const steps = Math.round((p.potential - before) * 0.4 * playBoost + rand() * 2);
@@ -579,6 +585,7 @@ export function endSeason(state: GameState): SeasonSummary {
       for (const k of ['speed', 'acceleration', 'stamina'] as StatKey[]) p.stats[k] = clamp(p.stats[k] - randInt(0, 2), 35, 99);
     }
     const after = overall(p);
+    if (p.youth) p.youth.hist.push([p.age, after]);
     if (p.teamId === state.userTeamId && after !== before) summary.grown.push({ name: p.name, diff: after - before });
     p.season = emptyStats();
     p.injury = 0;
@@ -615,7 +622,7 @@ export function endSeason(state: GameState): SeasonSummary {
     const p = generatePlayer({ position: pick(FA_POSITIONS), level: young ? 55 + randInt(0, 12) : 60 + randInt(0, 14), age: young ? randInt(17, 19) : randInt(23, 31), teamId: null });
     state.players[p.id] = p;
   }
-  summary.promoted = [...promoteAcademy(state), ...promoteYouth(state)];
+  summary.promoted = [...promoteAcademy(state), ...youthSeasonEnd(state), ...promoteYouth(state)];
   aiFillSquads(state);
 
   state.history.push({ season: state.season, rank, champion, clWinner, userCl, club: teamById(state, state.userTeamId).name });

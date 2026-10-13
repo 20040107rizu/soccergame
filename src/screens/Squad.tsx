@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { LineupBoard } from '../components/LineupBoard';
 import { PrematchOpponent } from './Opponent';
 import { HalftimePlan } from './HalftimePlan';
+import { Youth } from './Youth';
 import { Crest, Seg, SpiritGauge } from '../components/ui';
 import { applyFormation, available, moveInTeam, moveSlot, repairLineup, setAutoLineup, spiritPreview, squadOf } from '../game/lineup';
 import { FORMATION_LIST } from '../game/positions';
@@ -29,6 +30,8 @@ export function Squad(props: { mode?: 'squad' | 'prematch'; onKickoff?: () => vo
   const fx = prematch ? userFixture(state) : undefined;
   const opp = fx ? teamById(state, fx.home === team.id ? fx.away : fx.home) : undefined;
   const [scout, setScout] = useState(false);
+  const [youth, setYouth] = useState(false);
+  const kids = Object.keys(state.youth?.kids ?? {}).length;
   const unavailable = team.lineup.filter((id) => state.players[id] && !available(state.players[id]));
 
   return (
@@ -51,9 +54,14 @@ export function Squad(props: { mode?: 'squad' | 'prematch'; onKickoff?: () => vo
       ) : (
         <div className="row between">
           <h2 className="screen-title">チーム編成</h2>
-          <button className="btn small" onClick={() => update((d) => setAutoLineup(d, teamById(d, d.userTeamId)))}>
-            おまかせ
-          </button>
+          <div className="row gap">
+            <button className="btn small" onClick={() => setYouth(true)}>
+              🌱 ユース{kids > 0 ? `（${kids}）` : ''}
+            </button>
+            <button className="btn small" onClick={() => update((d) => setAutoLineup(d, teamById(d, d.userTeamId)))}>
+              おまかせ
+            </button>
+          </div>
         </div>
       )}
 
@@ -108,6 +116,7 @@ export function Squad(props: { mode?: 'squad' | 'prematch'; onKickoff?: () => vo
 
       <HalftimePlan />
 
+      {youth && <Youth onClose={() => setYouth(false)} />}
       {scout && <PrematchOpponent state={state} onClose={() => setScout(false)} />}
 
       {prematch && (

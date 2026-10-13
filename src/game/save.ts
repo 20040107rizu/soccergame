@@ -1,6 +1,7 @@
 import type { GameState } from './types';
 import { ensureHeight } from './height';
 import { backfillXp } from './collection';
+import { ensureYouth } from './youth';
 
 /**
  * セーブデータ。スロット制で端末内（localStorage）に保存。
@@ -104,6 +105,8 @@ function migrate(s: GameState): GameState {
   for (const p of Object.values(s.players)) ensureHeight(p);
   // v0.17：監督レベルの実装前のセーブは、これまでの記録から経験値を計算する
   backfillXp(s);
+  // v0.20：ユースチームを追加（古いセーブには最初の子たちを入団させる）
+  ensureYouth(s);
   // ここから下に、将来のバージョンごとの変換を追加する
   // if (s.version < 4) { ... }
   s.version = SAVE_VERSION;

@@ -653,7 +653,8 @@ export function goldenPremonition(state: GameState) {
 export function promoteAcademy(state: GameState): string[] {
   const team = teamById(state, state.userTeamId);
   const golden = !!state.flags?.[`golden-${state.season}`];
-  const n = golden ? 4 : 1;
+  // ふだんの昇格はユースチーム（youth.ts）から。黄金世代の年だけ有望株がまとめて上がってくる
+  const n = golden ? 4 : 0;
   const names: string[] = [];
   for (let i = 0; i < n; i++) {
     if (squadOf(state, team.id).length >= MAX_SQUAD) break;

@@ -15,6 +15,7 @@ import type { Position } from '../game/types';
 import { SODE_NAME } from '../data/sodegaura';
 import { declineSodeChallenge, negotiateSodePick, sodePickSeed, sodeTeamSnapshot, sodeTerms } from '../game/sodegaura';
 import { SodeReveal } from '../components/SodeReveal';
+import { answerSlump, answerYouthOffer } from '../game/youth';
 
 /** メール内で選択するイベント（掘り出し物・わがまま・監督オファー） */
 export function EventPanel({ mail, onDone }: { mail: Mail; onDone: () => void }) {
@@ -28,6 +29,8 @@ export function EventPanel({ mail, onDone }: { mail: Mail; onDone: () => void })
   if (mail.action === 'coachMatch') return <CoachMatchPanel onDone={onDone} />;
   if (mail.action === 'coachPick') return <CoachPickPanel />;
   if (mail.action === 'mystery') return <MysteryPanel playerId={mail.playerId!} onDone={onDone} />;
+  if (mail.action === 'youthSlump') return <YouthSlumpPanel kidId={mail.youthId!} />;
+  if (mail.action === 'youthOffer') return <YouthOfferPanel kidId={mail.youthId!} />;
   return null;
 }
 
@@ -471,6 +474,63 @@ function MysteryPanel({ playerId, onDone }: { playerId: string; onDone: () => vo
           }}
         >
           話に乗る（{fmtMoney(o.fee)}）
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** ユースの伸び悩み：声をかける／見守る */
+function YouthSlumpPanel({ kidId }: { kidId: string }) {
+  const { state, update } = useGame();
+  const [result, setResult] = useState<string | null>(null);
+  const kid = state.youth?.kids[kidId];
+  const s = kid?.youth?.slump;
+  if (result) return <Done text={result} />;
+  if (!kid || !s || s.choice) return <p className="hint">この話はもう終わっています。</p>;
+  const answer = (c: 'talk' | 'watch') => setResult(update((d) => answerSlump(d, kidId, c)).message ?? '');
+  return (
+    <div className="event-card">
+      <div className="event-title">😣 {kid.name}（{kid.age}歳）への接し方</div>
+      <div className="row gap">
+        <button className="btn grow" onClick={() => answer('talk')}>
+          声をかける
+        </button>
+        <button className="btn grow" onClick={() => answer('watch')}>
+          見守る
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** ビッグクラブからのユースの引き抜き */
+function YouthOfferPanel({ kidId }: { kidId: string }) {
+  const { state, update } = useGame();
+  const [result, setResult] = useState<string | null>(null);
+  const kid = state.youth?.kids[kidId];
+  const o = kid?.youth?.offer;
+  if (result) return <Done text={result} />;
+  if (!kid || !o || o.expires < state.day) return <p className="hint">この話はもう終わっています。</p>;
+  const club = state.teams.find((t) => t.id === o.club);
+  const answer = (ok: boolean) => {
+    if (ok && !confirm(`${kid.name}を${club?.name}に送り出しますか？（もう戻ってきません）`)) return;
+    setResult(update((d) => answerYouthOffer(d, kidId, ok)).message ?? '');
+  };
+  return (
+    <div className="event-card">
+      <div className="event-title">
+        📨 {kid.name}（{kid.age}歳・総合値{overall(kid)}）の引き抜き <small>回答期限 あと{Math.max(0, o.expires - state.day)}日</small>
+      </div>
+      <p className="small">
+        {club?.name} · 補償金 <b>{fmtMoney(o.fee)}</b>
+      </p>
+      <div className="row gap">
+        <button className="btn ghost grow" onClick={() => answer(false)}>
+          断ってクラブに残す
+        </button>
+        <button className="btn primary grow" onClick={() => answer(true)}>
+          売る
         </button>
       </div>
     </div>

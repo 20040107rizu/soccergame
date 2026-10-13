@@ -14,7 +14,7 @@ export type FacilityKind = 'training' | 'scout' | 'academy' | 'medical' | 'scien
 export const FACILITIES: { id: FacilityKind; icon: string; label: string; effect: string }[] = [
   { id: 'training', icon: '🏋️', label: '練習場', effect: '選手の成長が速くなる' },
   { id: 'scout', icon: '🔭', label: 'スカウト網', effect: '掘り出し物の情報が届きやすくなる' },
-  { id: 'academy', icon: '🎓', label: 'ユースアカデミー', effect: '昇格してくるユースの質が上がる' },
+  { id: 'academy', icon: '🎓', label: 'ユースアカデミー', effect: 'ユースに入ってくる子の人数と質が上がる' },
   { id: 'medical', icon: '🏥', label: '医療センター', effect: 'ケガが早く治る' },
   { id: 'science', icon: '🧪', label: 'スポーツ科学', effect: '選手の調子が安定し、好調が出やすくなる' },
   { id: 'analysis', icon: '📊', label: '分析室', effect: '相手を分析して、試合で少し有利に戦える' },

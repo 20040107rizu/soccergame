@@ -144,6 +144,38 @@ export interface Player {
   listed?: boolean;
   /** 無名の掘り出し物 */
   gem?: { origin: string; tier: GemTier; revealed?: boolean };
+  /** 自クラブのユースチームで育った（古いセーブには無い） */
+  youth?: YouthInfo;
+}
+
+export type YouthTalent = 'genius' | 'hard' | 'late' | 'grand' | 'normal';
+export type YouthFocus = 'auto' | 'shoot' | 'pass' | 'dribble' | 'defense' | 'physical' | 'gk';
+
+export interface YouthInfo {
+  talent: YouthTalent;
+  focus: YouthFocus;
+  /** 入団したシーズン */
+  join: number;
+  /** 年齢ごとの総合値（成長アルバム） */
+  hist: [number, number][];
+  /** 代理人の見立て */
+  hints: { season: number; text: string; paid?: boolean }[];
+  /** 代理人に相談したシーズン */
+  consulted?: number;
+  /** 師匠（トップチームの選手 ID） */
+  mentor?: string;
+  /** 伸び悩み */
+  slump?: { until: number; choice?: 'talk' | 'watch' };
+  /** 成長期が来た */
+  spurt?: boolean;
+  /** ビッグクラブからの引き抜き */
+  offer?: { club: string; fee: number; expires: number };
+  /** トップチームでデビュー済み */
+  debut?: boolean;
+  /** 成長の端数 */
+  acc?: number;
+  /** 個人差 */
+  var?: number;
 }
 
 export type GemTier = 'jackpot' | 'normal' | 'bust';
@@ -341,7 +373,9 @@ export interface Mail {
   /** レジェンド選手の極秘情報 */
   legend?: boolean;
   /** メール内で選択する操作 */
-  action?: 'gem' | 'demand' | 'job' | 'legendMatch' | 'legendPick' | 'sodeMatch' | 'sodePick' | 'coachMatch' | 'coachPick' | 'mystery';
+  action?: 'gem' | 'demand' | 'job' | 'legendMatch' | 'legendPick' | 'sodeMatch' | 'sodePick' | 'coachMatch' | 'coachPick' | 'mystery' | 'youthSlump' | 'youthOffer';
+  /** ユースの選手 */
+  youthId?: string;
   /** ひみつのチーム関係 */
   sode?: boolean;
 }
@@ -408,6 +442,8 @@ export interface GameState {
   hofXI?: (string | null)[];
   /** 師弟関係の進み具合（ベテランID|若手ID → 一緒に先発した試合数） */
   mentorProgress?: Record<string, number>;
+  /** ユースチーム（トップチームの登録人数には含まない。古いセーブには無い） */
+  youth?: { kids: Record<string, Player> };
   /** 〇〇2世の予定 */
   heirs?: { seedId: string; season: number; done?: boolean }[];
   history: { season: number; rank: number; champion: string; clWinner?: string; userCl?: string; club?: string }[];

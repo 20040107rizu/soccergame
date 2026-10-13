@@ -123,6 +123,19 @@ describe('セーブデータの引き継ぎ', () => {
     expect(g.history[0].rank).toBe(4);
   });
 
+  it('ユースチーム実装前（v0.19）のセーブを読むと、ユースに最初の子たちが入る', () => {
+    const s = newGame('テスト', 'ars');
+    delete s.youth;
+    for (const p of Object.values(s.players)) delete p.youth;
+    const before = Object.keys(s.players).length;
+    store.set('masterleague.save.3', JSON.stringify(s));
+    const g = loadGame(3)!;
+    expect(Object.keys(g.youth!.kids).length).toBe(3);
+    // トップチーム・選手データはそのまま
+    expect(Object.keys(g.players).length).toBe(before);
+    expect(g.userTeamId).toBe('ars');
+  });
+
   it('本体が壊れていてもバックアップから復旧する', () => {
     const s = newGame('テスト', 'liv');
     saveGame(1, s);
