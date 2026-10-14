@@ -103,20 +103,27 @@ export function spawnSodeChallenge(state: GameState) {
   });
 }
 
-/** 次に興味を示す選手。一度出た選手は、まだ出ていない選手が全員出るまで出てこない（加入済みの選手は二度と出ない） */
+/** この周回で手に入れた選手か（最初の周回は、これまでに加入した選手） */
+function gotThisRound(state: GameState, name: string): boolean {
+  const f = state.flags ?? {};
+  return f[`sodeGot-${name}`] ?? (!state.counters?.sodeRound && !!f[`sode-${name}`]);
+}
+
+/**
+ * 次に興味を示す選手。手に入れた選手は出てこない（断ったり交渉に失敗した選手はまた出る）。
+ * 全員を一度でも手に入れたら、また全員が対象に戻る。
+ */
 export function nextSodePick(state: GameState): number | null {
   const flags = (state.flags = state.flags ?? {});
-  const free = SODE_PLAYERS.map((_, i) => i).filter((i) => !flags[`sode-${SODE_PLAYERS[i].name}`]);
-  if (!free.length) return null;
-  let pool = free.filter((i) => !flags[`sodeSeen-${SODE_PLAYERS[i].name}`]);
+  const all = SODE_PLAYERS.map((_, i) => i);
+  let pool = all.filter((i) => !gotThisRound(state, SODE_PLAYERS[i].name));
   if (!pool.length) {
-    // 一巡したら最初から
-    for (const i of free) delete flags[`sodeSeen-${SODE_PLAYERS[i].name}`];
-    pool = free;
+    // 全員を手に入れた：新しい周回
+    state.counters = { ...(state.counters ?? {}), sodeRound: (state.counters?.sodeRound ?? 0) + 1 };
+    for (const k of Object.keys(flags)) if (k.startsWith('sodeGot-')) delete flags[k];
+    pool = all;
   }
-  const pick = pool[randInt(0, pool.length - 1)];
-  flags[`sodeSeen-${SODE_PLAYERS[pick].name}`] = true;
-  return pick;
+  return pool[randInt(0, pool.length - 1)];
 }
 
 export function finishSodeChallenge(state: GameState, gf: number, ga: number) {
@@ -255,6 +262,7 @@ export function negotiateSodePick(state: GameState): Result & { joined?: boolean
   markSpent(state, fee);
   state.flags = state.flags ?? {};
   state.flags[`sode-${s.name}`] = true;
+  state.flags[`sodeGot-${s.name}`] = true;
   state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'transfer', text: `【加入】${SODE_NAME}の${p.name}が入団（移籍金 ${fmtMoney(fee)}）` });
   sendMail(state, {
     from: 'agent',

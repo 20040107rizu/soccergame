@@ -191,19 +191,23 @@ describe('ひみつのチーム戦', () => {
     expect(games).toBeGreaterThan(10);
   });
 
-  it('一度出た選手は、全員が一巡するまで出てこない（加入済みは二度と出ない）', async () => {
+  it('手に入れた選手は出てこない。全員を手に入れたら、また全員が対象に戻る', async () => {
     const sc = await import('../sodegaura');
     const { SODE_PLAYERS } = await import('../../data/sodegaura');
     const s = newGame('テスト', 'ars');
+    // 以前のセーブで加入した選手は、最初の周回では出てこない
     s.flags = { [`sode-${SODE_PLAYERS[0].name}`]: true };
-    const n = SODE_PLAYERS.length - 1;
-    const first = Array.from({ length: n }, () => sc.nextSodePick(s)!);
-    expect(new Set(first).size).toBe(n);
-    expect(first).not.toContain(0);
-    // 一巡したら、また全員から
-    const again = sc.nextSodePick(s)!;
-    expect(again).not.toBe(0);
-    expect(Object.keys(s.flags!).filter((k) => k.startsWith('sodeSeen-')).length).toBe(1);
+    for (let i = 0; i < 50; i++) expect(sc.nextSodePick(s)).not.toBe(0);
+    // 断った選手は何度でも出てくる（記録が増えない）
+    expect(Object.keys(s.flags!).filter((k) => k.startsWith('sodeGot-')).length).toBe(0);
+    // 1人を残して全員手に入れると、その1人しか出ない
+    for (const p of SODE_PLAYERS.slice(1, -1)) s.flags![`sodeGot-${p.name}`] = true;
+    for (let i = 0; i < 20; i++) expect(sc.nextSodePick(s)).toBe(SODE_PLAYERS.length - 1);
+    // 全員手に入れたら、また全員が対象
+    s.flags![`sodeGot-${SODE_PLAYERS[SODE_PLAYERS.length - 1].name}`] = true;
+    const picks = new Set(Array.from({ length: 300 }, () => sc.nextSodePick(s)));
+    expect(picks.size).toBe(SODE_PLAYERS.length);
+    expect(s.counters?.sodeRound).toBe(1);
   });
 
   it('2回に1回は、本来の能力より上まで伸びる素質を持つ', async () => {
