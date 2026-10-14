@@ -94,12 +94,12 @@ describe('お金の使い道', async () => {
     expect(s.teams.find((t) => t.id === 'bou')!.rep).toBe(rep + 1);
   });
 
-  it('施設は Lv10 まで、新しい施設もある', () => {
+  it('施設は Lv20 まで、新しい施設もある', () => {
     const s = newGame('テスト', 'ars');
     s.facilities = { medical: 9 };
     expect(club.upgradeCost(s, 'medical')?.cost).toBe(650);
     s.facilities = { medical: 10 };
-    expect(club.upgradeCost(s, 'medical')).toBeNull();
+    expect(club.upgradeCost(s, 'medical')?.cost).toBe(1000);
     expect(club.medicalBoost(s)).toBeGreaterThan(0.5);
   });
 
@@ -221,5 +221,50 @@ describe('まとめて操作', async () => {
     expect(r.done.length + r.skipped.length).toBe(plan.length);
     expect(squad.slice(0, 4).every((p) => p.contractYears >= 1)).toBe(true);
     expect(r.done.length).toBeGreaterThan(0);
+  });
+});
+
+describe('施設Lv.20・クラブの全景', async () => {
+  const club = await import('../club');
+  const { computeBadges } = await import('../badges');
+  it('Lv.11からはとんでもなく高く、効果はLv.20でLv.10の1.5倍', () => {
+    const s = newGame('テスト', 'ars');
+    s.facilities = { training: 10, medical: 20 };
+    expect(club.upgradeCost(s, 'training')!.cost).toBe(1000);
+    expect(club.upgradeCost(s, 'medical')).toBeNull();
+    expect(club.effectLevel(10)).toBe(10);
+    expect(club.effectLevel(15)).toBe(12.5);
+    expect(club.effectLevel(20)).toBe(15);
+    expect(club.medicalBoost(s)).toBeCloseTo(10 * 0.07 * 1.5);
+    s.stadium = { level: 10 };
+    expect(club.stadiumCost(s)!.cost).toBe(1500);
+    s.stadium = { level: 20 };
+    expect(club.stadiumCost(s)).toBeNull();
+    expect(club.gateIncome(s)).toBeCloseTo(10 * 0.35 * 1.5);
+  });
+
+  it('全部Lv.20で黄金郷・天空の聖地', () => {
+    const s = newGame('テスト', 'ars');
+    s.facilities = { training: 20, scout: 20, academy: 20, medical: 20, science: 20, analysis: 20 };
+    s.stadium = { level: 20 };
+    const b = computeBadges(s, 1, 0);
+    expect(b).toContain('facilities20');
+    expect(b).toContain('facilities');
+    expect(b).toContain('stadium-20');
+  });
+
+  it('全景の情報に施設・博物館・銅像（名前と背番号）が入る', () => {
+    const s = newGame('テスト', 'ars');
+    s.facilities = { training: 12, analysis: 3 };
+    s.stadium = { level: 4, name: '夢の劇場' };
+    s.hallOfFame = [{ name: 'ティエリ・アンリ', position: 'CF', nationality: 'フランス', apps: 200, goals: 150, peak: 92, season: 5, note: '', number: 14 }];
+    s.cosmetics = { statues: ['ティエリ・アンリ@5'], museum: true };
+    const snap = club.sceneSnap(s);
+    const d = club.sceneData(JSON.parse(JSON.stringify(snap)), '夢の劇場', ['#f00', '#fff']);
+    expect(d.stadium).toBe(4);
+    expect(d.fac.training).toBe(12);
+    expect(d.fac.analysis).toBe(3);
+    expect(d.museum).toBe(true);
+    expect(d.statues).toEqual([{ name: 'ティエリ・アンリ', number: 14 }]);
   });
 });

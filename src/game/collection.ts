@@ -6,6 +6,7 @@ import { sendMail } from './mail';
 import { teamById } from './season';
 import { overall } from './stats';
 import type { GameState, Player, Position } from './types';
+import { sceneSnap, type SceneSnap } from './club';
 
 /* ======================= 選手図鑑 ======================= */
 
@@ -279,6 +280,8 @@ export interface ManagerProfile {
   colors?: [string, string];
   stadium?: [number, string];
   statues?: number;
+  /** クラブの全景（古い版のプロフィールには無い） */
+  scene?: SceneSnap;
 }
 
 export function managerProfile(state: GameState): ManagerProfile {
@@ -302,5 +305,6 @@ export function managerProfile(state: GameState): ManagerProfile {
     colors: [teamById(state, state.userTeamId).color, teamById(state, state.userTeamId).color2],
     stadium: [state.stadium?.level ?? 0, state.stadium?.name ?? ''],
     statues: state.cosmetics?.statues?.length ?? 0,
+    scene: sceneSnap(state),
   };
 }

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { backupAll, loadGame, saveGame } from '../save';
 import { newGame } from '../season';
+import { sceneSnap, startUpgrade } from '../club';
 
 const store = new Map<string, string>();
 beforeEach(() => {
@@ -134,6 +135,20 @@ describe('セーブデータの引き継ぎ', () => {
     // トップチーム・選手データはそのまま
     expect(Object.keys(g.players).length).toBe(before);
     expect(g.userTeamId).toBe('ars');
+  });
+
+  it('施設Lv.10が上限だった頃（v0.20）のセーブも読め、Lv.11に強化できる', () => {
+    const s = newGame('テスト', 'ars');
+    s.facilities = { training: 10, scout: 10, academy: 10, medical: 10, science: 10, analysis: 10 };
+    s.stadium = { level: 10, name: '夢の劇場' };
+    s.cosmetics = { statues: ['昔の名選手@3'], museum: true };
+    s.money = 5000;
+    store.set('masterleague.save.3', JSON.stringify(s));
+    const g = loadGame(3)!;
+    expect(g.facilities?.training).toBe(10);
+    expect(g.stadium?.name).toBe('夢の劇場');
+    expect(startUpgrade(g, 'training').ok).toBe(true);
+    expect(sceneSnap(g).st[0][0]).toBe('昔の名選手');
   });
 
   it('本体が壊れていてもバックアップから復旧する', () => {

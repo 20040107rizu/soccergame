@@ -7,6 +7,46 @@ import { autoSkills, OVR_WEIGHTS, overall, SKILLS } from './stats';
 import type { Result } from './transfer';
 import type { GameState, Player, StatKey } from './types';
 
+/* ======================= クラブの全景 ======================= */
+
+export interface ClubSceneData {
+  stadium: number;
+  stadiumName?: string;
+  fac: Record<FacilityKind, number>;
+  statues: { name: string; number?: number }[];
+  museum?: boolean;
+  colors: [string, string];
+}
+
+/** フレンドに送る全景の情報 [スタジアム, 6施設..., 博物館] と銅像 [名前, 背番号] */
+export type SceneSnap = { lv: number[]; st: [string, number | null][] };
+
+export function sceneSnap(state: GameState): SceneSnap {
+  const f = state.facilities ?? {};
+  const keys = state.cosmetics?.statues ?? [];
+  const hof = state.hallOfFame ?? [];
+  return {
+    lv: [state.stadium?.level ?? 0, ...FACILITIES.map((x) => f[x.id] ?? 0), state.cosmetics?.museum ? 1 : 0],
+    st: keys.slice(0, 10).map((k) => {
+      const e = hof.find((h) => `${h.name}@${h.season}` === k);
+      return [e?.name ?? k.split('@')[0], e?.number ?? null];
+    }),
+  };
+}
+
+export function sceneData(snap: SceneSnap, stadiumName: string, colors: [string, string]): ClubSceneData {
+  const fac = {} as Record<FacilityKind, number>;
+  FACILITIES.forEach((x, i) => (fac[x.id] = snap.lv[i + 1] ?? 0));
+  return {
+    stadium: snap.lv[0] ?? 0,
+    stadiumName,
+    fac,
+    museum: !!snap.lv[7],
+    statues: snap.st.map(([name, number]) => ({ name, number: number ?? undefined })),
+    colors,
+  };
+}
+
 /* ======================= クラブの施設 ======================= */
 
 export type FacilityKind = 'training' | 'scout' | 'academy' | 'medical' | 'science' | 'analysis';
@@ -20,10 +60,15 @@ export const FACILITIES: { id: FacilityKind; icon: string; label: string; effect
   { id: 'analysis', icon: '📊', label: '分析室', effect: '相手を分析して、試合で少し有利に戦える' },
 ];
 
-export const FACILITY_MAX = 10;
-/** 強化の費用（百万ユーロ）と工期（日程）。index = 次のレベル - 1 */
-const COST = [15, 30, 50, 80, 120, 180, 260, 360, 480, 650];
-const DAYS = [3, 5, 7, 9, 12, 14, 16, 18, 20, 24];
+export const FACILITY_MAX = 20;
+/** 強化の費用（百万ユーロ）と工期（日程）。index = 次のレベル - 1。Lv.11 からはとんでもなく高い */
+const COST = [15, 30, 50, 80, 120, 180, 260, 360, 480, 650, 1000, 1500, 2200, 3200, 4500, 6000, 8000, 11000, 15000, 20000];
+const DAYS = [3, 5, 7, 9, 12, 14, 16, 18, 20, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 45];
+
+/** 効果の強さ。Lv.11 からは1レベルの効果が半分になり、Lv.20 で Lv.10 の1.5倍 */
+export function effectLevel(lv: number): number {
+  return lv <= 10 ? lv : 10 + (lv - 10) * 0.5;
+}
 
 export function facilityLevel(state: GameState, k: FacilityKind): number {
   return state.facilities?.[k] ?? 0;
@@ -63,31 +108,31 @@ export function facilityTick(state: GameState) {
 
 /** 医療センター：ケガが1日余分に治る確率 */
 export function medicalBoost(state: GameState): number {
-  return facilityLevel(state, 'medical') * 0.07;
+  return effectLevel(facilityLevel(state, 'medical')) * 0.07;
 }
 
 /** スポーツ科学：調子の安定度への上乗せ */
 export function scienceBoost(state: GameState): number {
-  return facilityLevel(state, 'science') * 0.35;
+  return effectLevel(facilityLevel(state, 'science')) * 0.35;
 }
 
 /** 分析室：自分のチームの試合での上乗せ */
 export function analysisBoost(state: GameState, teamId: string): number {
-  return teamId === state.userTeamId ? 1 + facilityLevel(state, 'analysis') * 0.004 : 1;
+  return teamId === state.userTeamId ? 1 + effectLevel(facilityLevel(state, 'analysis')) * 0.004 : 1;
 }
 
 /* ======================= スタジアム ======================= */
 
-export const STADIUM_MAX = 10;
-const ST_COST = [80, 120, 170, 230, 300, 380, 480, 600, 750, 950];
-const ST_DAYS = [6, 8, 10, 12, 14, 16, 18, 20, 22, 25];
+export const STADIUM_MAX = 20;
+const ST_COST = [80, 120, 170, 230, 300, 380, 480, 600, 750, 950, 1500, 2250, 3300, 4800, 6750, 9000, 12000, 16500, 22500, 30000];
+const ST_DAYS = [6, 8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 30, 32, 34, 36, 38, 40, 42, 45, 48];
 
 export function stadiumLevel(state: GameState): number {
   return state.stadium?.level ?? 0;
 }
 
 export function stadiumCapacity(state: GameState): number {
-  return 30000 + stadiumLevel(state) * 6000;
+  return Math.round(30000 + effectLevel(stadiumLevel(state)) * 6000);
 }
 
 export function stadiumCost(state: GameState): { cost: number; days: number } | null {
@@ -122,7 +167,7 @@ export function stadiumTick(state: GameState) {
 
 /** ホームの試合の入場収入（百万ユーロ） */
 export function gateIncome(state: GameState): number {
-  return round2(stadiumLevel(state) * 0.35);
+  return round2(effectLevel(stadiumLevel(state)) * 0.35);
 }
 
 /** シーズンをまたぐ時：工事・遠征の残り日数を新しいシーズンの日付に合わせる */
@@ -249,17 +294,22 @@ export function richMarkup(state: GameState): number {
 
 /** 練習場：試合での成長のしやすさ */
 export function trainingBoost(state: GameState): number {
-  return 1 + facilityLevel(state, 'training') * 0.12;
+  return 1 + effectLevel(facilityLevel(state, 'training')) * 0.12;
 }
 
 /** スカウト網：掘り出し物の届きやすさ */
 export function scoutBoost(state: GameState): number {
-  return 1 + facilityLevel(state, 'scout') * 0.25;
+  return 1 + effectLevel(facilityLevel(state, 'scout')) * 0.25;
 }
 
 /** ユースアカデミー：昇格するユースの能力・伸びしろの上乗せ */
 export function academyBoost(state: GameState): number {
-  return facilityLevel(state, 'academy');
+  return effectLevel(facilityLevel(state, 'academy'));
+}
+
+/** 年俸総額の上限に効くスタジアムのレベル */
+export function stadiumWageLevel(state: GameState): number {
+  return effectLevel(stadiumLevel(state));
 }
 
 /* ======================= サポーターの愛称 ======================= */

@@ -11,7 +11,8 @@ import { useGame } from '../store';
 import { TACTIC_OPTIONS } from './Squad';
 import { fetchRanking, playerId, rankingEnabled, type RankingRow } from '../game/ranking';
 import { ACHIEVEMENTS } from '../game/events';
-import { FACILITIES } from '../game/club';
+import { FACILITIES, sceneData } from '../game/club';
+import { ClubScene } from '../components/ClubScene';
 import type { TeamSnapshot } from '../game/friendly';
 import { BadgeStrip, BadgeWall } from '../components/Badges';
 import { Jersey } from '../components/Jersey';
@@ -94,7 +95,7 @@ function FriendTeam({ row, mine, onClose }: { row: RankingRow; mine: boolean; on
   const { state } = useGame();
   const snap = parseSnapshot(row.team);
   const [detail, setDetail] = useState<string | null>(null);
-  const [view, setView] = useState<'plan' | 'career'>('plan');
+  const [view, setView] = useState<'plan' | 'career' | 'club'>('plan');
   const built = useMemo(() => (snap ? snapshotTeam(snap, teamById(state, state.userTeamId), row.nickname) : null), [row.team]);
   if (!snap || !built) {
     return (
@@ -118,9 +119,12 @@ function FriendTeam({ row, mine, onClose }: { row: RankingRow; mine: boolean; on
         options={[
           { v: 'plan', label: '⚽ ゲームプラン' },
           { v: 'career', label: '📈 監督の実績' },
+          { v: 'club', label: '🏟 クラブ' },
         ]}
       />
-      {view === 'career' ? (
+      {view === 'club' ? (
+        <FriendClub snap={snap} />
+      ) : view === 'career' ? (
         <Career row={row} snap={snap} />
       ) : (
       <>
@@ -258,6 +262,14 @@ function FriendTitle({ team }: { team?: string }) {
 }
 
 /** フレンドの監督としての実績 */
+/** フレンドのクラブの全景（施設・スタジアム・銅像） */
+function FriendClub({ snap }: { snap: TeamSnapshot }) {
+  const pr = snap.prof;
+  if (!pr?.scene) return <p className="hint">この人のクラブの様子はまだ届いていません（相手が最新版で試合を進めると見られるようになります）。</p>;
+  const colors = pr.colors ?? [snap.color ?? '#c8102e', snap.color2 ?? '#ffffff'];
+  return <ClubScene d={sceneData(pr.scene, pr.stadium?.[1] || 'ホームスタジアム', colors as [string, string])} />;
+}
+
 function Career({ row, snap }: { row: RankingRow; snap: TeamSnapshot }) {
   const { state } = useGame();
   const [allHist, setAllHist] = useState(false);

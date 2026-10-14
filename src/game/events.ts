@@ -1,6 +1,6 @@
 import { addCounter, markSpent, matchBadges } from './badges';
 import { checkMiracle, markAce, revealMystery, zoneAfterMatch, zoneBonus } from './hidden2';
-import { academyBoost, analysisBoost, fanTick, scoutBoost } from './club';
+import { academyBoost, analysisBoost, fanTick, scoutBoost, stadiumWageLevel } from './club';
 import { addXp, managerPerks, matchXp, registerDex } from './collection';
 import { generatePlayer } from './data';
 import { fairSalary, fmtMoney, round2, wageCap, payroll } from './economy';
@@ -547,7 +547,7 @@ export function answerDemand(state: GameState, choice: 'persuade' | 'compromise'
   if (choice === 'persuade' || choice === 'compromise') {
     const comp = choice === 'compromise' && d.kind === 'raise';
     const amt = comp ? compromiseAmount(p) : 0;
-    if (comp && payroll(squadOf(state, team.id)) - p.salary + amt > wageCap(team, state.stadium?.level ?? 0)) return { ok: false, message: `年俸総額の上限（${fmtMoney(wageCap(team, state.stadium?.level ?? 0))}）を超えてしまいます` };
+    if (comp && payroll(squadOf(state, team.id)) - p.salary + amt > wageCap(team, stadiumWageLevel(state))) return { ok: false, message: `年俸総額の上限（${fmtMoney(wageCap(team, stadiumWageLevel(state)))}）を超えてしまいます` };
     if (rand() < (comp ? compromiseChance(state, p) : persuadeChance(state, p))) {
       delete state.demand;
       if (comp) {
@@ -573,7 +573,7 @@ export function answerDemand(state: GameState, choice: 'persuade' | 'compromise'
   if (choice === 'accept') {
     if (d.kind === 'raise') {
       const amt = raiseAmount(p);
-      if (payroll(squadOf(state, team.id)) - p.salary + amt > wageCap(team, state.stadium?.level ?? 0)) return { ok: false, message: `年俸総額の上限（${fmtMoney(wageCap(team, state.stadium?.level ?? 0))}）を超えてしまいます` };
+      if (payroll(squadOf(state, team.id)) - p.salary + amt > wageCap(team, stadiumWageLevel(state))) return { ok: false, message: `年俸総額の上限（${fmtMoney(wageCap(team, stadiumWageLevel(state)))}）を超えてしまいます` };
       p.salary = amt;
       p.contractYears = Math.max(p.contractYears, 3);
     } else {
@@ -664,7 +664,7 @@ export function promoteAcademy(state: GameState): string[] {
     p.academy = true;
     p.joinedSeason = state.season + 1;
     p.contractYears = 3;
-    p.potential = Math.min(99, (golden ? randInt(84, 94) : Math.max(p.potential, randInt(65, 82))) + ab * 2);
+    p.potential = Math.min(99, (golden ? randInt(84, 94) : Math.max(p.potential, randInt(65, 82))) + Math.round(ab * 2));
     p.growth = golden ? pick(['normal', 'late'] as const) : p.growth;
     p.salary = fairSalary(p);
     p.loyalty = 90;

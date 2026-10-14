@@ -6,7 +6,7 @@ import { createMatch, sideRoles, simulateToEnd, sidePower, type LiveMatch } from
 import { legendGrowth, legendTick, spawnHeir } from './legend';
 import { legendChallengeTick } from './legendChallenge';
 import { sodeChallengeTick, sodeGrowth } from './sodegaura';
-import { expeditionTick, facilityTick, gateIncome, medicalBoost, scienceBoost, shiftClubDays, stadiumTick, trainingBoost } from './club';
+import { expeditionTick, facilityTick, gateIncome, medicalBoost, scienceBoost, shiftClubDays, stadiumTick, stadiumWageLevel, trainingBoost } from './club';
 import { ensureYouth, youthDebut, youthSeasonEnd, youthSeasonGrowth, youthTick } from './youth';
 import { coachChallengeTick, inheritAceTick, markAce, mysteryTick } from './hidden2';
 import { afterUserMatch, dailyEvents, heirsDue, spawnGem, jobOfferAtSeasonEnd, listedPlayersTick, onRetire, planHeirs, promoteAcademy, seasonEndAchievements } from './events';
@@ -689,5 +689,5 @@ function promoteYouth(state: GameState): string[] {
 
 export function userPayroll(state: GameState): { total: number; cap: number } {
   const t = teamById(state, state.userTeamId);
-  return { total: payroll(squadOf(state, t.id)), cap: wageCap(t, state.stadium?.level ?? 0) };
+  return { total: payroll(squadOf(state, t.id)), cap: wageCap(t, stadiumWageLevel(state)) };
 }

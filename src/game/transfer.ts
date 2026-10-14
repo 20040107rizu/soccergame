@@ -1,6 +1,6 @@
 import { markSpent } from './badges';
 import { markAce } from './hidden2';
-import { richMarkup } from './club';
+import { richMarkup, stadiumWageLevel } from './club';
 import { managerPerks, managerTitle } from './collection';
 import { windowStatus } from './competitions';
 import { aiFillSquads, teamById } from './season';
@@ -198,7 +198,7 @@ export function wageRoomFor(state: GameState, p: Player): { room: number; enough
 
 export function payrollInfo(state: GameState): { total: number; cap: number } {
   const t = teamById(state, state.userTeamId);
-  return { total: payroll(squadOf(state, t.id)), cap: wageCap(t, state.stadium?.level ?? 0) };
+  return { total: payroll(squadOf(state, t.id)), cap: wageCap(t, stadiumWageLevel(state)) };
 }
 
 /* ---------------- 成立 ---------------- */

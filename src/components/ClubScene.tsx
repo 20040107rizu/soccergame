@@ -1,14 +1,7 @@
 import type { ReactNode } from 'react';
+import type { ClubSceneData } from '../game/club';
 
 /** クラブの全景（スタジアム・施設・銅像・博物館）。レベルが上がるほど豪華になる */
-export interface ClubSceneData {
-  stadium: number;
-  stadiumName?: string;
-  fac: { training: number; scout: number; academy: number; medical: number; science: number; analysis: number };
-  statues: { name: string; number?: number }[];
-  museum?: boolean;
-  colors: [string, string];
-}
 
 const KINDS = [
   { id: 'training', label: '練習場' },
@@ -28,7 +21,7 @@ export function tierOf(lv: number): number {
 
 const W = 360;
 
-export function ClubScene({ d }: { d: ClubSceneData }) {
+export function ClubScene({ d, onTap }: { d: ClubSceneData; onTap?: (id: string) => void }) {
   const levels = [d.stadium, ...KINDS.map((k) => d.fac[k.id])];
   const avg = levels.reduce((a, b) => a + b, 0) / levels.length;
   const night = avg >= 8;
@@ -93,10 +86,14 @@ export function ClubScene({ d }: { d: ClubSceneData }) {
       <rect y={632} width={W} height={H - 632} fill={avg >= 11 ? '#2a2418' : '#b9b2a2'} />
       {avg >= 11 && <rect y={632} width={W} height={3} fill="url(#cs-gold)" />}
 
-      <Stadium lv={d.stadium} colors={d.colors} name={d.stadiumName} />
+      <g onClick={() => onTap?.('stadium')} className={onTap ? 'cs-tap' : ''}>
+        <Stadium lv={d.stadium} colors={d.colors} name={d.stadiumName} />
+      </g>
 
       {KINDS.map((k, i) => (
-        <Facility key={k.id} kind={k.id} label={k.label} lv={d.fac[k.id]} x={(i % 3) * 120} y={318 + Math.floor(i / 3) * 155} colors={d.colors} />
+        <g key={k.id} onClick={() => onTap?.(k.id)} className={onTap ? 'cs-tap' : ''}>
+          <Facility kind={k.id} label={k.label} lv={d.fac[k.id]} x={(i % 3) * 120} y={318 + Math.floor(i / 3) * 155} colors={d.colors} />
+        </g>
       ))}
 
       {/* 広場：銅像と博物館 */}

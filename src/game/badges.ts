@@ -40,8 +40,10 @@ export const BADGES: BadgeDef[] = [
   ...tiered('level', '📈', '監督レベル', '', [[10, 'bronze'], [50, 'silver'], [100, 'gold'], [300, 'legend'], [999, 'mythic']]),
   ...tiered('dex', '📖', '図鑑', '人', [[50, 'bronze'], [100, 'silver'], [300, 'gold']]),
   { id: 'stadium-5', icon: '🏟', name: '大スタジアム', desc: 'スタジアムをLv.5に拡張', tier: 'silver', group: 'stadium' },
-  { id: 'stadium-10', icon: '🏟', name: '聖地', desc: 'スタジアムを最大まで拡張', tier: 'legend', group: 'stadium' },
-  { id: 'facilities', icon: '🏗', name: '最新鋭のクラブ', desc: 'すべての施設を最大レベルに', tier: 'legend' },
+  { id: 'stadium-10', icon: '🏟', name: '聖地', desc: 'スタジアムをLv.10に拡張', tier: 'legend', group: 'stadium' },
+  { id: 'stadium-20', icon: '🏟', name: '天空の聖地', desc: 'スタジアムをLv.20に拡張', tier: 'mythic', group: 'stadium' },
+  { id: 'facilities', icon: '🏗', name: '最新鋭のクラブ', desc: 'すべての施設をLv.10に', tier: 'legend', group: 'facilities' },
+  { id: 'facilities20', icon: '🏰', name: '黄金郷', desc: 'すべての施設をLv.20に', tier: 'mythic', group: 'facilities' },
   { id: 'museum', icon: '🏛', name: 'クラブ博物館', desc: 'クラブ博物館を建てた', tier: 'gold' },
   { id: 'statue-1', icon: '🗿', name: '銅像', desc: '殿堂の選手の銅像を建てた', tier: 'silver', group: 'statue' },
   { id: 'statue-5', icon: '🗿', name: '銅像の並ぶ街', desc: '銅像を5体建てた', tier: 'gold', group: 'statue' },
@@ -70,7 +72,7 @@ export const BADGES: BadgeDef[] = [
   // クラブ運営
   { id: 'billionaire', icon: '💰', name: '億万長者', desc: '資金が1兆円に到達', tier: 'gold' },
   { id: 'miser', icon: '🪙', name: 'ケチの極み', desc: '移籍金を1円も使わずにリーグ優勝', tier: 'legend' },
-  { id: 'fullHouse', icon: '🏟', name: '満員御礼', desc: '最大まで拡張したスタジアムでリーグ優勝', tier: 'legend' },
+  { id: 'fullHouse', icon: '🏟', name: '満員御礼', desc: 'Lv.10以上のスタジアムでリーグ優勝', tier: 'legend' },
   { id: 'threeClubs', icon: '🔁', name: '名将のタクト', desc: '3つ以上のクラブでリーグ優勝', tier: 'legend' },
   { id: 'underdog', icon: '⬆️', name: '下剋上', desc: '格★1〜2のクラブでリーグ優勝', tier: 'mythic' },
   // 育成・選手
@@ -124,7 +126,9 @@ export function computeBadges(state: GameState, level: number, dexCount: number)
   add('stadium', state.stadium?.level ?? 0);
   add('statue', state.cosmetics?.statues?.length ?? 0);
   const f = state.facilities ?? {};
-  if ((['training', 'scout', 'academy', 'medical', 'science', 'analysis'] as const).every((k) => (f[k] ?? 0) >= 10)) out.push('facilities');
+  const facs = ['training', 'scout', 'academy', 'medical', 'science', 'analysis'] as const;
+  if (facs.every((k) => (f[k] ?? 0) >= 10)) out.push('facilities');
+  if (facs.every((k) => (f[k] ?? 0) >= 20)) out.push('facilities20');
   if (state.cosmetics?.museum) out.push('museum');
   if (state.cosmetics?.kits?.includes('gold')) out.push('goldkit');
   for (const id of ['invincible', 'double', 'legend', 'secondGen', 'legendSlayer', 'gemJackpot', 'mysteryJackpot', 'coachSlayer', 'aceHeir', 'miracle', 'awaken', 'golden', 'bigWin', 'mentor']) if (ach[id]) out.push(id);

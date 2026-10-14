@@ -1,13 +1,21 @@
-import { FACILITIES, FACILITY_MAX, facilityLevel, gateIncome, REGIONS, stadiumCapacity, stadiumCost, stadiumLevel, STADIUM_MAX, startExpedition, startStadium, startUpgrade, upgradeCost } from '../game/club';
+import { ClubScene } from '../components/ClubScene';
+import { FACILITIES, FACILITY_MAX, facilityLevel, sceneData, sceneSnap, gateIncome, REGIONS, stadiumCapacity, stadiumCost, stadiumLevel, STADIUM_MAX, startExpedition, startStadium, startUpgrade, upgradeCost } from '../game/club';
 import { fmtMoney } from '../game/economy';
 import { useGame } from '../store';
 
+/** レベルの目盛り（10マス。Lv.11 からは金色で重ねていく） */
 const bar = (lv: number, max: number) => (
   <span className="fac-lv">
-    {'■'.repeat(lv)}
-    <span className="muted">{'□'.repeat(max - lv)}</span> Lv.{lv}
+    {Array.from({ length: max / 2 }, (_, i) => (
+      <span key={i} className={lv > i + max / 2 ? 'gold' : lv > i ? '' : 'muted'}>
+        {lv > i ? '■' : '□'}
+      </span>
+    ))}{' '}
+    Lv.{lv}
   </span>
 );
+
+const jump = (id: string) => document.getElementById('fac-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
 /** クラブの施設・スタジアム・海外スカウト遠征 */
 export function Facilities() {
@@ -16,10 +24,15 @@ export function Facilities() {
   const st = state.stadium;
   const sc = stadiumCost(state);
   const ex = state.expedition;
+  const team = state.teams.find((t) => t.id === state.userTeamId)!;
   return (
     <>
+      <h3 className="section-title">🏙 クラブの全景</h3>
+      <ClubScene d={sceneData(sceneSnap(state), st?.name || 'ホームスタジアム', [team.color, team.color2])} onTap={jump} />
+      <p className="hint">建物をタップすると、その施設の強化に移動します。</p>
+
       <h3 className="section-title">🏟 スタジアム</h3>
-      <div className="card fac-card">
+      <div className="card fac-card" id="fac-stadium">
         {st?.building && <div className="fac-building">🚧 拡張工事中（完成まで あと{Math.max(0, st.building - state.day)}日程）</div>}
         <div className="fac-row">
           <div className="grow">
@@ -61,7 +74,7 @@ export function Facilities() {
           const lv = facilityLevel(state, f.id);
           const c = upgradeCost(state, f.id);
           return (
-            <div key={f.id} className="fac-row">
+            <div key={f.id} className="fac-row" id={'fac-' + f.id}>
               <div className="grow">
                 <b>
                   {f.icon} {f.label}

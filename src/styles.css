@@ -3463,3 +3463,13 @@ button.friend-row {
     animation: none !important;
   }
 }
+.club-scene .cs-tap {
+  cursor: pointer;
+}
+.fac-lv .gold {
+  color: #fff3b0;
+  text-shadow: 0 0 4px #ffd34d, 0 0 8px #ff9f1c;
+}
+.fac-lv .muted {
+  color: var(--muted);
+}
