@@ -151,6 +151,15 @@ describe('セーブデータの引き継ぎ', () => {
     expect(sceneSnap(g).st[0][0]).toBe('昔の名選手');
   });
 
+  it('ひみつのチームの出現記録が無い古いセーブでも、次の選手を選べる', async () => {
+    const { nextSodePick } = await import('../sodegaura');
+    const s = newGame('テスト', 'ars');
+    s.flags = { sodeWin: true };
+    store.set('masterleague.save.3', JSON.stringify(s));
+    const g = loadGame(3)!;
+    expect(nextSodePick(g)).not.toBeNull();
+  });
+
   it('本体が壊れていてもバックアップから復旧する', () => {
     const s = newGame('テスト', 'liv');
     saveGame(1, s);

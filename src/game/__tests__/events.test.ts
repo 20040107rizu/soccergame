@@ -191,6 +191,21 @@ describe('ひみつのチーム戦', () => {
     expect(games).toBeGreaterThan(10);
   });
 
+  it('一度出た選手は、全員が一巡するまで出てこない（加入済みは二度と出ない）', async () => {
+    const sc = await import('../sodegaura');
+    const { SODE_PLAYERS } = await import('../../data/sodegaura');
+    const s = newGame('テスト', 'ars');
+    s.flags = { [`sode-${SODE_PLAYERS[0].name}`]: true };
+    const n = SODE_PLAYERS.length - 1;
+    const first = Array.from({ length: n }, () => sc.nextSodePick(s)!);
+    expect(new Set(first).size).toBe(n);
+    expect(first).not.toContain(0);
+    // 一巡したら、また全員から
+    const again = sc.nextSodePick(s)!;
+    expect(again).not.toBe(0);
+    expect(Object.keys(s.flags!).filter((k) => k.startsWith('sodeSeen-')).length).toBe(1);
+  });
+
   it('2回に1回は、本来の能力より上まで伸びる素質を持つ', async () => {
     const { vi } = await import('vitest');
     const sc = await import('../sodegaura');

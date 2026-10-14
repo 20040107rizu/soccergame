@@ -391,7 +391,7 @@ function Career({ row, snap }: { row: RankingRow; snap: TeamSnapshot }) {
       <div className="career-fac">
         {FACILITIES.map((f, i) => (
           <div key={f.id}>
-            {f.icon} {f.label} <b>Lv.{pr.fac[i]}</b>
+            {f.icon} {f.label} <b>Lv.{pr.scene?.lv[i + 1] ?? pr.fac[i] ?? 0}</b>
           </div>
         ))}
       </div>

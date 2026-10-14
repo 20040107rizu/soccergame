@@ -103,18 +103,34 @@ export function spawnSodeChallenge(state: GameState) {
   });
 }
 
+/** 次に興味を示す選手。一度出た選手は、まだ出ていない選手が全員出るまで出てこない（加入済みの選手は二度と出ない） */
+export function nextSodePick(state: GameState): number | null {
+  const flags = (state.flags = state.flags ?? {});
+  const free = SODE_PLAYERS.map((_, i) => i).filter((i) => !flags[`sode-${SODE_PLAYERS[i].name}`]);
+  if (!free.length) return null;
+  let pool = free.filter((i) => !flags[`sodeSeen-${SODE_PLAYERS[i].name}`]);
+  if (!pool.length) {
+    // 一巡したら最初から
+    for (const i of free) delete flags[`sodeSeen-${SODE_PLAYERS[i].name}`];
+    pool = free;
+  }
+  const pick = pool[randInt(0, pool.length - 1)];
+  flags[`sodeSeen-${SODE_PLAYERS[pick].name}`] = true;
+  return pick;
+}
+
 export function finishSodeChallenge(state: GameState, gf: number, ga: number) {
   const c = state.sodeChallenge;
   if (!c || c.status !== 'invited') return;
   if (gf > ga) {
     state.flags = state.flags ?? {};
     state.flags.sodeWin = true;
-    const pool = SODE_PLAYERS.map((_, i) => i).filter((i) => !state.flags?.[`sode-${SODE_PLAYERS[i].name}`]);
-    if (!pool.length) {
+    const pick = nextSodePick(state);
+    if (pick === null) {
       delete state.sodeChallenge;
       return;
     }
-    state.sodeChallenge = { status: 'won', expires: state.day + 5, pick: pool[randInt(0, pool.length - 1)] };
+    state.sodeChallenge = { status: 'won', expires: state.day + 5, pick };
     sendMail(state, {
       from: 'league',
       sender: SODE_NAME,
