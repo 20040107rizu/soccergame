@@ -3346,3 +3346,120 @@ button.friend-row {
 .youth-kid select {
   width: 100%;
 }
+
+/* ---------- クラブの全景 ---------- */
+.club-scene {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.club-scene .cs-label {
+  font-size: 10px;
+  font-weight: 700;
+  fill: #fff;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.6);
+  stroke-width: 2.5px;
+}
+.club-scene .cs-label.gold {
+  fill: #ffd34d;
+}
+.club-scene .cs-label.small {
+  font-size: 8px;
+}
+.club-scene .cs-note {
+  font-size: 9px;
+  fill: #f3ead6;
+  opacity: 0.85;
+}
+.club-scene .cs-num {
+  font-size: 7px;
+  font-weight: 800;
+  fill: #fff;
+}
+.club-scene .cs-plate {
+  font-size: 5.5px;
+  fill: #fff;
+}
+.cs-twinkle {
+  animation: cs-twinkle 2.4s ease-in-out infinite;
+}
+@keyframes cs-twinkle {
+  50% {
+    opacity: 0.25;
+  }
+}
+.cs-blink {
+  animation: cs-twinkle 1.2s ease-in-out infinite;
+}
+.cs-pulse {
+  animation: cs-pulse 3s ease-in-out infinite;
+}
+@keyframes cs-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+.cs-sweep {
+  animation: cs-sweep 4s ease-in-out infinite alternate;
+}
+@keyframes cs-sweep {
+  from {
+    transform: rotate(-18deg);
+  }
+  to {
+    transform: rotate(18deg);
+  }
+}
+.cs-float {
+  animation: cs-float 3s ease-in-out infinite;
+}
+@keyframes cs-float {
+  50% {
+    transform: translateY(-5px);
+  }
+}
+.cs-spin {
+  animation: cs-spin 3s linear infinite;
+}
+@keyframes cs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.cs-flag {
+  animation: cs-twinkle 1.6s ease-in-out infinite;
+}
+.cs-led {
+  animation: cs-twinkle 0.9s steps(2) infinite;
+}
+.cs-firework {
+  animation: cs-firework 2.8s ease-out infinite;
+  opacity: 0;
+}
+@keyframes cs-firework {
+  0% {
+    transform: scale(0.1);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.cs-aurora {
+  animation: cs-pulse 6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .club-scene * {
+    animation: none !important;
+  }
+}
