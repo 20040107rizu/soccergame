@@ -3,9 +3,14 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.22.1';
+export const APP_VERSION = '0.22.2';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.22.2',
+    date: '2026-10-15',
+    items: ['フレンドランキングに、それぞれの最終プレイ（「プレイ中」「3時間12分前」など）と日時を表示。しばらく来ていない人は薄く表示されます'],
+  },
   {
     version: '0.22.1',
     date: '2026-10-15',

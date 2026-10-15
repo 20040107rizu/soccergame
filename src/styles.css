@@ -3487,3 +3487,58 @@ button.friend-row {
   color: #ffd34d;
   text-shadow: 0 0 8px #ffd34d88;
 }
+.friend-row {
+  position: relative;
+}
+.friend-row.stale {
+  opacity: 0.55;
+}
+.friend-seen {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 2px 5px;
+  max-width: 62%;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+.friend-seen small {
+  flex-basis: 100%;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.friend-seen .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.friend-seen.live {
+  color: var(--green);
+}
+.friend-seen.live .dot {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: cs-twinkle 1.4s ease-in-out infinite;
+}
+.friend-seen.recent {
+  color: var(--green);
+}
+.friend-seen.recent .dot {
+  background: var(--green);
+}
+.friend-seen.week {
+  color: var(--accent);
+}
+.friend-seen.week .dot {
+  background: var(--accent);
+}
+.friend-seen.old {
+  color: var(--muted);
+}

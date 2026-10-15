@@ -113,3 +113,23 @@ export async function fetchRanking(): Promise<RankingRow[]> {
   const data = (await res.json()) as { rows?: RankingRow[] };
   return (data.rows ?? []).filter((r) => r && r.playerId);
 }
+
+/** 最終プレイ（最後にデータが届いた時刻）の表示 */
+export function lastPlayed(updatedAt: string | undefined, now = Date.now()): { label: string; exact: string; tier: 'live' | 'recent' | 'week' | 'old' } | null {
+  const t = updatedAt ? Date.parse(updatedAt) : NaN;
+  if (!Number.isFinite(t)) return null;
+  const d = new Date(t);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const sameYear = d.getFullYear() === new Date(now).getFullYear();
+  const exact = `${sameYear ? '' : d.getFullYear() + '年'}${d.getMonth() + 1}月${d.getDate()}日 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const min = Math.max(0, Math.floor((now - t) / 60000));
+  if (min < 1) return { label: 'プレイ中（たった今）', exact, tier: 'live' };
+  if (min < 10) return { label: `プレイ中（${min}分前）`, exact, tier: 'live' };
+  if (min < 60) return { label: `${min}分前`, exact, tier: 'recent' };
+  const h = Math.floor(min / 60);
+  if (h < 24) return { label: `${h}時間${min % 60 ? `${min % 60}分` : ''}前`, exact, tier: 'week' };
+  const days = Math.floor(h / 24);
+  if (days < 7) return { label: `${days}日${h % 24 ? `${h % 24}時間` : ''}前`, exact, tier: 'week' };
+  if (days < 60) return { label: `${days}日前`, exact, tier: 'old' };
+  return { label: `${Math.floor(days / 30)}か月前`, exact, tier: 'old' };
+}

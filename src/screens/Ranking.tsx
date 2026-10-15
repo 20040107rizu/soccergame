@@ -9,7 +9,7 @@ import { overall, ratingAt, SKILLS, STAT_GROUPS, STAT_LABEL, STYLES } from '../g
 import type { Player, Team } from '../game/types';
 import { useGame } from '../store';
 import { TACTIC_OPTIONS } from './Squad';
-import { fetchRanking, playerId, rankingEnabled, type RankingRow } from '../game/ranking';
+import { fetchRanking, lastPlayed, playerId, rankingEnabled, type RankingRow } from '../game/ranking';
 import { ACHIEVEMENTS } from '../game/events';
 import { FACILITIES, sceneData } from '../game/club';
 import { ClubScene } from '../components/ClubScene';
@@ -31,6 +31,11 @@ export function Ranking() {
   const { state } = useGame();
   const mineBadges = useMemo(() => new Set(computeBadges(state, managerLevel(state), Object.keys(state.dex ?? {}).length)), [state]);
 
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
   useEffect(() => {
     if (!rankingEnabled()) return;
     fetchRanking()
@@ -62,8 +67,17 @@ export function Ranking() {
       />
       <div className="list">
         {list.length === 0 && <p className="muted center">まだ誰も参加していません</p>}
-        {list.map((r, i) => (
-          <button key={r.playerId + r.slot} className={'card friend-row' + (r.playerId === me ? ' me' : '')} onClick={() => setOpen(r)}>
+        {list.map((r, i) => {
+          const seen = lastPlayed(r.updatedAt, now);
+          return (
+          <button key={r.playerId + r.slot} className={'card friend-row' + (r.playerId === me ? ' me' : '') + (seen?.tier === 'old' ? ' stale' : '')} onClick={() => setOpen(r)}>
+            {seen && (
+              <span className={'friend-seen ' + seen.tier}>
+                <span className="dot" />
+                {seen.label}
+                <small>{seen.exact}</small>
+              </span>
+            )}
             <span className="friend-rank">{i + 1}</span>
             <div className="grow">
               <b>
@@ -83,7 +97,8 @@ export function Ranking() {
               </div>
             </div>
           </button>
-        ))}
+          );
+        })}
       </div>
       {open && <FriendTeam row={open} mine={open.playerId === me} onClose={() => setOpen(null)} />}
     </>
@@ -94,6 +109,7 @@ export function Ranking() {
 function FriendTeam({ row, mine, onClose }: { row: RankingRow; mine: boolean; onClose: () => void }) {
   const { state } = useGame();
   const snap = parseSnapshot(row.team);
+  const seen = lastPlayed(row.updatedAt);
   const [detail, setDetail] = useState<string | null>(null);
   const [view, setView] = useState<'plan' | 'career' | 'club'>('plan');
   const built = useMemo(() => (snap ? snapshotTeam(snap, teamById(state, state.userTeamId), row.nickname) : null), [row.team]);
@@ -136,6 +152,11 @@ function FriendTeam({ row, mine, onClose }: { row: RankingRow; mine: boolean; on
             <div className="small muted">
               シーズン{row.season} · {row.progress} · PL {row.plRank || '-'}位（{row.win}勝{row.draw}分{row.loss}敗）
             </div>
+            {seen && (
+              <div className="small muted">
+                最終プレイ {seen.exact}（{seen.label}）
+              </div>
+            )}
           </div>
         </div>
         <div className="plan-grid">

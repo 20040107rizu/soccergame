@@ -296,3 +296,18 @@ describe('成長のお知らせ', async () => {
     expect(s.mails.length).toBe(n + 1);
   });
 });
+
+describe('最終プレイの表示', async () => {
+  const { lastPlayed } = await import('../ranking');
+  it('経過時間に合わせて細かく表示する', () => {
+    const now = Date.parse('2026-10-15T13:00:00Z');
+    const ago = (m: number) => new Date(now - m * 60000).toISOString();
+    expect(lastPlayed(ago(0), now)!.label).toBe('プレイ中（たった今）');
+    expect(lastPlayed(ago(4), now)!).toMatchObject({ label: 'プレイ中（4分前）', tier: 'live' });
+    expect(lastPlayed(ago(35), now)!).toMatchObject({ label: '35分前', tier: 'recent' });
+    expect(lastPlayed(ago(192), now)!).toMatchObject({ label: '3時間12分前', tier: 'week' });
+    expect(lastPlayed(ago(60 * 50), now)!.label).toBe('2日2時間前');
+    expect(lastPlayed(ago(60 * 24 * 10), now)!).toMatchObject({ label: '10日前', tier: 'old' });
+    expect(lastPlayed(undefined, now)).toBeNull();
+  });
+});
