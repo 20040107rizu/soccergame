@@ -1329,6 +1329,8 @@ h4 {
   background: var(--bg);
   padding: 10px 0 calc(8px + var(--safe-b));
   border-top: 1px solid var(--line);
+  /* ピッチ上の選手より手前に出す（ボタンが押しにくくならないように）。シート（z-index 20）よりは後ろ */
+  z-index: 15;
 }
 
 /* --- heatmap / detail --- */
