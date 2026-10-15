@@ -6,6 +6,13 @@ export function squadOf(state: GameState, teamId: string): Player[] {
   return Object.values(state.players).filter((p) => p.teamId === teamId);
 }
 
+/** 平均年齢（スタメン・チーム全体）。小数第1位まで */
+export function teamAges(state: GameState, teamId: string): { xi: number; all: number } {
+  const avg = (ps: Player[]) => (ps.length ? Math.round((ps.reduce((a, p) => a + p.age, 0) / ps.length) * 10) / 10 : 0);
+  const team = state.teams.find((t) => t.id === teamId);
+  return { xi: avg((team?.lineup ?? []).map((id) => state.players[id]).filter(Boolean)), all: avg(squadOf(state, teamId)) };
+}
+
 export function available(p: Player): boolean {
   return p.injury <= 0 && p.suspension <= 0;
 }

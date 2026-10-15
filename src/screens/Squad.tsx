@@ -4,7 +4,7 @@ import { PrematchOpponent } from './Opponent';
 import { HalftimePlan } from './HalftimePlan';
 import { Youth } from './Youth';
 import { Crest, Seg, SpiritGauge } from '../components/ui';
-import { applyFormation, available, moveInTeam, moveSlot, repairLineup, setAutoLineup, spiritPreview, squadOf } from '../game/lineup';
+import { applyFormation, available, teamAges, moveInTeam, moveSlot, repairLineup, setAutoLineup, spiritPreview, squadOf } from '../game/lineup';
 import { FORMATION_LIST } from '../game/positions';
 import { teamById, today, userFixture } from '../game/season';
 import { overall } from '../game/stats';
@@ -22,6 +22,7 @@ export function Squad(props: { mode?: 'squad' | 'prematch'; onKickoff?: () => vo
   const { state, update, openPlayer } = useGame();
   const team = teamById(state, state.userTeamId);
   const squad = squadOf(state, team.id);
+  const ages = teamAges(state, team.id);
   const reserves = squad
     .filter((p) => !team.lineup.includes(p.id) && !team.bench.includes(p.id))
     .sort((a, b) => overall(b) - overall(a))
@@ -79,6 +80,9 @@ export function Squad(props: { mode?: 'squad' | 'prematch'; onKickoff?: () => vo
         }
       />
       <SpiritGauge v={prematch ? spiritPreview(team) : team.spirit} />
+      <div className="row gap small muted">
+        平均年齢：スタメン <b style={{ color: 'var(--text)' }}>{ages.xi}歳</b> · チーム全体 <b style={{ color: 'var(--text)' }}>{ages.all}歳</b>（{squad.length}人）
+      </div>
       <div className="row gap">
         <span className="muted small">作戦</span>
         <Seg

@@ -1,6 +1,7 @@
 import { managerLevel, managerProfile, managerTitle } from './collection';
 import { emptyStats } from './data';
 import { createMatch, type LiveMatch } from './engine';
+import { teamAges } from './lineup';
 import { teamById } from './season';
 import { STAT_KEYS } from './stats';
 import type { Aptitudes, Appearance, FormationLabel, GameState, Player, Position, Stats, Tactic, Team } from './types';
@@ -25,6 +26,8 @@ export interface TeamSnapshot {
   mgr?: { lv: number; title: string };
   /** 監督としての実績（古いデータには無い） */
   prof?: import('./collection').ManagerProfile;
+  /** 平均年齢 [スタメン, チーム全体]（古いデータには無い） */
+  ages?: [number, number];
 }
 
 interface SnapPlayer {
@@ -45,6 +48,7 @@ interface SnapPlayer {
 export function teamSnapshot(state: GameState): TeamSnapshot {
   const team = teamById(state, state.userTeamId);
   const ids = [...team.lineup, ...team.bench.slice(0, 7)];
+  const ages = teamAges(state, team.id);
   const players = ids
     .map((id) => state.players[id])
     .filter(Boolean)
@@ -76,6 +80,7 @@ export function teamSnapshot(state: GameState): TeamSnapshot {
     players,
     mgr: { lv: managerLevel(state), title: managerTitle(state) },
     prof: managerProfile(state),
+    ages: [ages.xi, ages.all],
   };
 }
 

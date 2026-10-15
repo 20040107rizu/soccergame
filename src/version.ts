@@ -3,9 +3,14 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.21.2';
+export const APP_VERSION = '0.21.3';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.21.3',
+    date: '2026-10-15',
+    items: ['チーム編成画面に、スタメンとチーム全体の平均年齢を表示', 'フレンドのチーム（ゲームプラン）でも平均年齢が見られるように'],
+  },
   {
     version: '0.21.2',
     date: '2026-10-14',

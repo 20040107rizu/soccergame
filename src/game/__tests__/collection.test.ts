@@ -268,3 +268,18 @@ describe('施設Lv.20・クラブの全景', async () => {
     expect(d.statues).toEqual([{ name: 'ティエリ・アンリ', number: 14 }]);
   });
 });
+
+describe('平均年齢', async () => {
+  const { teamAges, squadOf } = await import('../lineup');
+  const { teamSnapshot } = await import('../friendly');
+  it('スタメンとチーム全体の平均年齢が分かり、フレンドにも送られる', () => {
+    const s = newGame('テスト', 'ars');
+    const team = s.teams.find((t) => t.id === 'ars')!;
+    const xi = team.lineup.map((id) => s.players[id]);
+    const all = squadOf(s, 'ars');
+    const a = teamAges(s, 'ars');
+    expect(a.xi).toBeCloseTo(xi.reduce((x, p) => x + p.age, 0) / 11, 1);
+    expect(a.all).toBeCloseTo(all.reduce((x, p) => x + p.age, 0) / all.length, 1);
+    expect(teamSnapshot(s).ages).toEqual([a.xi, a.all]);
+  });
+});

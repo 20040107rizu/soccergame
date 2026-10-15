@@ -151,6 +151,14 @@ function FriendTeam({ row, mine, onClose }: { row: RankingRow; mine: boolean; on
             <small>スタメン平均</small>
             <b>{avg}</b>
           </div>
+          <div>
+            <small>スタメン平均年齢</small>
+            <b>{snap.ages?.[0] ?? Math.round((xi.reduce((a, p) => a + p.age, 0) / xi.length) * 10) / 10}歳</b>
+          </div>
+          <div>
+            <small>チーム平均年齢</small>
+            <b>{snap.ages ? `${snap.ages[1]}歳` : '―'}</b>
+          </div>
         </div>
         <SpiritGauge v={snap.spirit} />
       </div>
