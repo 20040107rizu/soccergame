@@ -375,7 +375,9 @@ function applyMatch(state: GameState, f: Fixture, m: LiveMatch) {
       if (mine && !p.legend && !p.sode) {
         // 急成長・新スキル・適性拡大
         if (p.age <= 23 && r >= 7.5 && before < p.potential && rand() < 0.06 * trainingBoost(state)) {
-          for (let i = 0; i < 6; i++) bumpStats(p, 1);
+          // 総合値が必ず2以上（伸びしろまで）上がるまで鍛える
+          const want = Math.min(p.potential, before + 2);
+          for (let i = 0; i < 80 && overall(p) < want; i++) bumpStats(p, 1);
           mailGrowth(state, p, before, overall(p), true);
         } else if (overall(p) > before) {
           mailGrowth(state, p, before, overall(p), false);

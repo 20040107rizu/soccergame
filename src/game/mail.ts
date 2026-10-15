@@ -184,6 +184,8 @@ export function mailBestEleven(state: GameState, label: string) {
 }
 
 export function mailGrowth(state: GameState, p: Player, before: number, after: number, sudden: boolean) {
+  // 総合値が変わっていない時は知らせない
+  if (after <= before) return;
   sendMail(state, {
     from: 'coach',
     sender: 'フィジカルコーチ',

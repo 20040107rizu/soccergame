@@ -283,3 +283,16 @@ describe('平均年齢', async () => {
     expect(teamSnapshot(s).ages).toEqual([a.xi, a.all]);
   });
 });
+
+describe('成長のお知らせ', async () => {
+  const { mailGrowth } = await import('../mail');
+  it('総合値が変わっていない時は、成長メールを送らない', () => {
+    const s = newGame('テスト', 'ars');
+    const p = Object.values(s.players).find((x) => x.teamId === 'ars')!;
+    const n = s.mails.length;
+    mailGrowth(s, p, 68, 68, true);
+    expect(s.mails.length).toBe(n);
+    mailGrowth(s, p, 68, 70, true);
+    expect(s.mails.length).toBe(n + 1);
+  });
+});
