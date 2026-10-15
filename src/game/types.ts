@@ -373,7 +373,7 @@ export interface Mail {
   /** レジェンド選手の極秘情報 */
   legend?: boolean;
   /** メール内で選択する操作 */
-  action?: 'gem' | 'demand' | 'job' | 'legendMatch' | 'legendPick' | 'sodeMatch' | 'sodePick' | 'coachMatch' | 'coachPick' | 'mystery' | 'youthSlump' | 'youthOffer';
+  action?: 'gem' | 'demand' | 'job' | 'legendMatch' | 'legendPick' | 'sodeMatch' | 'sodePick' | 'coachMatch' | 'coachPick' | 'mystery' | 'youthSlump' | 'youthOffer' | 'saudi';
   /** ユースの選手 */
   youthId?: string;
   /** ひみつのチーム関係 */
@@ -442,6 +442,8 @@ export interface GameState {
   hofXI?: (string | null)[];
   /** 師弟関係の進み具合（ベテランID|若手ID → 一緒に先発した試合数） */
   mentorProgress?: Record<string, number>;
+  /** サウジアラビアからの超高額オファー（古いセーブには無い） */
+  saudiOffer?: { playerId: string; club: string; fee: number; expires: number };
   /** ユースチーム（トップチームの登録人数には含まない。古いセーブには無い） */
   youth?: { kids: Record<string, Player> };
   /** 〇〇2世の予定 */

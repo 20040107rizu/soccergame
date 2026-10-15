@@ -80,6 +80,8 @@ export const BADGES: BadgeDef[] = [
   { id: 'raised', icon: '🌳', name: '育ての親', desc: '15歳から育てた選手が25歳までに総合値90に到達', tier: 'legend' },
   { id: 'ironman', icon: '🧓', name: '鉄人', desc: '38歳以上の選手がリーグ戦に出場', tier: 'silver' },
   { id: 'mentor', icon: '🤝', name: '師弟の絆', desc: '師弟関係が生まれた', tier: 'silver' },
+  { id: 'oilMoney', icon: '🛢', name: 'オイルマネー', desc: 'サウジアラビアの超高額オファーを受けた', tier: 'gold', luck: true, hidden: true },
+  { id: 'notForSale', icon: '🙅', name: '金では買えない', desc: 'サウジアラビアの超高額オファーを3回断った', tier: 'legend', luck: true, hidden: true },
   { id: 'beloved', icon: '📣', name: '愛されクラブ', desc: '愛称の付いた選手が5人同時に在籍', tier: 'gold' },
   { id: 'camp100', icon: '🏕', name: '鬼コーチ', desc: '特訓キャンプを100回', tier: 'silver' },
   // 運・レア

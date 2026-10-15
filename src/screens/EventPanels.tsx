@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Crest } from '../components/ui';
-import { fmtMoney } from '../game/economy';
+import { fmtMoney, marketValue } from '../game/economy';
 import { acceptJob, answerDemand, compromiseAmount, compromiseChance, DEMAND_TRIES, passGem, persuadeChance, raiseAmount, signGem } from '../game/events';
 import { teamById } from '../game/season';
 import { declineLegendChallenge, legendTeamSnapshot, negotiateLegendPick, pickCandidates, pickTerms } from '../game/legendChallenge';
@@ -16,6 +16,8 @@ import { SODE_NAME } from '../data/sodegaura';
 import { declineSodeChallenge, negotiateSodePick, sodePickSeed, sodeTeamSnapshot, sodeTerms } from '../game/sodegaura';
 import { SodeReveal } from '../components/SodeReveal';
 import { answerSlump, answerYouthOffer } from '../game/youth';
+import { answerSaudi } from '../game/saudi';
+
 
 /** メール内で選択するイベント（掘り出し物・わがまま・監督オファー） */
 export function EventPanel({ mail, onDone }: { mail: Mail; onDone: () => void }) {
@@ -29,6 +31,7 @@ export function EventPanel({ mail, onDone }: { mail: Mail; onDone: () => void })
   if (mail.action === 'coachMatch') return <CoachMatchPanel onDone={onDone} />;
   if (mail.action === 'coachPick') return <CoachPickPanel />;
   if (mail.action === 'mystery') return <MysteryPanel playerId={mail.playerId!} onDone={onDone} />;
+  if (mail.action === 'saudi') return <SaudiPanel playerId={mail.playerId!} />;
   if (mail.action === 'youthSlump') return <YouthSlumpPanel kidId={mail.youthId!} />;
   if (mail.action === 'youthOffer') return <YouthOfferPanel kidId={mail.youthId!} />;
   return null;
@@ -528,6 +531,42 @@ function YouthOfferPanel({ kidId }: { kidId: string }) {
       <div className="row gap">
         <button className="btn ghost grow" onClick={() => answer(false)}>
           断ってクラブに残す
+        </button>
+        <button className="btn primary grow" onClick={() => answer(true)}>
+          売る
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** サウジアラビアからの超高額オファー */
+function SaudiPanel({ playerId }: { playerId: string }) {
+  const { state, update } = useGame();
+  const [result, setResult] = useState<string | null>(null);
+  const o = state.saudiOffer;
+  const p = state.players[playerId];
+  if (result) return <Done text={result} />;
+  if (!o || o.playerId !== playerId || !p) return <p className="hint">この話はもう終わっています。</p>;
+  const answer = (ok: boolean) => {
+    if (ok && !confirm(`${p.name}を${o.club}に ${fmtMoney(o.fee)} で売りますか？（すぐに移籍します）`)) return;
+    setResult(update((d) => answerSaudi(d, ok)).message ?? '');
+  };
+  return (
+    <div className="event-card saudi-card">
+      <div className="event-title">
+        💰 {o.club} <small>回答期限 あと{Math.max(0, o.expires - state.day)}日</small>
+      </div>
+      <p className="small">
+        {p.name}（{p.age}歳・総合値{overall(p)}）
+        <br />
+        移籍金 <b className="saudi-fee">{fmtMoney(o.fee)}</b>
+        <br />
+        <span className="muted">市場価値 {fmtMoney(marketValue(p))}</span>
+      </p>
+      <div className="row gap">
+        <button className="btn ghost grow" onClick={() => answer(false)}>
+          断る
         </button>
         <button className="btn primary grow" onClick={() => answer(true)}>
           売る

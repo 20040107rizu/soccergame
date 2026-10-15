@@ -3473,3 +3473,17 @@ button.friend-row {
 .fac-lv .muted {
   color: var(--muted);
 }
+.mail-row.saudi {
+  border: 1px solid #ffd34d;
+  background: linear-gradient(100deg, #2b3a10, #0f5132 55%, #1b3a2c);
+  box-shadow: 0 0 14px #ffd34d66;
+}
+.saudi-card {
+  border: 1px solid #ffd34d;
+  background: linear-gradient(135deg, #0f5132, #1b3a2c 70%);
+}
+.saudi-fee {
+  font-size: 20px;
+  color: #ffd34d;
+  text-shadow: 0 0 8px #ffd34d88;
+}

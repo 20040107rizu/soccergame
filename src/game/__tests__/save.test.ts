@@ -160,6 +160,16 @@ describe('セーブデータの引き継ぎ', () => {
     expect(nextSodePick(g)).not.toBeNull();
   });
 
+  it('サウジのオファーが無い古いセーブも読め、オファーが届く', async () => {
+    const { spawnSaudi } = await import('../saudi');
+    const s = newGame('テスト', 'ars');
+    delete s.saudiOffer;
+    store.set('masterleague.save.3', JSON.stringify(s));
+    const g = loadGame(3)!;
+    expect(g.saudiOffer).toBeUndefined();
+    expect(spawnSaudi(g)).toBe(true);
+  });
+
   it('本体が壊れていてもバックアップから復旧する', () => {
     const s = newGame('テスト', 'liv');
     saveGame(1, s);

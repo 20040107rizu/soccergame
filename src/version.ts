@@ -3,9 +3,14 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.21.4';
+export const APP_VERSION = '0.22.0';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.22.0',
+    date: '2026-10-15',
+    items: ['ごく稀に、とんでもない話が舞い込んでくるようになりました（何が起きるかはお楽しみ）', '🎖 隠しバッジを2つ追加'],
+  },
   {
     version: '0.21.4',
     date: '2026-10-15',

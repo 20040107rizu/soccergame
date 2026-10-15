@@ -78,7 +78,7 @@ export function InboxList({ limit }: { limit?: number }) {
         {list.map((m) => (
           <button
             key={m.id}
-            className={'mail-row' + (m.read ? '' : ' unread') + (m.important ? ' important' : '') + (m.legend ? ' legend' : '') + (m.sode ? ' sode' : '')}
+            className={'mail-row' + (m.read ? '' : ' unread') + (m.important ? ' important' : '') + (m.legend ? ' legend' : '') + (m.sode ? ' sode' : '') + (m.action === 'saudi' ? ' saudi' : '')}
             onClick={() => {
               setOpen(m.id);
               if (!m.read)

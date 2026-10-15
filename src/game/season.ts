@@ -7,6 +7,7 @@ import { legendGrowth, legendTick, spawnHeir } from './legend';
 import { legendChallengeTick } from './legendChallenge';
 import { sodeChallengeTick, sodeGrowth } from './sodegaura';
 import { expeditionTick, facilityTick, gateIncome, medicalBoost, scienceBoost, shiftClubDays, stadiumTick, stadiumWageLevel, trainingBoost } from './club';
+import { saudiTick } from './saudi';
 import { ensureYouth, youthDebut, youthSeasonEnd, youthSeasonGrowth, youthTick } from './youth';
 import { coachChallengeTick, inheritAceTick, markAce, mysteryTick } from './hidden2';
 import { afterUserMatch, dailyEvents, heirsDue, spawnGem, jobOfferAtSeasonEnd, listedPlayersTick, onRetire, planHeirs, promoteAcademy, seasonEndAchievements } from './events';
@@ -246,6 +247,7 @@ export function playDay(state: GameState, userMatch?: LiveMatch): DayReport {
   dailyEvents(state, day);
   listedPlayersTick(state);
   youthTick(state);
+  saudiTick(state);
 
   state.day++;
   state.updatedAt = Date.now();
