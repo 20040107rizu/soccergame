@@ -11,8 +11,8 @@ import type { GameState } from './types';
 /* ======================= サウジアラビアからの超高額オファー ======================= */
 
 export const SAUDI_CLUBS = ['アル・ヒラル', 'アル・ナスル', 'アル・イテハド', 'アル・アハリ', 'アル・カーディシーヤ', 'アル・シャバブ'];
-/** 1日あたりの確率（数シーズンに1回くらい） */
-const RATE = 1 / 200;
+/** 平均して何シーズンに1回届くか */
+const EVERY_SEASONS = 10;
 /** 最低額（1000億円） */
 const MIN_FEE = 625;
 const DAYS = 3;
@@ -26,7 +26,7 @@ export function saudiTick(state: GameState) {
     }
     return;
   }
-  if (rand() >= RATE) return;
+  if (rand() >= 1 / (EVERY_SEASONS * (state.calendar.length || 60))) return;
   spawnSaudi(state);
 }
 

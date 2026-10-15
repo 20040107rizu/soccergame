@@ -50,10 +50,10 @@ describe('サウジアラビアの超高額オファー', () => {
     expect(computeBadges(s, 1, 0)).toContain('notForSale');
   });
 
-  it('数シーズンに1回くらい', () => {
+  it('10シーズンに1回くらい', () => {
     const s = newGame('テスト', 'ars');
     let n = 0;
-    const seasons = 60;
+    const seasons = 600;
     for (let i = 0; i < seasons * s.calendar.length; i++) {
       saudiTick(s);
       if (s.saudiOffer) {
@@ -63,7 +63,7 @@ describe('サウジアラビアの超高額オファー', () => {
     }
     const per = seasons / n;
     console.log('saudi: 1 per', per.toFixed(1), 'seasons');
-    expect(per).toBeGreaterThan(1.5);
-    expect(per).toBeLessThan(6);
+    expect(per).toBeGreaterThan(7);
+    expect(per).toBeLessThan(14);
   });
 });
