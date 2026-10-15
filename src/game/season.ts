@@ -1,7 +1,7 @@
 import { seasonBadges } from './badges';
 import { CL_2026, EU_SEEDS, emptyStats, generateOriginalSquad, generatePlayer, PL_SEEDS, playerFromSeed, teamFromSeed } from './data';
 import { CL_STAGE_PRIZE, fairSalary, fmtMoney as fmtYen, leaguePrize, marketValue, MATCH_PRIZE, payroll, round2, wageCap } from './economy';
-import { advanceCL, buildCalendar, clLeagueFixtures, plFixtures, plTable, resolveTie, stageComplete, STAGE_LABEL, windowStatus } from './competitions';
+import { advanceCL, buildCalendar, clLeagueTable, clLeagueFixtures, plFixtures, plTable, resolveTie, stageComplete, STAGE_LABEL, windowStatus } from './competitions';
 import { createMatch, sideRoles, simulateToEnd, sidePower, type LiveMatch } from './engine';
 import { legendGrowth, legendTick, spawnHeir } from './legend';
 import { legendChallengeTick } from './legendChallenge';
@@ -328,8 +328,18 @@ function progressCL(state: GameState, stage: CLStage, leg?: 1 | 2) {
   }
   const next = advanceCL(state, stage);
   if (!next) return;
+  // リーグフェーズ8位以内はプレーオフなしでラウンド16へ
+  const lpRank = clLeagueTable(state).findIndex((r) => r.teamId === user) + 1;
+  const direct = state.clTeams.includes(user) && lpRank >= 1 && lpRank <= 8;
+  if (stage === 'LP' && direct) {
+    state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'info', text: `CL リーグフェーズ${lpRank}位通過！ラウンド16へストレートイン` });
+    mailCompetition(state, `【CL】リーグフェーズ${lpRank}位でラウンド16へ！`, `チャンピオンズリーグのリーグフェーズを${lpRank}位で終えました。
+8位以内のため、プレーオフは免除。ラウンド16に直接進出します。
+（対戦相手はプレーオフの結果で決まります）`);
+    return;
+  }
   const inNext = state.ties.some((t) => t.stage === next && (t.a === user || t.b === user));
-  const wasIn = stage === 'LP' ? state.clTeams.includes(user) : state.ties.some((t) => t.stage === stage && (t.a === user || t.b === user));
+  const wasIn = stage === 'LP' ? state.clTeams.includes(user) : (stage === 'PO' && direct) || state.ties.some((t) => t.stage === stage && (t.a === user || t.b === user));
   if (wasIn) {
     if (inNext) {
       const prize = (CL_STAGE_PRIZE as Record<string, number>)[next] ?? 0;

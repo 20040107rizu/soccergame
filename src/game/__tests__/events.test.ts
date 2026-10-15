@@ -238,3 +238,21 @@ describe('ひみつのチーム戦', () => {
     expect(s.sodeChallenge).toBeUndefined();
   });
 });
+
+describe('CL リーグフェーズの通過', () => {
+  it('8位以内はプレーオフなしでラウンド16へ（敗退メールは届かない）', () => {
+    const s = newGame('テスト', 'ars');
+    expect(s.clTeams).toContain('ars');
+    for (const f of s.fixtures.filter((x) => x.comp === 'CL' && x.stage === 'LP')) {
+      f.result = f.home === 'ars' ? { home: 3, away: 0 } : f.away === 'ars' ? { home: 0, away: 3 } : { home: 1, away: 1 };
+    }
+    const lastLp = Math.max(...s.fixtures.filter((x) => x.comp === 'CL' && x.stage === 'LP').map((x) => x.day));
+    const lastPo = s.calendar.findIndex((d, i) => i > lastLp && d.type === 'CL' && d.stage === 'PO' && d.leg === 2);
+    while (s.day <= lastPo) playDay(s);
+    const subjects = s.mails.map((m) => m.subject);
+    expect(subjects.some((x) => x.includes('リーグフェーズ1位でラウンド16へ'))).toBe(true);
+    expect(subjects.some((x) => x.includes('敗退'))).toBe(false);
+    expect(subjects.some((x) => x.includes('ラウンド16進出'))).toBe(true);
+    expect(s.ties.some((t) => t.stage === 'R16' && (t.a === 'ars' || t.b === 'ars'))).toBe(true);
+  }, 60000);
+});
