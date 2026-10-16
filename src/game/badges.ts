@@ -75,6 +75,7 @@ export const BADGES: BadgeDef[] = [
   { id: 'fullHouse', icon: '🏟', name: '満員御礼', desc: 'Lv.10以上のスタジアムでリーグ優勝', tier: 'legend' },
   { id: 'threeClubs', icon: '🔁', name: '名将のタクト', desc: '3つ以上のクラブでリーグ優勝', tier: 'legend' },
   { id: 'underdog', icon: '⬆️', name: '下剋上', desc: '格★1〜2のクラブでリーグ優勝', tier: 'mythic' },
+  { id: 'underdogCL', icon: '🌠', name: 'ジャイアントキリング', desc: '格★1〜2のクラブでCL優勝', tier: 'divine' },
   // 育成・選手
   { id: 'homegrown90', icon: '🌱', name: '叩き上げ', desc: 'ユース出身の選手が総合値90に到達', tier: 'gold' },
   { id: 'raised', icon: '🌳', name: '育ての親', desc: '15歳から育てた選手が25歳までに総合値90に到達', tier: 'legend' },
@@ -168,7 +169,10 @@ export function sortBadges(ids: string[]): BadgeDef[] {
 }
 
 /** シーズン終了時の記録系バッジ */
-export function seasonBadges(state: GameState, rank: number, row: { ga: number; points: number } | undefined, startRep: number) {
+export function seasonBadges(state: GameState, rank: number, row: { ga: number; points: number } | undefined, startRep: number, userCl = '') {
+  // ★1〜2（RepStars と同じ基準）
+  const smallClub = Math.max(1, Math.min(5, Math.round((startRep - 40) / 12))) <= 2;
+  if (userCl === '優勝' && smallClub) earnBadge(state, 'underdogCL');
   if (row && row.ga <= 20) earnBadge(state, 'wall');
   if (row && row.points >= 100) earnBadge(state, 'points100');
   const players = Object.values(state.players);
@@ -179,8 +183,7 @@ export function seasonBadges(state: GameState, rank: number, row: { ga: number; 
   if (rank === 1) {
     if (!state.flags?.[`spent-${state.season}`]) earnBadge(state, 'miser');
     if ((state.stadium?.level ?? 0) >= 10) earnBadge(state, 'fullHouse');
-    // ★1〜2（RepStars と同じ基準）
-    if (Math.max(1, Math.min(5, Math.round((startRep - 40) / 12))) <= 2) earnBadge(state, 'underdog');
+    if (smallClub) earnBadge(state, 'underdog');
   }
 }
 

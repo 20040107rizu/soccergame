@@ -573,7 +573,7 @@ export function endSeason(state: GameState): SeasonSummary {
 
   // 隠しシステム：実績・2世の予定・監督オファー（成績が確定した時点で）
   const userRow = tbl.find((r) => r.teamId === state.userTeamId);
-  seasonBadges(state, rank, userRow, oldRep);
+  seasonBadges(state, rank, userRow, oldRep, userCl);
   seasonEndAchievements(state, rank, userRow?.loss ?? 99, userCl);
   inheritAceTick(state);
   planHeirs(state, rank);

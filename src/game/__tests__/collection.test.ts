@@ -178,6 +178,13 @@ describe('追加バッジとゴッド', async () => {
     bd.markSpent(t, 10);
     bd.seasonBadges(t, 1, { ga: 30, points: 90 }, 92);
     expect(bd.computeBadges(t, 1, 0)).not.toContain('miser');
+    // ★1〜2のクラブでCL優勝はゴッド（強豪クラブでは付かない）
+    expect(bd.computeBadges(s, 1, 0)).not.toContain('underdogCL');
+    bd.seasonBadges(s, 5, { ga: 40, points: 60 }, 55, '優勝');
+    expect(bd.computeBadges(s, 1, 0)).toContain('underdogCL');
+    expect(bd.badgeDef('underdogCL')!.tier).toBe('divine');
+    bd.seasonBadges(t, 5, { ga: 40, points: 60 }, 92, '優勝');
+    expect(bd.computeBadges(t, 1, 0)).not.toContain('underdogCL');
     expect(bd.computeBadges(t, 1, 0)).not.toContain('underdog');
   });
 
