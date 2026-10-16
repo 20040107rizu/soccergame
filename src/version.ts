@@ -3,13 +3,18 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.22.5';
+export const APP_VERSION = '0.22.6';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
   {
+    version: '0.22.6',
+    date: '2026-10-16',
+    items: ['細かな調整'],
+  },
+  {
     version: '0.22.5',
     date: '2026-10-16',
-    items: ['🎖 ゴッドのバッジ「ジャイアントキリング」（格★1〜2のクラブでCL優勝）を追加'],
+    items: ['細かな調整'],
   },
   {
     version: '0.22.4',

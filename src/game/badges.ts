@@ -75,7 +75,7 @@ export const BADGES: BadgeDef[] = [
   { id: 'fullHouse', icon: '🏟', name: '満員御礼', desc: 'Lv.10以上のスタジアムでリーグ優勝', tier: 'legend' },
   { id: 'threeClubs', icon: '🔁', name: '名将のタクト', desc: '3つ以上のクラブでリーグ優勝', tier: 'legend' },
   { id: 'underdog', icon: '⬆️', name: '下剋上', desc: '格★1〜2のクラブでリーグ優勝', tier: 'mythic' },
-  { id: 'underdogCL', icon: '🌠', name: 'ジャイアントキリング', desc: '格★1〜2のクラブでCL優勝', tier: 'divine' },
+  { id: 'underdogCL', icon: '🌠', name: 'ジャイアントキリング', desc: '格★1〜2のクラブでCL優勝', tier: 'divine', hidden: true },
   // 育成・選手
   { id: 'homegrown90', icon: '🌱', name: '叩き上げ', desc: 'ユース出身の選手が総合値90に到達', tier: 'gold' },
   { id: 'raised', icon: '🌳', name: '育ての親', desc: '15歳から育てた選手が25歳までに総合値90に到達', tier: 'legend' },
