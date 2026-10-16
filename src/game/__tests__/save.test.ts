@@ -170,6 +170,16 @@ describe('セーブデータの引き継ぎ', () => {
     expect(spawnSaudi(g)).toBe(true);
   });
 
+  it('経歴の記録が無い古いセーブも読め、経歴を表示できる', async () => {
+    const { careerOf } = await import('../career');
+    const s = newGame('テスト', 'ars');
+    for (const p of Object.values(s.players)) delete p.log;
+    store.set('masterleague.save.3', JSON.stringify(s));
+    const g = loadGame(3)!;
+    const p = Object.values(g.players).find((x) => x.teamId === 'ars')!;
+    expect(careerOf(g, p).length).toBeGreaterThan(0);
+  });
+
   it('本体が壊れていてもバックアップから復旧する', () => {
     const s = newGame('テスト', 'liv');
     saveGame(1, s);

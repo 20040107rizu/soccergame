@@ -3544,3 +3544,25 @@ button.friend-row {
 .friend-seen.old {
   color: var(--muted);
 }
+.career-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0;
+}
+.career-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: var(--card2);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.career-item small {
+  font-size: 11px;
+}
+.career-icon {
+  font-size: 18px;
+  line-height: 1.2;
+}

@@ -144,6 +144,8 @@ export interface Player {
   listed?: boolean;
   /** 無名の掘り出し物 */
   gem?: { origin: string; tier: GemTier; revealed?: boolean };
+  /** 経歴（古いセーブには無い） */
+  log?: import('./career').CareerEntry[];
   /** 自クラブのユースチームで育った（古いセーブには無い） */
   youth?: YouthInfo;
 }

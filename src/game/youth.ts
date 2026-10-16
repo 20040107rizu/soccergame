@@ -1,4 +1,5 @@
 import { academyBoost } from './club';
+import { logCareer } from './career';
 import { generatePlayer } from './data';
 import { fairSalary, fmtMoney, round2 } from './economy';
 import { squadOf } from './lineup';
@@ -398,6 +399,7 @@ export function promoteKid(state: GameState, kidId: string): Result {
   kid.number = 30;
   while (used.has(kid.number)) kid.number = kid.number < 99 ? kid.number + 1 : 13;
   state.players[kid.id] = kid;
+  logCareer(state, kid, 'youthUp', `${kid.age}歳でユースからトップチームに昇格（背番号${kid.number}）`);
   state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'info', text: `ユースの${kid.name}（${kid.age}歳）がトップチームに昇格` });
   return { ok: true, message: `${kid.name}がトップチームに昇格しました（背番号${kid.number}）` };
 }

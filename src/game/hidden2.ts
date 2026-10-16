@@ -1,4 +1,5 @@
 import { addCounter, earnBadge, markSpent } from './badges';
+import { logCareer } from './career';
 import { fairSalary, fmtMoney, marketValue, round2 } from './economy';
 import { unlock } from './events';
 import type { TeamSnapshot } from './friendly';
@@ -264,6 +265,7 @@ export function signMystery(state: GameState): Result {
   delete state.mysteryOffer;
   state.money = round2(state.money - o.fee);
   markSpent(state, o.fee);
+  logCareer(state, p, 'mystery', `謎の代理人の紹介で加入（移籍金 ${fmtMoney(o.fee)}）`);
   p.teamId = state.userTeamId;
   p.salary = round2(Math.max(0.3, fairSalary(p) * 0.7));
   p.contractYears = 3;
@@ -287,6 +289,7 @@ export function revealMystery(state: GameState, p: Player) {
   if (!p.mystery || p.mystery.revealed || (p.clubApps ?? 0) < 8) return;
   p.mystery.revealed = true;
   const t = p.mystery.tier;
+  logCareer(state, p, 'mystery', `正体が判明 → ${t === 'jackpot' ? 'とんでもない掘り出し物だった' : t === 'normal' ? '値段なりの堅実な選手だった' : '期待外れだった'}`);
   const text =
     t === 'jackpot'
       ? 'とんでもない掘り出し物でした。伸びしろは、まだまだ底が見えません。'

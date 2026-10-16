@@ -1,4 +1,5 @@
 import { markSpent } from './badges';
+import { logCareer } from './career';
 import { managerPerks } from './collection';
 import { fmtMoney, round2 } from './economy';
 import { unlock } from './events';
@@ -189,6 +190,7 @@ export function negotiateLegendPick(state: GameState, seedId: string): Result & 
   p.salary = round2(Math.max(1.5, fee * 0.05));
   p.joinedSeason = state.season;
   p.legend!.signed = true;
+  logCareer(state, p, 'legend', 'レジェンドXIに勝利し、若き日の姿で加入');
   const used = new Set(squadOf(state, state.userTeamId).map((x) => x.number));
   while (used.has(p.number)) p.number = randInt(2, 49);
   state.players[p.id] = p;

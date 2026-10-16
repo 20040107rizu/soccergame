@@ -1,4 +1,5 @@
 import { markSpent } from './badges';
+import { logCareer } from './career';
 import { markAce } from './hidden2';
 import { richMarkup, stadiumWageLevel } from './club';
 import { managerPerks, managerTitle } from './collection';
@@ -220,6 +221,7 @@ export function completeSigning(state: GameState, playerId: string, salary: numb
   state.money = round2(state.money - fee);
   markSpent(state, fee);
   if (from) from.budget = round2(from.budget + fee);
+  logCareer(state, p, from ? 'transfer' : 'free', `${p.age}歳・総合値${overall(p)}で、${from ? `${from.name}から移籍金 ${fmtMoney(fee)} で加入` : 'フリーで加入'}`);
   p.exTeamId = p.teamId ?? p.exTeamId;
   p.teamId = state.userTeamId;
   p.joinedSeason = state.season;
@@ -260,6 +262,7 @@ export function acceptOffer(state: GameState, offerId: string): Result {
   state.money = round2(state.money + o.fee);
   buyer.budget = round2(buyer.budget - o.fee);
   markAce(state, p);
+  logCareer(state, p, 'sold', `${p.age}歳・総合値${overall(p)}で、${buyer.name}へ移籍金 ${fmtMoney(o.fee)} で移籍`);
   p.exTeamId = state.userTeamId;
   p.teamId = buyer.id;
   p.joinedSeason = state.season;
@@ -354,6 +357,7 @@ export function releasePlayer(state: GameState, playerId: string): Result {
   if (cost > state.money) return { ok: false, message: '違約金を払う資金が足りません' };
   state.money = round2(state.money - cost);
   markAce(state, p);
+  logCareer(state, p, 'released', '契約解除でクラブを去る');
   p.exTeamId = state.userTeamId;
   p.teamId = null;
   delete p.promise;

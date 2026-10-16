@@ -1,4 +1,5 @@
 import { addCounter, markSpent, matchBadges } from './badges';
+import { logCareer } from './career';
 import { checkMiracle, markAce, revealMystery, zoneAfterMatch, zoneBonus } from './hidden2';
 import { academyBoost, analysisBoost, fanTick, scoutBoost, stadiumWageLevel } from './club';
 import { addXp, managerPerks, matchXp, registerDex } from './collection';
@@ -293,6 +294,7 @@ function checkAwakening(state: GameState, f: Fixture, m: LiveMatch, key: 'home' 
 export function awaken(state: GameState, p: Player, why: string) {
   const before = overall(p);
   p.awakened = true;
+  logCareer(state, p, 'awaken', `覚醒（${why}）`);
   p.potential = Math.min(109, p.potential + randInt(4, 8));
   const n = randInt(44, 58);
   for (let i = 0; i < n; i++) awakenBump(p);
@@ -455,6 +457,7 @@ export function signGem(state: GameState): Result {
   while (used.has(p.number)) p.number = randInt(13, 49);
   p.gem!.revealed = true;
   const tier = p.gem!.tier;
+  logCareer(state, p, 'gem', `掘り出し物として${p.gem!.origin}から加入（移籍金 ${fmtMoney(o.fee)}）→ ${tier === 'jackpot' ? 'とんでもない逸材だった' : tier === 'normal' ? '堅実な選手だった' : '期待外れだった'}`);
   const text =
     tier === 'jackpot'
       ? `とんでもない逸材でした！\n伸びしろは底が見えません。数年後にはワールドクラスになっているかもしれません。`
@@ -672,6 +675,7 @@ export function promoteAcademy(state: GameState): string[] {
     while (used.has(p.number)) p.number = randInt(13, 49);
     state.players[p.id] = p;
     names.push(p.name);
+    logCareer(state, p, 'golden', '黄金世代の一人として、ユースからトップチームに昇格');
   }
   if (golden && names.length) {
     sendMail(state, { from: 'coach', sender: 'ユース監督', subject: `【黄金世代】${names.length}人がトップチームへ`, body: `約束どおり、黄金世代がトップチームに昇格しました。\n\n${names.map((x) => '・' + x).join('\n')}\n\n彼らがクラブの未来を背負っていくはずです。` });

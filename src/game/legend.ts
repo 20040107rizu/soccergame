@@ -1,4 +1,5 @@
 import { markSpent } from './badges';
+import { logCareer } from './career';
 import { fairSalary, fmtMoney, round2 } from './economy';
 import { repairLineup, squadOf } from './lineup';
 import { sendMail } from './mail';
@@ -281,6 +282,7 @@ export function acceptLegend(state: GameState): Result & { joined?: boolean } {
   p.loyalty = 80;
   p.legend!.signed = true;
   p.joinedSeason = state.season;
+  logCareer(state, p, 'legend', `${p.legend!.heir ? 'レジェンドの2世' : 'レジェンド'}として電撃加入（移籍金 ${fmtMoney(o.fee)}）`);
   unlock(state, p.legend!.heir ? 'secondGen' : 'legend');
   state.news.unshift({ id: uid('n'), season: state.season, day: state.day, kind: 'transfer', text: `【電撃加入】${p.name}が入団！（移籍金 ${fmtMoney(o.fee)}）` });
   sendMail(state, {

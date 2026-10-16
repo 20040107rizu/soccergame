@@ -1,4 +1,5 @@
 import { GrowthAlbum } from '../components/GrowthAlbum';
+import { CAREER_ICON, careerOf } from '../game/career';
 import { useState } from 'react';
 import { Heatmap } from '../components/Heatmap';
 import { COND_STYLE, CondArrow, Ovr, PlayerIcon, PosTag, Seg, Sheet, statColor } from '../components/ui';
@@ -215,6 +216,7 @@ export function PlayerDetail({ id, onClose }: { id: string; onClose: () => void 
             </div>
           </div>
           {p.youth && <GrowthAlbum p={p} />}
+          <CareerList id={p.id} />
         </>
       )}
 
@@ -359,6 +361,32 @@ function PlayerBadges({ id }: { id: string }) {
     <div className="pd-badges">
       {items.map((t) => (
         <span key={t}>{t}</span>
+      ))}
+    </div>
+  );
+}
+
+/** 経歴（どうやって加入したか・代理人の見立て・移籍など） */
+function CareerList({ id }: { id: string }) {
+  const { state } = useGame();
+  const p = state.players[id];
+  const list = careerOf(state, p);
+  if (!list.length) return null;
+  return (
+    <div className="career-list">
+      <b>📜 経歴</b>
+      {list.map((e, i) => (
+        <div key={i} className="career-item">
+          <span className="career-icon">{CAREER_ICON[e.k]}</span>
+          <div className="grow">
+            <small className="muted">
+              {e.s > 0 ? `シーズン${e.s}` : '時期不明'}
+              {e.a > 0 ? ` · ${e.a}歳` : ''}
+              {e.o > 0 ? ` · 総合値${e.o}` : ''}
+            </small>
+            <div>{e.t}</div>
+          </div>
+        </div>
       ))}
     </div>
   );

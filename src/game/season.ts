@@ -1,4 +1,5 @@
 import { seasonBadges } from './badges';
+import { logCareer } from './career';
 import { CL_2026, EU_SEEDS, emptyStats, generateOriginalSquad, generatePlayer, PL_SEEDS, playerFromSeed, teamFromSeed } from './data';
 import { CL_STAGE_PRIZE, fairSalary, fmtMoney as fmtYen, leaguePrize, marketValue, MATCH_PRIZE, payroll, round2, wageCap } from './economy';
 import { advanceCL, buildCalendar, clLeagueTable, clLeagueFixtures, plFixtures, plTable, resolveTie, stageComplete, STAGE_LABEL, windowStatus } from './competitions';
@@ -616,6 +617,7 @@ export function endSeason(state: GameState): SeasonSummary {
       if (p.contractYears <= 0) {
         if (p.teamId === state.userTeamId) {
           markAce(state, p);
+          logCareer(state, p, 'left', '契約満了で退団');
           summary.left.push(p.name);
           p.teamId = null;
           p.contractYears = 0;
@@ -695,6 +697,7 @@ function promoteYouth(state: GameState): string[] {
     const used = new Set(squad.map((x) => x.number));
     while (used.has(p.number)) p.number = randInt(2, 99);
     state.players[p.id] = p;
+    logCareer(state, p, 'academy', '人数不足のため、ユースからトップチームに昇格');
     names.push(p.name);
     squad = squadOf(state, state.userTeamId);
   }
