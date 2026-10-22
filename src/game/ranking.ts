@@ -6,6 +6,7 @@ import { overall } from './stats';
 import type { GameState } from './types';
 import { APP_VERSION } from '../version';
 import { teamSnapshot } from './friendly';
+import { cupRowFrom, missingCupRows, myCupWinCount } from './cup';
 
 /** ランキングに送るプレー状況（個人情報は含めない） */
 export interface RankingRow {
@@ -86,7 +87,7 @@ export function rankingSummary(state: GameState, slot: number): RankingRow {
     titles,
     clTitles,
     version: APP_VERSION,
-    team: JSON.stringify(teamSnapshot(state)),
+    team: JSON.stringify({ ...teamSnapshot(state), cw: myCupWinCount() }),
   };
 }
 
@@ -99,12 +100,24 @@ export function sendRanking(state: GameState, slot: number) {
   const key = JSON.stringify(row);
   if (key === lastSent) return;
   lastSent = key;
+  post(key);
+  // 今週のフレンドカップにも、この時点のチームで登録（締め切りまでは遊ぶたびに上書き）
+  post(JSON.stringify(cupRowFrom(row)));
+}
+
+function post(body: string) {
   try {
     // text/plain で送ると、ブラウザの事前確認（CORS）が要らない
-    fetch(RANKING_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: key }).catch(() => {});
+    fetch(RANKING_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body }).catch(() => {});
   } catch {
     // オフラインなど
   }
+}
+
+/** フレンドカップ：今週まだ登録されていない人を、その人の最新のチームで登録する（全員参加） */
+export function syncCupEntries(rows: RankingRow[]) {
+  if (!rankingEnabled()) return;
+  for (const r of missingCupRows(rows)) post(JSON.stringify(r));
 }
 
 export async function fetchRanking(): Promise<RankingRow[]> {

@@ -3566,3 +3566,102 @@ button.friend-row {
   font-size: 18px;
   line-height: 1.2;
 }
+
+/* ---------- フレンドカップ ---------- */
+.fcup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fcup-next {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fcup-champ {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--accent);
+  background: linear-gradient(120deg, #3a2a00, var(--card) 70%);
+}
+.fcup-champ.me {
+  box-shadow: 0 0 14px #ffd34d66;
+}
+.fcup-champ > div:last-child {
+  display: flex;
+  flex-direction: column;
+}
+.fcup-champ b {
+  font-size: 20px;
+}
+.fcup-cup {
+  font-size: 40px;
+}
+.fcup-table {
+  padding: 6px 10px;
+}
+.fcup-tr {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.fcup-tr:last-child {
+  border-bottom: none;
+}
+.fcup-tr > span,
+.fcup-tr > b {
+  width: 22px;
+  text-align: center;
+}
+.fcup-tr > .grow {
+  flex: 1;
+  width: auto;
+  text-align: left;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fcup-tr.head {
+  color: var(--muted);
+  font-size: 11px;
+}
+.fcup-tr.me,
+.fcup-game.me {
+  background: rgba(255, 211, 77, 0.08);
+}
+.fcup-game {
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+.fcup-game:last-child {
+  border-bottom: none;
+}
+.fcup-score {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 14px;
+}
+.fcup-score .grow {
+  flex: 1;
+  min-width: 0;
+}
+.fcup-goals {
+  display: grid;
+  gap: 2px;
+  margin-top: 4px;
+}
+.right {
+  text-align: right;
+}
+.cup-trophies {
+  color: var(--accent);
+  font-size: 13px;
+}

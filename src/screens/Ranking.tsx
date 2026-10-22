@@ -9,7 +9,9 @@ import { overall, ratingAt, SKILLS, STAT_GROUPS, STAT_LABEL, STYLES } from '../g
 import type { Player, Team } from '../game/types';
 import { useGame } from '../store';
 import { TACTIC_OPTIONS } from './Squad';
-import { fetchRanking, lastPlayed, playerId, rankingEnabled, type RankingRow } from '../game/ranking';
+import { fetchRanking, lastPlayed, playerId, rankingEnabled, syncCupEntries, type RankingRow } from '../game/ranking';
+import { isCupRow } from '../game/cup';
+import { FriendCup } from './FriendCup';
 import { ACHIEVEMENTS } from '../game/events';
 import { FACILITIES, sceneData } from '../game/club';
 import { ClubScene } from '../components/ClubScene';
@@ -26,6 +28,7 @@ export function Ranking() {
   const [rows, setRows] = useState<RankingRow[] | null>(null);
   const [err, setErr] = useState(false);
   const [sort, setSort] = useState<Sort>('titles');
+  const [view, setView] = useState<'rank' | 'cup'>('rank');
   const [open, setOpen] = useState<RankingRow | null>(null);
   const me = playerId();
   const { state } = useGame();
@@ -39,7 +42,10 @@ export function Ranking() {
   useEffect(() => {
     if (!rankingEnabled()) return;
     fetchRanking()
-      .then(setRows)
+      .then((r) => {
+        setRows(r);
+        syncCupEntries(r);
+      })
       .catch(() => setErr(true));
   }, []);
 
@@ -49,10 +55,22 @@ export function Ranking() {
 
   const key = (r: RankingRow) =>
     sort === 'titles' ? r.titles * 1000 + r.clTitles * 500 + r.points - r.plRank : sort === 'points' ? r.points * 100 + (r.gf - r.ga) : sort === 'money' ? r.money : r.achievements;
-  const list = [...rows].sort((a, b) => key(b) - key(a));
+  const list = rows.filter((r) => !isCupRow(r)).sort((a, b) => key(b) - key(a));
 
   return (
     <>
+      <Seg
+        value={view}
+        onChange={setView}
+        options={[
+          { v: 'rank', label: '📊 ランキング' },
+          { v: 'cup', label: '🤝 フレンドカップ' },
+        ]}
+      />
+      {view === 'cup' ? (
+        <FriendCup rows={rows} />
+      ) : (
+      <>
       <p className="hint">テストプレイ中のみんなの状況です（自動で更新されます）。</p>
       <Seg
         small
@@ -83,6 +101,7 @@ export function Ranking() {
               <b>
                 {r.nickname}
                 {r.playerId === me && <small className="muted">（あなた）</small>}
+                <CupTrophies team={r.team} />
               </b>
               <FriendTitle team={r.team} />
               <FriendBadges team={r.team} mine={mineBadges} />
@@ -100,6 +119,8 @@ export function Ranking() {
           );
         })}
       </div>
+      </>
+      )}
       {open && <FriendTeam row={open} mine={open.playerId === me} onClose={() => setOpen(null)} />}
     </>
   );
@@ -427,4 +448,11 @@ function Career({ row, snap }: { row: RankingRow; snap: TeamSnapshot }) {
       {pr.miracles > 0 && <p className="small">✨ 大逆転勝利 {pr.miracles}回</p>}
     </div>
   );
+}
+
+/** フレンドカップの優勝回数 */
+function CupTrophies({ team }: { team?: string }) {
+  const n = parseSnapshot(team)?.cw ?? 0;
+  if (!n) return null;
+  return <span className="cup-trophies"> 🏆×{n}</span>;
 }

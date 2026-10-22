@@ -39,6 +39,7 @@ export const BADGES: BadgeDef[] = [
   ...tiered('cl', '⭐', 'CL優勝', '回', [[1, 'silver'], [3, 'gold'], [10, 'legend'], [30, 'mythic']]),
   ...tiered('level', '📈', '監督レベル', '', [[10, 'bronze'], [50, 'silver'], [100, 'gold'], [300, 'legend'], [999, 'mythic']]),
   ...tiered('dex', '📖', '図鑑', '人', [[50, 'bronze'], [100, 'silver'], [300, 'gold']]),
+  ...tiered('fcup', '🤝', 'フレンドカップ優勝', '回', [[1, 'silver'], [3, 'gold'], [10, 'legend']]),
   { id: 'stadium-5', icon: '🏟', name: '大スタジアム', desc: 'スタジアムをLv.5に拡張', tier: 'silver', group: 'stadium' },
   { id: 'stadium-10', icon: '🏟', name: '聖地', desc: 'スタジアムをLv.10に拡張', tier: 'legend', group: 'stadium' },
   { id: 'stadium-20', icon: '🏟', name: '天空の聖地', desc: 'スタジアムをLv.20に拡張', tier: 'mythic', group: 'stadium' },
@@ -126,6 +127,7 @@ export function computeBadges(state: GameState, level: number, dexCount: number)
   add('cl', cl);
   add('level', level);
   add('dex', dexCount);
+  add('fcup', state.counters?.fcup ?? 0);
   add('stadium', state.stadium?.level ?? 0);
   add('statue', state.cosmetics?.statues?.length ?? 0);
   const f = state.facilities ?? {};

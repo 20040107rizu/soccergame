@@ -26,6 +26,8 @@ export interface TeamSnapshot {
   mgr?: { lv: number; title: string };
   /** 監督としての実績（古いデータには無い） */
   prof?: import('./collection').ManagerProfile;
+  /** フレンドカップの優勝回数（古いデータには無い） */
+  cw?: number;
   /** 平均年齢 [スタメン, チーム全体]（古いデータには無い） */
   ages?: [number, number];
 }
