@@ -27,13 +27,18 @@ export function weekDeadline(w: number): number {
   return ((w + 1) * 7 + 4) * DAY - JST;
 }
 
+/** フレンドカップ用の行（ランキングには出さない）。cup: 週1回の頃の登録 / cupd: 毎日の登録 / cupres: 結果の保存 */
 export function isCupRow(r: RankingRow): boolean {
+  return /^cup(d|res)?:/.test(String(r.playerId));
+}
+
+function isWeeklyRow(r: RankingRow): boolean {
   return String(r.playerId).startsWith(CUP_PREFIX);
 }
 
 /** cup 行の持ち主（端末ID） */
-function ownerOf(r: RankingRow): string {
-  return String(r.playerId).slice(CUP_PREFIX.length).split(':')[0];
+export function ownerOf(r: RankingRow): string {
+  return String(r.playerId).split(':')[1] ?? '';
 }
 
 /** 自分のチームを今週のフレンドカップに登録する行 */
@@ -53,7 +58,7 @@ export interface CupEntrant {
 export function cupEntrants(rows: RankingRow[], w: number): CupEntrant[] {
   const best = new Map<string, RankingRow>();
   for (const r of rows) {
-    if (!isCupRow(r) || Number(r.season) !== w || Number(r.slot) !== w % 2) continue;
+    if (!isWeeklyRow(r) || Number(r.season) !== w || Number(r.slot) !== w % 2) continue;
     if (!parseSnapshot(r.team)) continue;
     const k = ownerOf(r);
     const cur = best.get(k);
@@ -69,7 +74,7 @@ export function cupEntrants(rows: RankingRow[], w: number): CupEntrant[] {
  * 本人が遊べば本人の端末が上書きするので、締め切り時点の最新のチームが残る。
  */
 export function missingCupRows(rows: RankingRow[], w = weekId()): RankingRow[] {
-  const entered = new Set(rows.filter((r) => isCupRow(r) && Number(r.season) === w && Number(r.slot) === w % 2).map(ownerOf));
+  const entered = new Set(rows.filter((r) => isWeeklyRow(r) && Number(r.season) === w && Number(r.slot) === w % 2).map(ownerOf));
   const latest = new Map<string, RankingRow>();
   for (const r of rows) {
     if (isCupRow(r) || !parseSnapshot(r.team)) continue;
@@ -264,7 +269,7 @@ export function cupWins(): Record<string, number[]> {
 }
 
 /** 自分が優勝していたら記録する（同じ週は1回だけ） */
-export function recordCupWin(res: CupResult, me: string): boolean {
+export function recordCupWin(res: Pick<CupResult, 'week' | 'champion'>, me: string): boolean {
   if (res.champion !== me) return false;
   try {
     const all = cupWins();
@@ -290,7 +295,7 @@ export const CUP_PRIZE = [30, 15, 8];
 const PAID_KEY = 'masterleague.cupPaid';
 
 /** 自分の順位（1始まり。決勝の結果で1・2位を決める） */
-export function cupPlace(res: CupResult, me: string): number {
+export function cupPlace(res: Pick<CupResult, 'champion' | 'final' | 'table'>, me: string): number {
   if (res.champion === me) return 1;
   if (res.final && (res.final.a === me || res.final.b === me)) return 2;
   const i = res.table.findIndex((r) => r.key === me);
@@ -298,7 +303,7 @@ export function cupPlace(res: CupResult, me: string): number {
 }
 
 /** まだ受け取っていなければ賞金額を返し、受け取り済みにする */
-export function claimCupPrize(res: CupResult, me: string): number {
+export function claimCupPrize(res: Pick<CupResult, 'week' | 'champion' | 'final' | 'table'>, me: string): number {
   const place = cupPlace(res, me);
   const prize = CUP_PRIZE[place - 1] ?? 0;
   if (!prize) return 0;

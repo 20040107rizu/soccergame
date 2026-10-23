@@ -3665,3 +3665,12 @@ button.friend-row {
   color: var(--accent);
   font-size: 13px;
 }
+.fcup-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fcup-game small.center {
+  display: block;
+  text-align: center;
+}
