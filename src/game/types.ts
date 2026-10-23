@@ -444,6 +444,9 @@ export interface GameState {
   hofXI?: (string | null)[];
   /** 師弟関係の進み具合（ベテランID|若手ID → 一緒に先発した試合数） */
   mentorProgress?: Record<string, number>;
+  /** 開催中のワールドカップと、歴代の結果（古いセーブには無い） */
+  worldCup?: import('./worldcup').WorldCup;
+  wcHistory?: import('./worldcup').WCHistory[];
   /** サウジアラビアからの超高額オファー（古いセーブには無い） */
   saudiOffer?: { playerId: string; club: string; fee: number; expires: number };
   /** ユースチーム（トップチームの登録人数には含まない。古いセーブには無い） */

@@ -4,8 +4,9 @@ import { clLeagueTable, plTable, STAGE_LABEL, type TableRow } from '../game/comp
 import type { CLStage, Fixture, Team } from '../game/types';
 import { useGame } from '../store';
 import { Ranking } from './Ranking';
+import { WorldCupView } from './WorldCup';
 
-type Comp = 'PL' | 'CL' | 'history' | 'friends';
+type Comp = 'PL' | 'CL' | 'wc' | 'history' | 'friends';
 
 export function seasonLabel(season: number): string {
   const y = 2025 + season;
@@ -30,12 +31,38 @@ export function Competitions() {
         options={[
           { v: 'PL', label: 'プレミアリーグ' },
           { v: 'CL', label: 'チャンピオンズL' },
+          ...(state.worldCup || state.wcHistory?.length ? [{ v: 'wc' as Comp, label: '🌍 W杯' }] : []),
           { v: 'history', label: '歴代' },
           { v: 'friends', label: 'フレンド' },
         ]}
       />
       {comp === 'friends' && <Ranking />}
-      {comp !== 'history' && comp !== 'friends' && (
+      {comp === 'wc' && (
+        <>
+          {state.worldCup && <WorldCupView wc={state.worldCup} />}
+          {!!state.wcHistory?.length && (
+            <>
+              <h3 className="section-title">歴代のワールドカップ</h3>
+              <div className="card">
+                {[...state.wcHistory].reverse().map((h) => (
+                  <div key={h.season} className="wc-hist">
+                    <b>
+                      {2026 + h.season} · 🏆 {h.champion}
+                    </b>
+                    <small className="muted">
+                      準優勝 {h.runnerUp}
+                      {h.mvp ? ` · MVP ${h.mvp.name}（${h.mvp.nation}）` : ''}
+                      {h.topScorer ? ` · 得点王 ${h.topScorer.name}（${h.topScorer.goals}点）` : ''}
+                      {h.coach ? ` · あなたの${h.coach}は${h.coachResult}` : ''}
+                    </small>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+      {comp !== 'history' && comp !== 'friends' && comp !== 'wc' && (
         <Seg
           small
           value={tab}

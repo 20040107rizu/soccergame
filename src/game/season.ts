@@ -9,6 +9,7 @@ import { legendChallengeTick } from './legendChallenge';
 import { sodeChallengeTick, sodeGrowth } from './sodegaura';
 import { expeditionTick, facilityTick, gateIncome, medicalBoost, scienceBoost, shiftClubDays, stadiumTick, stadiumWageLevel, trainingBoost } from './club';
 import { saudiTick } from './saudi';
+import { maybeStartWorldCup } from './worldcup';
 import { ensureYouth, youthDebut, youthSeasonEnd, youthSeasonGrowth, youthTick } from './youth';
 import { coachChallengeTick, inheritAceTick, markAce, mysteryTick } from './hidden2';
 import { afterUserMatch, dailyEvents, heirsDue, spawnGem, jobOfferAtSeasonEnd, listedPlayersTick, onRetire, planHeirs, promoteAcademy, seasonEndAchievements } from './events';
@@ -668,6 +669,8 @@ export function endSeason(state: GameState): SeasonSummary {
     kind: 'info',
     text: `シーズン${state.season - 1}終了：プレミアリーグ ${rank}位（優勝 ${champion}）。分配金 +${fmtYen(prize)}${inCl ? ` / 来季CL出場（+${fmtYen(CL_STAGE_PRIZE.start)}）` : ''}`,
   });
+  // 4シーズンに1回、シーズンオフにワールドカップ
+  maybeStartWorldCup(state, state.season - 1);
   state.updatedAt = Date.now();
   return summary;
 }

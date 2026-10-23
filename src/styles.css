@@ -3674,3 +3674,91 @@ button.friend-row {
   display: block;
   text-align: center;
 }
+
+/* ---------- ワールドカップ ---------- */
+.wc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #4aa3ff;
+  background: linear-gradient(140deg, #0d2a4a, var(--card) 70%);
+}
+.wc-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wc-head > div {
+  display: flex;
+  flex-direction: column;
+}
+.wc-globe {
+  font-size: 34px;
+}
+.wc-offer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+}
+.wc-vs {
+  font-size: 18px;
+  text-align: center;
+}
+.wc-champ {
+  font-size: 20px;
+  text-align: center;
+}
+.wc-groups {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.wc-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wc-row,
+.wc-ko-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  padding: 3px 0;
+}
+.wc-row .grow,
+.wc-ko-row .grow {
+  flex: 1;
+  min-width: 0;
+}
+.wc-row.through {
+  color: var(--green);
+}
+.wc-row.me,
+.wc-ko-row.me {
+  background: rgba(255, 211, 77, 0.1);
+}
+.wc-ko-row .win {
+  font-weight: 800;
+  color: var(--accent);
+}
+.wc-res {
+  display: block;
+  font-size: 11px;
+}
+.wc-ko {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wc-hist {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.wc-hist:last-child {
+  border-bottom: none;
+}

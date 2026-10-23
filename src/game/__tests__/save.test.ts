@@ -180,6 +180,18 @@ describe('セーブデータの引き継ぎ', () => {
     expect(careerOf(g, p).length).toBeGreaterThan(0);
   });
 
+  it('ワールドカップ実装前（v0.25）のセーブも読め、シーズン終了時に開幕できる', async () => {
+    const { maybeStartWorldCup } = await import('../worldcup');
+    const s = newGame('テスト', 'ars');
+    delete s.worldCup;
+    delete s.wcHistory;
+    store.set('masterleague.save.3', JSON.stringify(s));
+    const g = loadGame(3)!;
+    expect(g.worldCup).toBeUndefined();
+    maybeStartWorldCup(g, 8);
+    expect(g.worldCup?.nations.length).toBe(32);
+  });
+
   it('本体が壊れていてもバックアップから復旧する', () => {
     const s = newGame('テスト', 'liv');
     saveGame(1, s);

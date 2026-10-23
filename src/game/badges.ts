@@ -84,6 +84,9 @@ export const BADGES: BadgeDef[] = [
   { id: 'mentor', icon: '🤝', name: '師弟の絆', desc: '師弟関係が生まれた', tier: 'silver' },
   { id: 'oilMoney', icon: '🛢', name: 'オイルマネー', desc: 'サウジアラビアの超高額オファーを受けた', tier: 'gold', luck: true, hidden: true },
   { id: 'notForSale', icon: '🙅', name: '金では買えない', desc: 'サウジアラビアの超高額オファーを3回断った', tier: 'legend', luck: true, hidden: true },
+  { id: 'wcCoach', icon: '🌍', name: '世界一の監督', desc: '代表監督としてワールドカップ優勝', tier: 'legend' },
+  { id: 'wcJapan', icon: '🗾', name: 'サムライブルーの奇跡', desc: '日本代表を率いてワールドカップ優勝', tier: 'divine' },
+  { id: 'wcMvp', icon: '🎖', name: '世界最高の選手', desc: '自クラブの選手がワールドカップMVP', tier: 'gold' },
   { id: 'beloved', icon: '📣', name: '愛されクラブ', desc: '愛称の付いた選手が5人同時に在籍', tier: 'gold' },
   { id: 'camp100', icon: '🏕', name: '鬼コーチ', desc: '特訓キャンプを100回', tier: 'silver' },
   // 運・レア

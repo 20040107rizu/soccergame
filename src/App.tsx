@@ -6,6 +6,7 @@ import { playDay, prepareDay, teamById, today } from './game/season';
 import type { GameState } from './game/types';
 import type { LiveMatch } from './game/engine';
 import { friendlyMatch, type TeamSnapshot } from './game/friendly';
+import { coachMatch, playWCDay } from './game/worldcup';
 import { finishLegendChallenge } from './game/legendChallenge';
 import { finishSodeChallenge } from './game/sodegaura';
 import { finishCoachChallenge } from './game/hidden2';
@@ -93,7 +94,24 @@ function Shell({ firstTab }: { firstTab: Tab }) {
   const [tab, setTab] = useState<Tab>(firstTab);
   const [screen, setScreen] = useState<'tabs' | 'prematch' | 'match'>('tabs');
   const [help, setHelp] = useState(false);
-  const [friendly, setFriendly] = useState<{ state: GameState; match: LiveMatch; onEnd?: (gf: number, ga: number) => void } | null>(null);
+  const [friendly, setFriendly] = useState<{ state: GameState; match: LiveMatch; onEnd?: (gf: number, ga: number, m: LiveMatch) => void } | null>(null);
+
+  // ワールドカップ：代表監督として采配する
+  useEffect(() => {
+    const h = () => {
+      const cm = coachMatch(state);
+      if (!cm) return;
+      setFriendly({
+        ...cm,
+        onEnd: (gf, ga, m) => {
+          update((d) => playWCDay(d, { state: cm.state, match: m }));
+          toast(`${gf > ga ? '勝利！' : gf === ga ? '引き分け' : '敗戦…'}（${gf}-${ga}）`);
+        },
+      });
+    };
+    window.addEventListener('start-wc', h);
+    return () => window.removeEventListener('start-wc', h);
+  }, [state]);
 
   // ランキング画面から「親善試合」、メールから「レジェンドXI戦」を始める
   useEffect(() => {

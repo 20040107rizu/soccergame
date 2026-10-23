@@ -19,7 +19,8 @@ export type CareerKind =
   | 'sold'
   | 'released'
   | 'left'
-  | 'awaken';
+  | 'awaken'
+  | 'worldcup';
 
 export interface CareerEntry {
   /** シーズン */
@@ -49,6 +50,7 @@ export const CAREER_ICON: Record<CareerKind, string> = {
   released: '👋',
   left: '👋',
   awaken: '🔥',
+  worldcup: '🌍',
 };
 
 const TIER_TEXT = { jackpot: 'とんでもない逸材だった', normal: '堅実な選手だった', bust: '期待外れだった' };

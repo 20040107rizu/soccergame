@@ -9,6 +9,7 @@ import { createMatch, sidePower } from '../game/engine';
 import { endSeason, isSeasonOver, playDay, prepareDay, teamById, today, userFixture, userPayroll, type SeasonSummary } from '../game/season';
 import { useGame } from '../store';
 import { isDerby, isRival } from '../game/events';
+import { WorldCupCard } from './WorldCup';
 
 export function Home({ onPreMatch }: { onPreMatch: () => void }) {
   const { state, update, toast } = useGame();
@@ -89,7 +90,9 @@ export function Home({ onPreMatch }: { onPreMatch: () => void }) {
         {state.offers.length > 0 && <span className="offer-pill">オファー {state.offers.length}件</span>}
       </div>
 
-      {over ? (
+      {state.worldCup ? (
+        <WorldCupCard />
+      ) : over ? (
         <div className="card next-match">
           <h3>シーズン{state.season} 全日程終了</h3>
           <p>最終順位 {rankIdx + 1}位。シーズンを締めくくり、次のシーズンへ進みましょう。</p>
