@@ -3,9 +3,14 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.26.0';
+export const APP_VERSION = '0.26.1';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.26.1',
+    date: '2026-10-27',
+    items: ['移籍市場に、10代で総合値70を超える若き才能が増えました（毎シーズン夏と冬に登場。今のセーブにもすぐに何人か加わります）'],
+  },
   {
     version: '0.26.0',
     date: '2026-10-23',

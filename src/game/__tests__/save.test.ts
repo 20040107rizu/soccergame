@@ -192,6 +192,20 @@ describe('セーブデータの引き継ぎ', () => {
     expect(g.worldCup?.nations.length).toBe(32);
   });
 
+  it('古いセーブを読むと、10代で総合値70超えの若手が一度だけ移籍市場に加わる', async () => {
+    const { overall } = await import('../stats');
+    const s = newGame('テスト', 'ars');
+    delete s.flags?.wonderkids;
+    const count = (st: typeof s) => Object.values(st.players).filter((p) => p.age <= 19 && overall(p) >= 70 && p.teamId !== 'ars').length;
+    const before = count(s);
+    store.set('masterleague.save.3', JSON.stringify(s));
+    const g = loadGame(3)!;
+    expect(count(g)).toBeGreaterThanOrEqual(before + 5);
+    expect(g.flags?.wonderkids).toBe(true);
+    saveGame(3, g);
+    expect(count(loadGame(3)!)).toBe(count(g));
+  });
+
   it('本体が壊れていてもバックアップから復旧する', () => {
     const s = newGame('テスト', 'liv');
     saveGame(1, s);

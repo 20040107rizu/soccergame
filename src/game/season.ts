@@ -132,6 +132,8 @@ export function newGame(managerName: string, userTeamId: string, original?: Orig
   mailWindow(state, true);
   mailScoutAdvice(state);
   ensureYouth(state);
+  spawnWonderkids(state, 6);
+  state.flags = { ...(state.flags ?? {}), wonderkids: true };
   return state;
 }
 
@@ -295,6 +297,8 @@ function periodicMails(state: GameState, day: { type: string; round: number }, w
   state.flags = state.flags ?? {};
   const next = windowStatus({ ...state, day: state.day + 1 } as GameState);
   if (!wasOpen && next.open) {
+    // 冬の移籍市場にも、若き才能が何人か現れる
+    spawnWonderkids(state, 4);
     state.day++;
     mailWindow(state, true);
     mailScoutAdvice(state);
@@ -639,6 +643,7 @@ export function endSeason(state: GameState): SeasonSummary {
     const p = generatePlayer({ position: pick(FA_POSITIONS), level: young ? 55 + randInt(0, 12) : 60 + randInt(0, 14), age: young ? randInt(17, 19) : randInt(23, 31), teamId: null });
     state.players[p.id] = p;
   }
+  spawnWonderkids(state, 6);
   summary.promoted = [...promoteAcademy(state), ...youthSeasonEnd(state), ...promoteYouth(state)];
   aiFillSquads(state);
 
@@ -685,6 +690,28 @@ function clResultLabel(state: GameState): string {
     if (state.ties.some((t) => t.stage === s && (t.a === u || t.b === u))) return s === 'F' ? '決勝' : STAGE_LABEL[s];
   }
   return 'リーグフェーズ敗退';
+}
+
+/**
+ * 10代で総合値70を超える若き才能を、移籍市場に送り出す。
+ * 多くは CPU クラブに所属（移籍金で獲得）、一部はフリー。
+ */
+export function spawnWonderkids(state: GameState, n: number) {
+  const clubs = state.teams.filter((t) => t.id !== state.userTeamId);
+  for (let i = 0; i < n; i++) {
+    const p = generatePlayer({ position: pick(FA_POSITIONS), level: randInt(70, 77), age: randInt(16, 19), teamId: null });
+    p.potential = Math.min(97, Math.max(overall(p) + 8, randInt(84, 94)));
+    p.growth = rand() < 0.6 ? 'normal' : 'late';
+    if (i % 3 !== 2 && clubs.length) {
+      const t = pick(clubs);
+      p.teamId = t.id;
+      p.contractYears = randInt(3, 5);
+      p.salary = fairSalary(p);
+      const used = new Set(squadOf(state, t.id).map((x) => x.number));
+      while (used.has(p.number)) p.number = randInt(13, 49);
+    }
+    state.players[p.id] = p;
+  }
 }
 
 /** 人数が最低ラインを割ったらユースから昇格 */
