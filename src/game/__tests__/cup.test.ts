@@ -59,7 +59,7 @@ describe('フレンドカップの賞金', () => {
     expect(cupPlace(res, 'c')).toBe(3);
     expect(claimCupPrize(res, 'b')).toBe(CUP_PRIZE[0]);
     expect(claimCupPrize(res, 'b')).toBe(0);
-    expect(claimCupPrize(res, 'd')).toBe(0);
+    expect(claimCupPrize(res, 'd')).toBe(0); // 同じ週はこの端末で1回だけ
   });
 });
 
@@ -117,10 +117,13 @@ describe('フレンドカップ（毎日1節）', () => {
   }, 60000);
 });
 
-describe('賞金100倍の週', () => {
-  it('2026年10月26日の週だけ100倍', async () => {
-    const { cupPrizes, CUP_PRIZE } = await import('../cup');
-    expect(cupPrizes(2964)).toEqual(CUP_PRIZE.map((x) => x * 100));
-    expect(cupPrizes(2965)).toEqual(CUP_PRIZE);
+describe('賞金（毎週）', () => {
+  it('上位ほど多く、6位以下にも出る', async () => {
+    const { prizeFor } = await import('../cup');
+    expect(prizeFor(1, 1)).toBe(3000);
+    expect(prizeFor(1, 4)).toBe(500);
+    expect(prizeFor(1, 6)).toBe(300);
+    expect(prizeFor(1, 9)).toBe(300);
+    expect(prizeFor(1, 0)).toBe(0);
   });
 });

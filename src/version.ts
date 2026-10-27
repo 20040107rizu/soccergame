@@ -3,9 +3,14 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.26.2';
+export const APP_VERSION = '0.26.3';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.26.3',
+    date: '2026-10-27',
+    items: ['🤝 フレンドカップの賞金を毎週大幅アップ！優勝 ￥4,800億・準優勝 ￥2,400億・3位 ￥1,280億・4位 ￥800億・5位 ￥640億・6位以下も ￥480億'],
+  },
   {
     version: '0.26.2',
     date: '2026-10-27',

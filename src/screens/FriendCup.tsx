@@ -96,8 +96,7 @@ export function FriendCup({ rows }: { rows: RankingRow[] }) {
 
   const prizeLine = (
     <small className="muted">
-      {cupPrizes(w)[0] > 30 && <b className="fcup-boost">🎉 今週は賞金{cupPrizes(w)[0] / 30}倍！ </b>}
-      賞金：優勝 {fmtMoney(cupPrizes(w)[0])} · 準優勝 {fmtMoney(cupPrizes(w)[1])} · 3位 {fmtMoney(cupPrizes(w)[2])}
+      賞金：優勝 {fmtMoney(cupPrizes(w)[0])} · 準優勝 {fmtMoney(cupPrizes(w)[1])} · 3位 {fmtMoney(cupPrizes(w)[2])} · 4位 {fmtMoney(cupPrizes(w)[3])} · 5位 {fmtMoney(cupPrizes(w)[4])} · 6位以下 {fmtMoney(cupPrizes(w)[5])}
     </small>
   );
 

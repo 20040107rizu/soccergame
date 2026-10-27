@@ -290,18 +290,18 @@ export function myCupWinCount(): number {
 
 /* ---------------- 賞金（少しだけ。1週につき1回、その時に開いているセーブに入る） ---------------- */
 
-/** 順位ごとの賞金（百万ユーロ）：優勝・準優勝・3位 */
-export const CUP_PRIZE = [30, 15, 8];
-/** 特別な週の賞金の倍率（週番号 → 倍率） */
-const PRIZE_BOOST: Record<number, number> = {
-  // 2026年10月26日〜11月1日の大会（毎日形式の第1回）は賞金100倍
-  2964: 100,
-};
+/** 順位ごとの賞金（百万ユーロ）：1位・2位・3位・4位・5位、6位以下は最後の額 */
+export const CUP_PRIZE = [3000, 1500, 800, 500, 400, 300];
 
-/** その週の賞金（優勝・準優勝・3位） */
-export function cupPrizes(week: number): number[] {
-  const k = PRIZE_BOOST[week] ?? 1;
-  return CUP_PRIZE.map((x) => x * k);
+/** その週の順位ごとの賞金 */
+export function cupPrizes(_week: number): number[] {
+  return CUP_PRIZE;
+}
+
+/** 順位の賞金（6位以下は同じ額） */
+export function prizeFor(week: number, place: number): number {
+  const ps = cupPrizes(week);
+  return place < 1 ? 0 : ps[Math.min(place, ps.length) - 1];
 }
 const PAID_KEY = 'masterleague.cupPaid';
 
@@ -316,7 +316,7 @@ export function cupPlace(res: Pick<CupResult, 'champion' | 'final' | 'table'>, m
 /** まだ受け取っていなければ賞金額を返し、受け取り済みにする */
 export function claimCupPrize(res: Pick<CupResult, 'week' | 'champion' | 'final' | 'table'>, me: string): number {
   const place = cupPlace(res, me);
-  const prize = cupPrizes(res.week)[place - 1] ?? 0;
+  const prize = prizeFor(res.week, place);
   if (!prize) return 0;
   try {
     const paid: number[] = JSON.parse(localStorage.getItem(PAID_KEY) || '[]');
