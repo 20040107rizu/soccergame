@@ -3762,3 +3762,6 @@ button.friend-row {
 .wc-hist:last-child {
   border-bottom: none;
 }
+.fcup-boost {
+  color: var(--accent);
+}

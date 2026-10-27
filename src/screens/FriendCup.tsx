@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { claimCupPrize, CUP_PRIZE, cupEntrants, missingCupRows, myCupWinCount, recordCupWin, runCup, weekDeadline, weekId, type CupGame, type CupRow } from '../game/cup';
+import { claimCupPrize, cupPrizes, cupEntrants, missingCupRows, myCupWinCount, recordCupWin, runCup, weekDeadline, weekId, type CupGame, type CupRow } from '../game/cup';
 import { archiveRow, cacheCup, DAILY_START, dayEnd, dayIndex, finishedCup, runDailyCup, type DailyCup } from '../game/cupDaily';
 import { fmtMoney, round2 } from '../game/economy';
 import { playerId, post, type RankingRow } from '../game/ranking';
@@ -96,7 +96,8 @@ export function FriendCup({ rows }: { rows: RankingRow[] }) {
 
   const prizeLine = (
     <small className="muted">
-      賞金：優勝 {fmtMoney(CUP_PRIZE[0])} · 準優勝 {fmtMoney(CUP_PRIZE[1])} · 3位 {fmtMoney(CUP_PRIZE[2])}
+      {cupPrizes(w)[0] > 30 && <b className="fcup-boost">🎉 今週は賞金{cupPrizes(w)[0] / 30}倍！ </b>}
+      賞金：優勝 {fmtMoney(cupPrizes(w)[0])} · 準優勝 {fmtMoney(cupPrizes(w)[1])} · 3位 {fmtMoney(cupPrizes(w)[2])}
     </small>
   );
 

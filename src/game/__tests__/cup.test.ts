@@ -116,3 +116,11 @@ describe('フレンドカップ（毎日1節）', () => {
     expect(end.complete).toBe(true);
   }, 60000);
 });
+
+describe('賞金100倍の週', () => {
+  it('2026年10月26日の週だけ100倍', async () => {
+    const { cupPrizes, CUP_PRIZE } = await import('../cup');
+    expect(cupPrizes(2964)).toEqual(CUP_PRIZE.map((x) => x * 100));
+    expect(cupPrizes(2965)).toEqual(CUP_PRIZE);
+  });
+});
