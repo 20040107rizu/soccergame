@@ -2,7 +2,7 @@ import type { GameState } from './types';
 import { ensureHeight } from './height';
 import { backfillXp } from './collection';
 import { ensureYouth } from './youth';
-import { spawnWonderkids } from './season';
+import { refillBudgets, spawnWonderkids } from './season';
 
 /**
  * セーブデータ。スロット制で端末内（localStorage）に保存。
@@ -108,6 +108,11 @@ function migrate(s: GameState): GameState {
   backfillXp(s);
   // v0.20：ユースチームを追加（古いセーブには最初の子たちを入団させる）
   ensureYouth(s);
+  // v0.26.4：CPU クラブの移籍資金が尽きて売れなくなっていたのを補充（1回だけ）
+  if (!s.flags?.budgetRefill) {
+    refillBudgets(s);
+    s.flags = { ...(s.flags ?? {}), budgetRefill: true };
+  }
   // v0.26.1：10代の若き才能を移籍市場に（今のセーブにもすぐに）
   if (!s.flags?.wonderkids) {
     spawnWonderkids(s, 6);

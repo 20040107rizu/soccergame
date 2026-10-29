@@ -206,6 +206,19 @@ describe('セーブデータの引き継ぎ', () => {
     expect(count(loadGame(3)!)).toBe(count(g));
   });
 
+  it('CPUクラブの資金が尽きたセーブも、読み込むと補充されて選手を売れる', async () => {
+    const { seekBuyer } = await import('../transfer');
+    const { squadOf } = await import('../lineup');
+    const s = newGame('テスト', 'ars');
+    for (const t of s.teams) if (t.id !== 'ars') t.budget = 1;
+    delete s.flags?.budgetRefill;
+    store.set('masterleague.save.3', JSON.stringify(s));
+    const g = loadGame(3)!;
+    expect(g.teams.filter((t) => t.id !== 'ars').every((t) => t.budget > 30)).toBe(true);
+    const star = squadOf(g, 'ars').sort((a, b) => b.salary - a.salary)[0];
+    expect(seekBuyer(g, star.id).ok).toBe(true);
+  });
+
   it('本体が壊れていてもバックアップから復旧する', () => {
     const s = newGame('テスト', 'liv');
     saveGame(1, s);

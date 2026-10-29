@@ -133,7 +133,7 @@ export function newGame(managerName: string, userTeamId: string, original?: Orig
   mailScoutAdvice(state);
   ensureYouth(state);
   spawnWonderkids(state, 6);
-  state.flags = { ...(state.flags ?? {}), wonderkids: true };
+  state.flags = { ...(state.flags ?? {}), wonderkids: true, budgetRefill: true };
   return state;
 }
 
@@ -570,6 +570,8 @@ export function endSeason(state: GameState): SeasonSummary {
   const oldRep = user.rep;
   const clBonus = userCl === '優勝' ? 4 : userCl === '決勝' ? 3 : userCl === '準決勝' ? 2 : userCl === '準々決勝' ? 1.5 : userCl === 'ラウンド16' ? 1 : 0;
   user.rep = Math.round(clamp(user.rep + (10.5 - rank) * 0.5 + clBonus, 40, 99));
+  // CPU クラブの移籍資金：毎シーズン補充（格が高いほど多い）
+  refillBudgets(state);
   // CPU クラブの評価も成績で少し動く
   tbl.forEach((r, i) => {
     if (r.teamId === state.userTeamId) return;
@@ -690,6 +692,14 @@ function clResultLabel(state: GameState): string {
     if (state.ties.some((t) => t.stage === s && (t.a === u || t.b === u))) return s === 'F' ? '決勝' : STAGE_LABEL[s];
   }
   return 'リーグフェーズ敗退';
+}
+
+/** CPU クラブの移籍資金を補充する（選手を買ってくれるクラブがいなくならないように） */
+export function refillBudgets(state: GameState) {
+  for (const t of state.teams) {
+    if (t.id === state.userTeamId) continue;
+    t.budget = round2(Math.min(800, Math.max(t.budget, 30 + t.rep * 2) + t.rep * 0.8));
+  }
 }
 
 /**

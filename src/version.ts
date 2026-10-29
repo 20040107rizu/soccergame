@@ -3,9 +3,14 @@
  * アップデート後に初めて開いた時、前回見たバージョン以降の変更点を表示する。
  * セーブデータはアップデートしても引き継がれる（save.ts の migrate を参照）。
  */
-export const APP_VERSION = '0.26.3';
+export const APP_VERSION = '0.26.4';
 
 export const CHANGELOG: { version: string; date: string; items: string[] }[] = [
+  {
+    version: '0.26.4',
+    date: '2026-10-29',
+    items: ['不具合修正：他のクラブの移籍資金が減る一方で、移籍リストに載せても買い手が見つからなくなっていたのを直しました（毎シーズン資金が補充されます。今のセーブもすぐに補充）'],
+  },
   {
     version: '0.26.3',
     date: '2026-10-27',

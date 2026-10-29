@@ -337,10 +337,11 @@ export function seekBuyer(state: GameState, playerId: string): Result {
   if (!windowStatus(state).open) return { ok: false, message: '移籍市場は閉まっています' };
   if (state.offers.some((o) => o.playerId === playerId)) return { ok: false, message: 'すでにオファーが届いています' };
   const v = marketValue(p);
-  const buyers = state.teams.filter((t) => t.id !== state.userTeamId && t.budget >= v * 0.7 && Math.abs(t.rep - 30 - overall(p) * 0.6) < 25);
+  // 選手の格に見合うクラブのうち、移籍金の4割以上を出せるところ（予算が足りなければ出せる額まで）
+  const buyers = state.teams.filter((t) => t.id !== state.userTeamId && t.budget >= v * 0.4 && t.rep >= Math.min(85, overall(p) * 0.6 + 5));
   if (!buyers.length) return { ok: false, message: '興味を示すクラブは見つかりませんでした' };
   const b = buyers[Math.floor(Math.random() * buyers.length)];
-  const fee = round2(v * (0.7 + Math.random() * 0.3));
+  const fee = round2(Math.min(b.budget, v * (0.7 + Math.random() * 0.3)));
   state.offers.push({ id: uid('o'), playerId, fromTeam: b.id, fee, day: state.day, maxFee: round2(fee * (1.05 + Math.random() * 0.3)), tries: 0 });
   return { ok: true, message: `${b.name}から ${fmtMoney(fee)} のオファーが届きました` };
 }
